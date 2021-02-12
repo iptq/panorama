@@ -1,60 +1,51 @@
 use std::io::Write;
-use std::sync::mpsc::Receiver;
+use std::time::Duration;
 
 use anyhow::Result;
+use chrono::Local;
 use crossterm::{
-    event,
-    terminal::{self, EnterAlternateScreen},
+    cursor,
+    event::{self, Event, KeyCode, KeyEvent},
+    style, terminal,
 };
+use tokio::time;
 
-use crate::event::Event;
+use crate::ExitSender;
 
-pub struct Ui<S: Write> {
-    screen: S,
-    evts: Receiver<Event>,
-}
+const FRAME: Duration = Duration::from_millis(16);
 
-impl<S: Write> Ui<S> {
-    pub fn init(mut screen: S, evts: Receiver<Event>) -> Result<Self> {
-        execute!(screen, EnterAlternateScreen)?;
-        terminal::enable_raw_mode()?;
+pub async fn run_ui(mut w: impl Write, exit: ExitSender) -> Result<()> {
+    execute!(w, cursor::Hide, terminal::EnterAlternateScreen)?;
+    terminal::enable_raw_mode()?;
 
-        Ok(Ui { screen, evts })
-    }
+    loop {
+        execute!(w, cursor::MoveTo(0, 0))?;
 
-    pub fn run(mut self) -> Result<()> {
-        use crossterm::event::{Event, KeyCode, KeyEvent};
+        let now = Local::now();
+        println!("shiet {}", now);
 
-        loop {
-            // check for new events
-            use std::sync::mpsc::TryRecvError;
-            match self.evts.try_recv() {
-                Ok(evt) => {}
-                Err(TryRecvError::Empty) => {} // skip
-                Err(TryRecvError::Disconnected) => todo!("impossible?"),
-            }
+        // approx 60fps
+        time::sleep(FRAME).await;
 
-            // read events from the terminal
+        if event::poll(FRAME)? {
             match event::read()? {
                 Event::Key(KeyEvent {
                     code: KeyCode::Char('q'),
                     ..
-                }) => {
-                    break;
-                }
+                }) => break,
                 _ => {}
             }
         }
-
-        Ok(())
     }
-}
 
-impl<S: Write> Drop for Ui<S> {
-    fn drop(&mut self) {
-        use crossterm::{cursor::Show, style::ResetColor, terminal::LeaveAlternateScreen};
+    execute!(
+        w,
+        style::ResetColor,
+        cursor::Show,
+        terminal::LeaveAlternateScreen
+    )?;
+    terminal::disable_raw_mode()?;
 
-        execute!(self.screen, ResetColor, Show, LeaveAlternateScreen,).unwrap();
-        terminal::disable_raw_mode().unwrap();
-    }
+    exit.send(()).expect("fake news?");
+    Ok(())
 }
