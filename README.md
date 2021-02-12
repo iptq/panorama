@@ -15,3 +15,5 @@ Credits
 -------
 
 IMAP library modified from [djc/tokio-imap](https://github.com/djc/tokio-imap), MIT licensed.
+
+License: GPLv3 or later

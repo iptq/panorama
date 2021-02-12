@@ -25,6 +25,7 @@ use crate::config::Config;
 type ExitSender = oneshot::Sender<()>;
 
 #[derive(Debug, StructOpt)]
+#[structopt(author, about)]
 struct Opt {
     /// The path to the log file. By default, does not log.
     #[structopt(long = "log-file")]

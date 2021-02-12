@@ -3,6 +3,10 @@ name = "panorama"
 version = "0.1.0"
 authors = ["Michael Zhang <mail@mzhang.io>"]
 edition = "2018"
+description = "A customizable personal information manager."
+repository = "https://git.mzhang.io/michael/panorama"
+readme = "README.md"
+license = "GPL-3.0-or-later"
 
 [workspace]
 members = ["imap"]
