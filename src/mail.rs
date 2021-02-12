@@ -14,41 +14,49 @@ use imap::{
     parser::parse_response,
     types::{Capability, RequestId, Response, ResponseCode, State, Status},
 };
-use tokio::{net::TcpStream, sync::mpsc};
+use tokio::{
+    net::TcpStream,
+    sync::mpsc::{self, UnboundedReceiver},
+};
 use tokio_rustls::{rustls::ClientConfig, webpki::DNSNameRef, TlsConnector};
 use tokio_util::codec::{Decoder, LinesCodec, LinesCodecError};
 
+use crate::config::Config;
+
 pub enum MailCommand {
+    Refresh,
     Raw(Command),
 }
 
-pub async fn run_mail(server: impl AsRef<str>, port: u16) -> Result<()> {
-    let server = server.as_ref();
+pub async fn run_mail(config: Config, cmd_in: UnboundedReceiver<MailCommand>) -> Result<()> {
+    let server = config.server.as_str();
+    let port = config.port;
+
     let client = TcpStream::connect((server, port)).await?;
     let codec = LinesCodec::new();
     let framed = codec.framed(client);
     let mut state = State::NotAuthenticated;
     let (sink, stream) = framed.split::<String>();
 
-    let result = listen_loop(&mut state, sink, stream).await?;
+    let result = listen_loop(config.clone(), &mut state, sink, stream, false).await?;
     if let LoopExit::NegotiateTls(stream, sink) = result {
         debug!("negotiating tls");
-        let mut config = ClientConfig::new();
-        config
+        let mut tls_config = ClientConfig::new();
+        tls_config
             .root_store
             .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
-        let config = TlsConnector::from(Arc::new(config));
+        let tls_config = TlsConnector::from(Arc::new(tls_config));
         let dnsname = DNSNameRef::try_from_ascii_str(server).unwrap();
 
         // reconstruct the original stream
         let stream = stream.reunite(sink)?.into_inner();
         // let stream = TcpStream::connect((server, port)).await?;
-        let stream = config.connect(dnsname, stream).await?;
+        let stream = tls_config.connect(dnsname, stream).await?;
 
         let codec = LinesCodec::new();
         let framed = codec.framed(stream);
         let (sink, stream) = framed.split::<String>();
-        listen_loop(&mut state, sink, stream).await?;
+        listen_loop(config.clone(), &mut state, sink, stream, true).await?;
     }
 
     Ok(())
@@ -59,7 +67,13 @@ enum LoopExit<S, S2> {
     Closed,
 }
 
-async fn listen_loop<S, S2>(st: &mut State, sink: S2, mut stream: S) -> Result<LoopExit<S, S2>>
+async fn listen_loop<S, S2>(
+    config: Config,
+    st: &mut State,
+    sink: S2,
+    mut stream: S,
+    with_ssl: bool,
+) -> Result<LoopExit<S, S2>>
 where
     S: Stream<Item = Result<String, LinesCodecError>> + Unpin,
     S2: Sink<String> + Unpin,
@@ -67,6 +81,14 @@ where
 {
     let (tx, mut rx) = mpsc::unbounded_channel::<()>();
     let mut cmd_mgr = CommandManager::new(sink);
+
+    if with_ssl {
+        let cmd = Command {
+            args: b"CAPABILITY".to_vec(),
+            next_state: Some(State::Authenticated),
+        };
+        cmd_mgr.send(cmd, |_| {}).await?;
+    }
 
     loop {
         let fut1 = stream.next();
@@ -95,23 +117,39 @@ where
                             code: Some(ResponseCode::Capabilities(caps)),
                             ..
                         } => {
-                            let mut has_starttls = false;
-                            for cap in caps {
-                                if let Capability::Atom("STARTTLS") = cap {
-                                    has_starttls = true;
+                            if !with_ssl {
+                                // prepare to do TLS negotiation
+                                let mut has_starttls = false;
+                                for cap in caps {
+                                    if let Capability::Atom("STARTTLS") = cap {
+                                        has_starttls = true;
+                                    }
+                                }
+                                if has_starttls {
+                                    let cmd = Command {
+                                        args: b"STARTTLS".to_vec(),
+                                        next_state: None,
+                                    };
+                                    let tx = tx.clone();
+                                    cmd_mgr
+                                        .send(cmd, move |_| {
+                                            tx.send(()).unwrap();
+                                        })
+                                        .await?;
                                 }
                             }
-                            if has_starttls {
+                        }
+
+                        Response::Capabilities(caps) => {
+                            if with_ssl {
+                                // send authentication information
                                 let cmd = Command {
-                                    args: b"STARTTLS".to_vec(),
-                                    next_state: None,
+                                    args: format!("LOGIN {} {}", config.username, config.password)
+                                        .as_bytes()
+                                        .to_vec(),
+                                    next_state: Some(State::Authenticated),
                                 };
-                                let tx = tx.clone();
-                                cmd_mgr
-                                    .send(cmd, move |_| {
-                                        tx.send(()).unwrap();
-                                    })
-                                    .await?;
+                                cmd_mgr.send(cmd, |_| {}).await?;
                             }
                         }
 
@@ -169,6 +207,8 @@ where
         let cmd_str = std::str::from_utf8(&cmd.args)?;
         let full_str = format!("{} {}", tag_str, cmd_str);
         self.in_flight.insert(tag_str.clone(), cb);
+
+        debug!(">>> {:?}", full_str);
         self.sink
             .send(full_str)
             .await
