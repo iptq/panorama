@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Michael Zhang <mail@mzhang.io>"]
 edition = "2018"
 
+[workspace]
+members = ["imap"]
+
 [dependencies]
 anyhow = "1.0.38"
 async-trait = "0.1.42"
@@ -16,8 +19,11 @@ lettre = "0.9.5"
 log = "0.4.14"
 notify = "4.0.15"
 pin-project = "1.0.4"
+rustls-connector = "0.13.1"
 tokio = { version = "1.1.1", features = ["full"] }
 tokio-rustls = "0.22.0"
 tokio-util = { version = "0.6.3", features = ["full"] }
 webpki-roots = "0.21.0"
 xdg = "2.2.0"
+
+imap = { path = "imap" }

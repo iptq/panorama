@@ -12,7 +12,7 @@ use tokio::time;
 
 use crate::ExitSender;
 
-const FRAME: Duration = Duration::from_millis(16);
+const FRAME: Duration = Duration::from_millis(33);
 
 pub async fn run_ui(mut w: impl Write, exit: ExitSender) -> Result<()> {
     execute!(w, cursor::Hide, terminal::EnterAlternateScreen)?;
@@ -22,7 +22,7 @@ pub async fn run_ui(mut w: impl Write, exit: ExitSender) -> Result<()> {
         execute!(w, cursor::MoveTo(0, 0))?;
 
         let now = Local::now();
-        println!("shiet {}", now);
+        println!("time {}", now);
 
         // approx 60fps
         time::sleep(FRAME).await;
