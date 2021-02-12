@@ -27,6 +27,10 @@ type ExitSender = oneshot::Sender<()>;
 #[derive(Debug, StructOpt)]
 #[structopt(author, about)]
 struct Opt {
+    /// Config file
+    #[structopt(long = "config-file", short = "c")]
+    config_path: Option<PathBuf>,
+
     /// The path to the log file. By default, does not log.
     #[structopt(long = "log-file")]
     log_file: Option<PathBuf>,
@@ -39,7 +43,11 @@ async fn main() -> Result<()> {
     setup_logger(&opt)?;
 
     let config: Config = {
-        let mut config_file = File::open("config.toml")?;
+        let config_path = opt
+            .config_path
+            .clone()
+            .unwrap_or_else(|| "config.toml".into());
+        let mut config_file = File::open(config_path)?;
         let mut contents = Vec::new();
         config_file.read_to_end(&mut contents)?;
         toml::from_slice(&contents)?
