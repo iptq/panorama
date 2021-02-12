@@ -13,18 +13,29 @@ mod ui;
 
 use std::fs::File;
 use std::io::Read;
+use std::path::PathBuf;
 
 use anyhow::Result;
 use futures::future::TryFutureExt;
+use structopt::StructOpt;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::config::Config;
 
 type ExitSender = oneshot::Sender<()>;
 
+#[derive(Debug, StructOpt)]
+struct Opt {
+    /// The path to the log file. By default, does not log.
+    #[structopt(long = "log-file")]
+    log_file: Option<PathBuf>,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
-    setup_logger()?;
+    let opt = Opt::from_args();
+
+    setup_logger(&opt)?;
 
     let config: Config = {
         let mut config_file = File::open("config.toml")?;
@@ -48,8 +59,8 @@ fn report_err(err: anyhow::Error) {
     error!("error: {:?}", err);
 }
 
-fn setup_logger() -> Result<()> {
-    fern::Dispatch::new()
+fn setup_logger(opt: &Opt) -> Result<()> {
+    let mut fern = fern::Dispatch::new()
         .format(|out, message, record| {
             out.finish(format_args!(
                 "{}[{}][{}] {}",
@@ -59,8 +70,12 @@ fn setup_logger() -> Result<()> {
                 message
             ))
         })
-        .level(log::LevelFilter::Debug)
-        .chain(fern::log_file("output.log")?)
-        .apply()?;
+        .level(log::LevelFilter::Debug);
+
+    if let Some(path) = &opt.log_file {
+        fern = fern.chain(fern::log_file(path)?);
+    }
+
+    fern.apply()?;
     Ok(())
 }

@@ -29,3 +29,4 @@ xdg = "2.2.0"
 imap = { path = "imap" }
 toml = "0.5.8"
 serde = { version = "1.0.123", features = ["derive"] }
+structopt = "0.3.21"
