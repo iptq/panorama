@@ -21,8 +21,7 @@ async fn main() -> Result<()> {
     let (exit_tx, exit_rx) = oneshot::channel::<()>();
 
     tokio::spawn(mail::run_mail("mzhang.io", 143).unwrap_or_else(report_err));
-
-    let stdout = std::io::stdout();
+    let mut stdout = std::io::stdout();
     tokio::spawn(ui::run_ui(stdout, exit_tx).unwrap_or_else(report_err));
 
     exit_rx.await?;

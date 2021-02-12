@@ -4,31 +4,29 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use futures::{
-    future::{self, Either, FutureExt},
-    pin_mut, select,
+    future::{self, Either},
+    pin_mut,
     sink::{Sink, SinkExt},
-    stream::{Stream, StreamExt, TryStream},
+    stream::{Stream, StreamExt},
 };
 use imap::{
-    builders::command::{Command, CommandBuilder},
+    builders::command::Command,
     parser::parse_response,
     types::{Capability, RequestId, Response, ResponseCode, State, Status},
 };
-use tokio::{
-    net::TcpStream,
-    sync::{
-        mpsc::{self, Receiver},
-        oneshot,
-    },
-};
+use tokio::{net::TcpStream, sync::mpsc};
 use tokio_rustls::{rustls::ClientConfig, webpki::DNSNameRef, TlsConnector};
 use tokio_util::codec::{Decoder, LinesCodec, LinesCodecError};
+
+pub enum MailCommand {
+    Raw(Command),
+}
 
 pub async fn run_mail(server: impl AsRef<str>, port: u16) -> Result<()> {
     let server = server.as_ref();
     let client = TcpStream::connect((server, port)).await?;
     let codec = LinesCodec::new();
-    let mut framed = codec.framed(client);
+    let framed = codec.framed(client);
     let mut state = State::NotAuthenticated;
     let (sink, stream) = framed.split::<String>();
 
@@ -48,9 +46,8 @@ pub async fn run_mail(server: impl AsRef<str>, port: u16) -> Result<()> {
         let stream = config.connect(dnsname, stream).await?;
 
         let codec = LinesCodec::new();
-        let mut framed = codec.framed(stream);
+        let framed = codec.framed(stream);
         let (sink, stream) = framed.split::<String>();
-
         listen_loop(&mut state, sink, stream).await?;
     }
 
@@ -62,7 +59,7 @@ enum LoopExit<S, S2> {
     Closed,
 }
 
-async fn listen_loop<S, S2>(st: &mut State, mut sink: S2, mut stream: S) -> Result<LoopExit<S, S2>>
+async fn listen_loop<S, S2>(st: &mut State, sink: S2, mut stream: S) -> Result<LoopExit<S, S2>>
 where
     S: Stream<Item = Result<String, LinesCodecError>> + Unpin,
     S2: Sink<String> + Unpin,
@@ -117,6 +114,7 @@ where
                                     .await?;
                             }
                         }
+
                         Response::Done { tag, code, .. } => {
                             cmd_mgr.process_done(tag, code)?;
                         }
@@ -136,6 +134,7 @@ where
     Ok(LoopExit::Closed)
 }
 
+/// A struct in charge of managing multiple in-flight commands.
 struct CommandManager<S> {
     tag_idx: usize,
     in_flight: HashMap<String, Box<dyn Fn(Option<ResponseCode>) + Send>>,
