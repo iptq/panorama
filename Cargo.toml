@@ -1,0 +1,23 @@
+[package]
+name = "panorama"
+version = "0.1.0"
+authors = ["Michael Zhang <mail@mzhang.io>"]
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.38"
+async-trait = "0.1.42"
+cfg-if = "1.0.0"
+chrono = "0.4.19"
+crossterm = "0.19.0"
+fern = "0.6.0"
+futures = "0.3.12"
+lettre = "0.9.5"
+log = "0.4.14"
+notify = "4.0.15"
+pin-project = "1.0.4"
+tokio = { version = "1.1.1", features = ["full"] }
+tokio-rustls = "0.22.0"
+tokio-util = { version = "0.6.3", features = ["full"] }
+webpki-roots = "0.21.0"
+xdg = "2.2.0"
