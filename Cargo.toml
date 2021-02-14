@@ -1,6 +1,6 @@
 [package]
 name = "panorama"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Michael Zhang <mail@mzhang.io>"]
 edition = "2018"
 description = "A customizable personal information manager."

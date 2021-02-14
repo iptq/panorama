@@ -7,7 +7,7 @@ use futures::future::TryFutureExt;
 use structopt::StructOpt;
 use tokio::sync::{mpsc, oneshot};
 use xdg::BaseDirectories;
-use panorama::config::{spawn_config_watcher, MailConfig};
+use panorama::{config::{spawn_config_watcher, MailConfig}, mail, ui};
 
 #[derive(Debug, StructOpt)]
 #[structopt(author, about)]
