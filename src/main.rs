@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use futures::future::TryFutureExt;
 use panorama::{
-    config::{spawn_config_watcher, MailConfig},
+    config::{spawn_config_watcher, Config},
     mail, ui,
 };
 use structopt::StructOpt;
@@ -38,26 +38,16 @@ async fn main() -> Result<()> {
     let xdg = BaseDirectories::new()?;
     let (config_thread, config_update) = spawn_config_watcher()?;
 
-    // let config: MailConfig = {
-    //     let config_path = opt
-    //         .config_path
-    //         .clone()
-    //         .unwrap_or_else(|| "config.toml".into());
-    //     let mut config_file = File::open(config_path)?;
-    //     let mut contents = Vec::new();
-    //     config_file.read_to_end(&mut contents)?;
-    //     toml::from_slice(&contents)?
-    // };
-
     // used to notify the runtime that the process should exit
     let (exit_tx, mut exit_rx) = mpsc::channel::<()>(1);
 
     // used to send commands to the mail service
     let (mail_tx, mail_rx) = mpsc::unbounded_channel();
 
-    let mail_thread = tokio::spawn(mail::run_mail(config_update.clone(), mail_rx).unwrap_or_else(report_err));
+    tokio::spawn(mail::run_mail(config_update.clone(), mail_rx).unwrap_or_else(report_err));
+
     let stdout = std::io::stdout();
-    let ui_thread = tokio::spawn(ui::run_ui(stdout, exit_tx).unwrap_or_else(report_err));
+    tokio::spawn(ui::run_ui(stdout, exit_tx).unwrap_or_else(report_err));
 
     exit_rx.recv().await;
 

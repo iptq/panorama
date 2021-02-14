@@ -14,11 +14,30 @@ use tokio::{sync::watch, task::JoinHandle};
 use xdg::BaseDirectories;
 
 /// Alias for a MailConfig receiver.
-pub type ConfigWatcher = watch::Receiver<Option<MailConfig>>;
+pub type ConfigWatcher = watch::Receiver<Option<Config>>;
 
 /// Configuration
 #[derive(Default, Serialize, Deserialize, Clone, Debug)]
-pub struct MailConfig {
+pub struct Config {
+    /// Version of the config to use
+    /// (potentially for migration later?)
+    pub version: String,
+
+    /// Mail accounts
+    #[serde(rename = "mail")]
+    pub mail_accounts: Vec<MailAccountConfig>,
+}
+
+/// Configuration for a single mail account
+#[derive(Default, Serialize, Deserialize, Clone, Debug)]
+pub struct MailAccountConfig {
+    /// Imap
+    pub imap: ImapConfig,
+}
+
+/// Configuring an IMAP server
+#[derive(Default, Serialize, Deserialize, Clone, Debug)]
+pub struct ImapConfig {
     /// Host of the IMAP server (needs to be hostname for TLS)
     pub server: String,
 
@@ -48,7 +67,7 @@ fn start_watcher() -> Result<(RecommendedWatcher, Receiver<DebouncedEvent>)> {
     Ok((watcher, rx))
 }
 
-async fn read_config(path: impl AsRef<Path>) -> Result<MailConfig> {
+async fn read_config(path: impl AsRef<Path>) -> Result<Config> {
     let mut file = File::open(path.as_ref())?;
     let mut contents = Vec::new();
     file.read_to_end(&mut contents)?;
@@ -63,20 +82,29 @@ async fn read_config(path: impl AsRef<Path>) -> Result<MailConfig> {
 /// This exists so all errors are able to be caught in one go.
 async fn watcher_loop(
     fs_events: Receiver<DebouncedEvent>,
-    config_tx: watch::Sender<Option<MailConfig>>,
+    config_tx: watch::Sender<Option<Config>>,
 ) -> Result<()> {
-    // first try opening the config file directly on load
+    // first try opening the config file directly when the program is opened
     // (so the config isn't blank until the user touches the config file)
     let xdg = BaseDirectories::new()?;
     if let Some(config_path) = xdg.find_config_file("panorama/panorama.toml") {
         debug!("found config at {:?}", config_path);
         let config = read_config(config_path).await?;
+        debug!("read config: {:?}, sending to output", config);
         config_tx.send(Some(config))?;
     }
 
+    // start listening for events from the notify::Watcher
     for event in fs_events {
         debug!("new event: {:?}", event);
-        // config_tx.send(Some(config))?;
+        use notify::DebouncedEvent::*;
+        match event {
+            NoticeWrite(path) | Write(path) => {
+                let config = read_config(path).await?;
+                config_tx.send(Some(config))?;
+            }
+            _ => {}
+        }
     }
 
     Ok(())
@@ -93,7 +121,7 @@ pub fn spawn_config_watcher() -> Result<(JoinHandle<()>, ConfigWatcher)> {
         match watcher_loop(config_rx, config_tx).await {
             Ok(_) => {}
             Err(err) => {
-                debug!("config watcher died: {:?}", err);
+                debug!("config watcher bugged: {:?}", err);
             }
         }
     });

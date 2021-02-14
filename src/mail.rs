@@ -25,7 +25,7 @@ use tokio_rustls::{rustls::ClientConfig, webpki::DNSNameRef, TlsConnector};
 use tokio_stream::wrappers::WatchStream;
 use tokio_util::codec::{Decoder, LinesCodec, LinesCodecError};
 
-use crate::config::{ConfigWatcher, MailConfig};
+use crate::config::{Config, ConfigWatcher, ImapConfig};
 
 /// Command sent to the mail thread by something else (i.e. UI)
 pub enum MailCommand {
@@ -45,7 +45,10 @@ pub async fn run_mail(
 
     let mut config_watcher = WatchStream::new(config_watcher);
     loop {
-        let config: MailConfig = match config_watcher.next().await {
+        debug!("listening for configs");
+        let a = config_watcher.next().await;
+        debug!("got config {:?}", a);
+        let config: Config = match a {
             Some(Some(v)) => v,
             _ => break,
         };
@@ -57,14 +60,18 @@ pub async fn run_mail(
             curr_conn.abort();
         }
 
-        let handle = tokio::spawn(open_imap_connection(config));
+        let handle = tokio::spawn(async {
+            for acct in config.mail_accounts.into_iter() {
+                open_imap_connection(acct.imap);
+            }
+        });
         curr_conn = Some(handle);
     }
 
     Ok(())
 }
 
-async fn open_imap_connection(config: MailConfig) -> Result<()> {
+async fn open_imap_connection(config: ImapConfig) -> Result<()> {
     debug!(
         "Opening imap connection to {}:{}",
         config.server, config.port
@@ -115,7 +122,7 @@ enum LoopExit<S, S2> {
 }
 
 async fn listen_loop<S, S2>(
-    config: MailConfig,
+    config: ImapConfig,
     st: &mut State,
     sink: S2,
     mut stream: S,
