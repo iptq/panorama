@@ -82,6 +82,17 @@ impl Table {
                 }
                 println!("{}", s);
             }
+
+            let d = "\u{b7}".repeat(rect.2 as usize);
+            queue!(
+                w,
+                style::SetBackgroundColor(Color::Black),
+                style::SetForegroundColor(Color::White)
+            )?;
+            for j in self.rows.len() as u16..rect.3 {
+                queue!(w, cursor::MoveTo(rect.0, rect.1 + j))?;
+                println!("{}", d);
+            }
         } else {
             let msg = "Nothing in this table!";
             let x = rect.0 + (rect.2 - msg.len() as u16) / 2;

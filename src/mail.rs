@@ -19,16 +19,42 @@ use tokio::{
     sync::mpsc::{self, UnboundedReceiver},
 };
 use tokio_rustls::{rustls::ClientConfig, webpki::DNSNameRef, TlsConnector};
+use tokio_stream::wrappers::WatchStream;
 use tokio_util::codec::{Decoder, LinesCodec, LinesCodecError};
 
-use crate::config::Config;
+use crate::config::{MailConfig, ConfigWatcher};
 
 pub enum MailCommand {
     Refresh,
     Raw(Command),
 }
 
-pub async fn run_mail(config: Config, cmd_in: UnboundedReceiver<MailCommand>) -> Result<()> {
+/// Main entrypoint for the mail listener.
+pub async fn run_mail(
+    config_watcher: ConfigWatcher,
+    cmd_in: UnboundedReceiver<MailCommand>,
+) -> Result<()> {
+    let mut curr_conn = None;
+
+    let mut config_watcher = WatchStream::new(config_watcher);
+    loop {
+        let config: MailConfig = match config_watcher.next().await {
+            Some(Some(v)) => v,
+            _ => break,
+        };
+
+        let handle = tokio::spawn(open_imap_connection(config));
+        curr_conn = Some(handle);
+    }
+
+    Ok(())
+}
+
+async fn open_imap_connection(config: MailConfig) -> Result<()> {
+    debug!(
+        "Opening imap connection to {}:{}",
+        config.server, config.port
+    );
     let server = config.server.as_str();
     let port = config.port;
 
@@ -62,13 +88,16 @@ pub async fn run_mail(config: Config, cmd_in: UnboundedReceiver<MailCommand>) ->
     Ok(())
 }
 
+/// Action that should be taken after the connection loop quits.
 enum LoopExit<S, S2> {
+    /// Used in case the STARTTLS command is issued; perform TLS negotiation on top of the current
+    /// stream
     NegotiateTls(S, S2),
     Closed,
 }
 
 async fn listen_loop<S, S2>(
-    config: Config,
+    config: MailConfig,
     st: &mut State,
     sink: S2,
     mut stream: S,

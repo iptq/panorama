@@ -19,8 +19,9 @@ use anyhow::Result;
 use futures::future::TryFutureExt;
 use structopt::StructOpt;
 use tokio::sync::{mpsc, oneshot};
+use xdg::BaseDirectories;
 
-use crate::config::Config;
+use crate::config::{spawn_config_watcher, MailConfig};
 
 type ExitSender = oneshot::Sender<()>;
 
@@ -38,26 +39,35 @@ struct Opt {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // parse command line arguments into options struct
     let opt = Opt::from_args();
 
+    // print logs to file as directed by command line options
     setup_logger(&opt)?;
 
-    let config: Config = {
-        let config_path = opt
-            .config_path
-            .clone()
-            .unwrap_or_else(|| "config.toml".into());
-        let mut config_file = File::open(config_path)?;
-        let mut contents = Vec::new();
-        config_file.read_to_end(&mut contents)?;
-        toml::from_slice(&contents)?
-    };
+    let xdg = BaseDirectories::new()?;
+    let config_update = spawn_config_watcher()?;
 
+    let config = MailConfig::default();
+    // let config: MailConfig = {
+    //     let config_path = opt
+    //         .config_path
+    //         .clone()
+    //         .unwrap_or_else(|| "config.toml".into());
+    //     let mut config_file = File::open(config_path)?;
+    //     let mut contents = Vec::new();
+    //     config_file.read_to_end(&mut contents)?;
+    //     toml::from_slice(&contents)?
+    // };
+
+    // used to notify the runtime that the process should exit
     let (exit_tx, exit_rx) = oneshot::channel::<()>();
+
+    // used to send commands to the mail service
     let (mail_tx, mail_rx) = mpsc::unbounded_channel();
 
-    tokio::spawn(mail::run_mail(config.clone(), mail_rx).unwrap_or_else(report_err));
-    let mut stdout = std::io::stdout();
+    tokio::spawn(mail::run_mail(config_update.clone(), mail_rx).unwrap_or_else(report_err));
+    let stdout = std::io::stdout();
     tokio::spawn(ui::run_ui(stdout, exit_tx).unwrap_or_else(report_err));
 
     exit_rx.await?;

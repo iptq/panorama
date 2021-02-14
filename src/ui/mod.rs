@@ -17,7 +17,7 @@ use crate::ExitSender;
 
 use self::table::Table;
 
-const FRAME: Duration = Duration::from_millis(16);
+const FRAME: Duration = Duration::from_millis(20);
 
 /// X Y W H
 #[derive(Copy, Clone)]
@@ -51,6 +51,7 @@ pub async fn run_ui(mut w: impl Write, exit: ExitSender) -> Result<()> {
         // approx 60fps
         time::sleep(FRAME).await;
 
+        // check to see if there's even an event this frame. otherwise, just keep going
         if event::poll(FRAME)? {
             let event = event::read()?;
             table.update(&event);
