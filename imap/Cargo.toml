@@ -1,6 +1,6 @@
 [package]
 name = "panorama-imap"
-version = "0.12.2"
+version = "0.0.1"
 authors = ["Dirkjan Ochtman <dirkjan@ochtman.nl>", "Michael Zhang <mail@mzhang.io>"]
 description = "IMAP protocol parser and data structures"
 keywords = ["imap", "email"]

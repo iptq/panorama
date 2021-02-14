@@ -785,7 +785,7 @@ dependencies = [
 
 [[package]]
 name = "panorama-imap"
-version = "0.12.2"
+version = "0.0.1"
 dependencies = [
  "assert_matches",
  "nom 6.1.0",
