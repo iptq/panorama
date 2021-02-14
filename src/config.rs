@@ -1,3 +1,7 @@
+//! Module for setting up config files and watchers.
+//!
+//! One of the primary goals of panorama is to be able to always hot-reload configuration files.
+
 use std::fs::File;
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
@@ -9,14 +13,22 @@ use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::watch;
 use xdg::BaseDirectories;
 
+/// Alias for a MailConfig receiver.
 pub type ConfigWatcher = watch::Receiver<Option<MailConfig>>;
 
+/// Configuration
 #[derive(Default, Serialize, Deserialize, Clone, Debug)]
 pub struct MailConfig {
+    /// Host of the IMAP server (needs to be hostname for TLS)
     pub server: String,
+
+    /// Port of the IMAP server
     pub port: u16,
 
+    /// Username for authenticating to IMAP
     pub username: String,
+
+    /// Password for authenticating to IMAP
     pub password: String,
 }
 
@@ -46,6 +58,10 @@ async fn read_config(path: impl AsRef<Path>) -> Result<MailConfig> {
     Ok(config)
 }
 
+/// The inner loop of the watcher, which is responsible for taking events received by the watcher
+/// and trying to parse and return the config.
+///
+/// This exists so all errors are able to be caught in one go.
 async fn watcher_loop(
     fs_events: Receiver<DebouncedEvent>,
     config_tx: watch::Sender<Option<MailConfig>>,
@@ -67,6 +83,8 @@ async fn watcher_loop(
     Ok(())
 }
 
+/// Start the entire config watcher system, and return a [ConfigWatcher][self::ConfigWatcher],
+/// which is a cloneable receiver of config update events.
 pub fn spawn_config_watcher() -> Result<ConfigWatcher> {
     let (_watcher, config_rx) = start_watcher()?;
     let (config_tx, config_update) = watch::channel(None);

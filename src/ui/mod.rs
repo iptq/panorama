@@ -1,3 +1,5 @@
+//! UI
+
 mod table;
 
 use std::io::Write;
@@ -23,6 +25,7 @@ const FRAME: Duration = Duration::from_millis(20);
 #[derive(Copy, Clone)]
 pub struct Rect(u16, u16, u16, u16);
 
+/// UI entrypoint.
 pub async fn run_ui(mut w: impl Write, exit: ExitSender) -> Result<()> {
     execute!(w, cursor::Hide, terminal::EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;

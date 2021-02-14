@@ -1,16 +1,3 @@
-#[macro_use]
-extern crate anyhow;
-#[macro_use]
-extern crate crossterm;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate serde;
-
-mod config;
-mod mail;
-mod ui;
-
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -20,10 +7,7 @@ use futures::future::TryFutureExt;
 use structopt::StructOpt;
 use tokio::sync::{mpsc, oneshot};
 use xdg::BaseDirectories;
-
-use crate::config::{spawn_config_watcher, MailConfig};
-
-type ExitSender = oneshot::Sender<()>;
+use panorama::config::{spawn_config_watcher, MailConfig};
 
 #[derive(Debug, StructOpt)]
 #[structopt(author, about)]
@@ -48,7 +32,6 @@ async fn main() -> Result<()> {
     let xdg = BaseDirectories::new()?;
     let config_update = spawn_config_watcher()?;
 
-    let config = MailConfig::default();
     // let config: MailConfig = {
     //     let config_path = opt
     //         .config_path
@@ -74,10 +57,6 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-fn report_err(err: anyhow::Error) {
-    error!("error: {:?}", err);
-}
-
 fn setup_logger(opt: &Opt) -> Result<()> {
     let mut fern = fern::Dispatch::new()
         .format(|out, message, record| {
@@ -97,4 +76,8 @@ fn setup_logger(opt: &Opt) -> Result<()> {
 
     fern.apply()?;
     Ok(())
+}
+
+fn report_err(err: anyhow::Error) {
+    log::error!("error: {:?}", err);
 }

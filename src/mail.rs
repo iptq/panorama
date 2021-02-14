@@ -1,3 +1,5 @@
+//! Mail
+
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::sync::Arc;
@@ -24,8 +26,12 @@ use tokio_util::codec::{Decoder, LinesCodec, LinesCodecError};
 
 use crate::config::{MailConfig, ConfigWatcher};
 
+/// Command sent to the mail thread by something else (i.e. UI)
 pub enum MailCommand {
+    /// Refresh the list
     Refresh,
+
+    /// Send a raw command
     Raw(Command),
 }
 
