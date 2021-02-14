@@ -11,7 +11,7 @@ use futures::{
     sink::{Sink, SinkExt},
     stream::{Stream, StreamExt},
 };
-use imap::{
+use panorama_imap::{
     builders::command::Command,
     parser::parse_response,
     types::{Capability, RequestId, Response, ResponseCode, State, Status},

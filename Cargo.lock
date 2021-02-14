@@ -422,14 +422,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "imap"
-version = "0.12.2"
-dependencies = [
- "assert_matches",
- "nom 6.1.0",
-]
-
-[[package]]
 name = "inotify"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -774,10 +766,10 @@ dependencies = [
  "crossterm",
  "fern",
  "futures",
- "imap",
  "lettre",
  "log",
  "notify",
+ "panorama-imap",
  "pin-project",
  "rustls-connector",
  "serde",
@@ -789,6 +781,14 @@ dependencies = [
  "toml",
  "webpki-roots",
  "xdg",
+]
+
+[[package]]
+name = "panorama-imap"
+version = "0.12.2"
+dependencies = [
+ "assert_matches",
+ "nom 6.1.0",
 ]
 
 [[package]]
