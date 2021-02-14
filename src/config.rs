@@ -3,14 +3,14 @@
 //! One of the primary goals of panorama is to be able to always hot-reload configuration files.
 
 use std::fs::File;
-use std::sync::mpsc::{self, Receiver};
-use std::time::Duration;
 use std::io::Read;
 use std::path::Path;
+use std::sync::mpsc::{self, Receiver};
+use std::time::Duration;
 
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
-use tokio::sync::watch;
+use tokio::{sync::watch, task::JoinHandle};
 use xdg::BaseDirectories;
 
 /// Alias for a MailConfig receiver.
@@ -34,17 +34,16 @@ pub struct MailConfig {
 
 /// Spawns a notify::RecommendedWatcher to watch the XDG config directory. Whenever the config file
 /// is updated, the config file is parsed and sent to the receiver.
-fn start_watcher() -> Result<(
-    RecommendedWatcher,
-    Receiver<DebouncedEvent>,
-)> {
+fn start_watcher() -> Result<(RecommendedWatcher, Receiver<DebouncedEvent>)> {
     let (tx, rx) = mpsc::channel();
     let mut watcher = RecommendedWatcher::new(tx, Duration::from_secs(5))?;
 
     let xdg = BaseDirectories::new()?;
     let config_home = xdg.get_config_home();
     debug!("config_home: {:?}", config_home);
-    watcher.watch(config_home.join("panorama"), RecursiveMode::Recursive).context("could not watch config_home")?;
+    watcher
+        .watch(config_home.join("panorama"), RecursiveMode::Recursive)
+        .context("could not watch config_home")?;
 
     Ok((watcher, rx))
 }
@@ -85,11 +84,12 @@ async fn watcher_loop(
 
 /// Start the entire config watcher system, and return a [ConfigWatcher][self::ConfigWatcher],
 /// which is a cloneable receiver of config update events.
-pub fn spawn_config_watcher() -> Result<ConfigWatcher> {
-    let (_watcher, config_rx) = start_watcher()?;
+pub fn spawn_config_watcher() -> Result<(JoinHandle<()>, ConfigWatcher)> {
+    let (watcher, config_rx) = start_watcher()?;
     let (config_tx, config_update) = watch::channel(None);
 
-    tokio::spawn(async move {
+    let config_thread = tokio::spawn(async move {
+        let _watcher = watcher;
         match watcher_loop(config_rx, config_tx).await {
             Ok(_) => {}
             Err(err) => {
@@ -98,5 +98,5 @@ pub fn spawn_config_watcher() -> Result<ConfigWatcher> {
         }
     });
 
-    Ok(config_update)
+    Ok((config_thread, config_update))
 }

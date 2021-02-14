@@ -19,12 +19,13 @@ use panorama_imap::{
 use tokio::{
     net::TcpStream,
     sync::mpsc::{self, UnboundedReceiver},
+    task::JoinHandle,
 };
 use tokio_rustls::{rustls::ClientConfig, webpki::DNSNameRef, TlsConnector};
 use tokio_stream::wrappers::WatchStream;
 use tokio_util::codec::{Decoder, LinesCodec, LinesCodecError};
 
-use crate::config::{MailConfig, ConfigWatcher};
+use crate::config::{ConfigWatcher, MailConfig};
 
 /// Command sent to the mail thread by something else (i.e. UI)
 pub enum MailCommand {
@@ -40,7 +41,7 @@ pub async fn run_mail(
     config_watcher: ConfigWatcher,
     cmd_in: UnboundedReceiver<MailCommand>,
 ) -> Result<()> {
-    let mut curr_conn = None;
+    let mut curr_conn: Option<JoinHandle<_>> = None;
 
     let mut config_watcher = WatchStream::new(config_watcher);
     loop {
@@ -48,6 +49,13 @@ pub async fn run_mail(
             Some(Some(v)) => v,
             _ => break,
         };
+
+        // TODO: gracefully shut down connection
+        // just gonna drop the connection for now
+        if let Some(mut curr_conn) = curr_conn.take() {
+            debug!("dropping connection...");
+            curr_conn.abort();
+        }
 
         let handle = tokio::spawn(open_imap_connection(config));
         curr_conn = Some(handle);
@@ -61,6 +69,7 @@ async fn open_imap_connection(config: MailConfig) -> Result<()> {
         "Opening imap connection to {}:{}",
         config.server, config.port
     );
+
     let server = config.server.as_str();
     let port = config.port;
 
@@ -71,6 +80,7 @@ async fn open_imap_connection(config: MailConfig) -> Result<()> {
     let (sink, stream) = framed.split::<String>();
 
     let result = listen_loop(config.clone(), &mut state, sink, stream, false).await?;
+
     if let LoopExit::NegotiateTls(stream, sink) = result {
         debug!("negotiating tls");
         let mut tls_config = ClientConfig::new();
@@ -97,7 +107,9 @@ async fn open_imap_connection(config: MailConfig) -> Result<()> {
 /// Action that should be taken after the connection loop quits.
 enum LoopExit<S, S2> {
     /// Used in case the STARTTLS command is issued; perform TLS negotiation on top of the current
-    /// stream
+    /// stream.
+    ///
+    /// S and S2 are stream and sink types, respectively.
     NegotiateTls(S, S2),
     Closed,
 }

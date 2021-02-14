@@ -1,13 +1,19 @@
+#[macro_use]
+extern crate log;
+
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
 
 use anyhow::Result;
 use futures::future::TryFutureExt;
+use panorama::{
+    config::{spawn_config_watcher, MailConfig},
+    mail, ui,
+};
 use structopt::StructOpt;
 use tokio::sync::{mpsc, oneshot};
 use xdg::BaseDirectories;
-use panorama::{config::{spawn_config_watcher, MailConfig}, mail, ui};
 
 #[derive(Debug, StructOpt)]
 #[structopt(author, about)]
@@ -30,7 +36,7 @@ async fn main() -> Result<()> {
     setup_logger(&opt)?;
 
     let xdg = BaseDirectories::new()?;
-    let config_update = spawn_config_watcher()?;
+    let (config_thread, config_update) = spawn_config_watcher()?;
 
     // let config: MailConfig = {
     //     let config_path = opt
@@ -44,17 +50,22 @@ async fn main() -> Result<()> {
     // };
 
     // used to notify the runtime that the process should exit
-    let (exit_tx, exit_rx) = oneshot::channel::<()>();
+    let (exit_tx, mut exit_rx) = mpsc::channel::<()>(1);
 
     // used to send commands to the mail service
     let (mail_tx, mail_rx) = mpsc::unbounded_channel();
 
-    tokio::spawn(mail::run_mail(config_update.clone(), mail_rx).unwrap_or_else(report_err));
+    let mail_thread = tokio::spawn(mail::run_mail(config_update.clone(), mail_rx).unwrap_or_else(report_err));
     let stdout = std::io::stdout();
-    tokio::spawn(ui::run_ui(stdout, exit_tx).unwrap_or_else(report_err));
+    let ui_thread = tokio::spawn(ui::run_ui(stdout, exit_tx).unwrap_or_else(report_err));
 
-    exit_rx.await?;
-    Ok(())
+    exit_rx.recv().await;
+
+    // TODO: graceful shutdown
+    // yada yada create a background process and pass off the connections so they can be safely
+    // shutdown
+    std::process::exit(0);
+    // Ok(())
 }
 
 fn setup_logger(opt: &Opt) -> Result<()> {
@@ -79,5 +90,5 @@ fn setup_logger(opt: &Opt) -> Result<()> {
 }
 
 fn report_err(err: anyhow::Error) {
-    log::error!("error: {:?}", err);
+    error!("error: {:?}", err);
 }

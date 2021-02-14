@@ -76,6 +76,7 @@ pub async fn run_ui(mut w: impl Write, exit: ExitSender) -> Result<()> {
     )?;
     terminal::disable_raw_mode()?;
 
-    exit.send(()).expect("fake news?");
+    exit.send(()).await?;
+    debug!("sent exit");
     Ok(())
 }

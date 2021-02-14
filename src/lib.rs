@@ -17,4 +17,4 @@ pub mod mail;
 pub mod ui;
 
 /// A cloneable type that allows sending an exit-"signal" to stop the application.
-pub type ExitSender = tokio::sync::oneshot::Sender<()>;
+pub type ExitSender = tokio::sync::mpsc::Sender<()>;
