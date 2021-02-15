@@ -11,7 +11,7 @@ use crossterm::{
     cursor,
     event::{self, Event, KeyCode, KeyEvent},
     style::{self, Color},
-    terminal::{self, ClearType},
+    terminal,
 };
 use tokio::time;
 
@@ -58,12 +58,13 @@ pub async fn run_ui(mut w: impl Write, exit: ExitSender) -> Result<()> {
         if event::poll(FRAME)? {
             let event = event::read()?;
             table.update(&event);
-            match event {
-                Event::Key(KeyEvent {
-                    code: KeyCode::Char('q'),
-                    ..
-                }) => break,
-                _ => {}
+
+            if let Event::Key(KeyEvent {
+                code: KeyCode::Char('q'),
+                ..
+            }) = event
+            {
+                break;
             }
         }
     }

@@ -1,18 +1,13 @@
 #[macro_use]
 extern crate log;
 
-use std::fs::File;
-use std::io::Read;
 use std::path::PathBuf;
 
 use anyhow::Result;
 use futures::future::TryFutureExt;
-use panorama::{
-    config::{spawn_config_watcher, Config},
-    mail, ui,
-};
+use panorama::{config::spawn_config_watcher, mail, ui};
 use structopt::StructOpt;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 use xdg::BaseDirectories;
 
 #[derive(Debug, StructOpt)]
@@ -35,14 +30,14 @@ async fn main() -> Result<()> {
     // print logs to file as directed by command line options
     setup_logger(&opt)?;
 
-    let xdg = BaseDirectories::new()?;
-    let (config_thread, config_update) = spawn_config_watcher()?;
+    let _xdg = BaseDirectories::new()?;
+    let (_config_thread, config_update) = spawn_config_watcher()?;
 
     // used to notify the runtime that the process should exit
     let (exit_tx, mut exit_rx) = mpsc::channel::<()>(1);
 
     // used to send commands to the mail service
-    let (mail_tx, mail_rx) = mpsc::unbounded_channel();
+    let (_mail_tx, mail_rx) = mpsc::unbounded_channel();
 
     tokio::spawn(mail::run_mail(config_update.clone(), mail_rx).unwrap_or_else(report_err));
 

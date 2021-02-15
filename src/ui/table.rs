@@ -17,8 +17,8 @@ pub struct Table {
 
 impl Table {
     pub fn update(&mut self, event: &Event) {
-        match event {
-            Event::Key(KeyEvent { code, .. }) => match code {
+        if let Event::Key(KeyEvent { code, .. }) = event {
+            match code {
                 KeyCode::Char('j') => {
                     if let Some(selected_row) = &mut self.selected_row {
                         *selected_row = (self.rows.len() as u16 - 1).min(*selected_row + 1);
@@ -27,13 +27,12 @@ impl Table {
                 KeyCode::Char('k') => {
                     if let Some(selected_row) = &mut self.selected_row {
                         if *selected_row > 0 {
-                            *selected_row = *selected_row - 1;
+                            *selected_row -= 1;
                         }
                     }
                 }
                 _ => {}
-            },
-            _ => {}
+            }
         }
     }
 
@@ -45,7 +44,7 @@ impl Table {
             let mut columns = Vec::new();
             for row in self.rows.iter() {
                 for (i, cell) in row.iter().enumerate() {
-                    if columns.len() == 0 || columns.len() - 1 < i {
+                    if columns.is_empty() || columns.len() - 1 < i {
                         columns.push(0);
                     } else {
                         columns[i] = cell.len().max(columns[i]);
@@ -105,7 +104,7 @@ impl Table {
 
     pub fn push_row(&mut self, row: Vec<String>) {
         self.rows.push(row);
-        if let None = self.selected_row {
+        if self.selected_row.is_none() {
             self.selected_row = Some(0);
         }
     }

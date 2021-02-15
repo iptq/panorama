@@ -29,14 +29,14 @@ pub struct Config {
 }
 
 /// Configuration for a single mail account
-#[derive(Default, Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MailAccountConfig {
     /// Imap
     pub imap: ImapConfig,
 }
 
 /// Configuring an IMAP server
-#[derive(Default, Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ImapConfig {
     /// Host of the IMAP server (needs to be hostname for TLS)
     pub server: String,
@@ -49,6 +49,25 @@ pub struct ImapConfig {
 
     /// Password for authenticating to IMAP
     pub password: String,
+
+    /// TLS
+    pub tls: TlsMethod,
+}
+
+/// Describes when to perform the TLS handshake
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum TlsMethod {
+    /// Perform TLS handshake immediately upon connection
+    #[serde(rename = "on")]
+    On,
+
+    /// Perform TLS handshake after issuing the STARTTLS command
+    #[serde(rename = "starttls")]
+    Starttls,
+
+    /// Don't perform TLS handshake at all (unsecured)
+    #[serde(rename = "off")]
+    Off,
 }
 
 /// Spawns a notify::RecommendedWatcher to watch the XDG config directory. Whenever the config file

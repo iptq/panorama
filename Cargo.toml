@@ -34,3 +34,6 @@ tokio-util = { version = "0.6.3", features = ["full"] }
 toml = "0.5.8"
 webpki-roots = "0.21.0"
 xdg = "2.2.0"
+
+[features]
+clippy = []

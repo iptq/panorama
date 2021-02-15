@@ -1,5 +1,3 @@
-//! Mail
-
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::sync::Arc;
@@ -16,62 +14,13 @@ use panorama_imap::{
     parser::parse_response,
     types::{Capability, RequestId, Response, ResponseCode, State, Status},
 };
-use tokio::{
-    net::TcpStream,
-    sync::mpsc::{self, UnboundedReceiver},
-    task::JoinHandle,
-};
+use tokio::{net::TcpStream, sync::mpsc};
 use tokio_rustls::{rustls::ClientConfig, webpki::DNSNameRef, TlsConnector};
-use tokio_stream::wrappers::WatchStream;
 use tokio_util::codec::{Decoder, LinesCodec, LinesCodecError};
 
-use crate::config::{Config, ConfigWatcher, ImapConfig};
+use crate::config::ImapConfig;
 
-/// Command sent to the mail thread by something else (i.e. UI)
-pub enum MailCommand {
-    /// Refresh the list
-    Refresh,
-
-    /// Send a raw command
-    Raw(Command),
-}
-
-/// Main entrypoint for the mail listener.
-pub async fn run_mail(
-    config_watcher: ConfigWatcher,
-    cmd_in: UnboundedReceiver<MailCommand>,
-) -> Result<()> {
-    let mut curr_conn: Option<JoinHandle<_>> = None;
-
-    let mut config_watcher = WatchStream::new(config_watcher);
-    loop {
-        debug!("listening for configs");
-        let a = config_watcher.next().await;
-        debug!("got config {:?}", a);
-        let config: Config = match a {
-            Some(Some(v)) => v,
-            _ => break,
-        };
-
-        // TODO: gracefully shut down connection
-        // just gonna drop the connection for now
-        if let Some(mut curr_conn) = curr_conn.take() {
-            debug!("dropping connection...");
-            curr_conn.abort();
-        }
-
-        let handle = tokio::spawn(async {
-            for acct in config.mail_accounts.into_iter() {
-                open_imap_connection(acct.imap);
-            }
-        });
-        curr_conn = Some(handle);
-    }
-
-    Ok(())
-}
-
-async fn open_imap_connection(config: ImapConfig) -> Result<()> {
+pub async fn open_imap_connection(config: ImapConfig) -> Result<()> {
     debug!(
         "Opening imap connection to {}:{}",
         config.server, config.port
@@ -165,6 +114,7 @@ where
                 debug!("<<< {:?}", resp);
 
                 match st {
+                    State::Authenticated => {}
                     State::NotAuthenticated => match resp {
                         Response::Data {
                             status: Status::Ok,
@@ -194,7 +144,7 @@ where
                             }
                         }
 
-                        Response::Capabilities(caps) => {
+                        Response::Capabilities(_caps) => {
                             if with_ssl {
                                 // send authentication information
                                 let cmd = Command {
@@ -226,10 +176,12 @@ where
     Ok(LoopExit::Closed)
 }
 
+type InFlightFunc = Box<dyn Fn(Option<ResponseCode>) + Send>;
+
 /// A struct in charge of managing multiple in-flight commands.
 struct CommandManager<S> {
     tag_idx: usize,
-    in_flight: HashMap<String, Box<dyn Fn(Option<ResponseCode>) + Send>>,
+    in_flight: HashMap<String, InFlightFunc>,
     sink: S,
 }
 

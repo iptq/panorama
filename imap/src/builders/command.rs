@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::fmt;
 use std::marker::PhantomData;
 use std::ops::{RangeFrom, RangeInclusive};
 use std::str;
