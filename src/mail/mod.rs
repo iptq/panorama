@@ -1,6 +1,7 @@
 //! Mail
 
 mod imap;
+mod imap2;
 
 use anyhow::Result;
 use futures::stream::StreamExt;
@@ -23,18 +24,19 @@ pub enum MailCommand {
 
 /// Main entrypoint for the mail listener.
 pub async fn run_mail(
-    config_watcher: ConfigWatcher,
+    mut config_watcher: ConfigWatcher,
     _cmd_in: UnboundedReceiver<MailCommand>,
 ) -> Result<()> {
     let mut curr_conn: Option<JoinHandle<_>> = None;
 
-    let mut config_watcher = WatchStream::new(config_watcher);
+    // let mut config_watcher = WatchStream::new(config_watcher);
     loop {
         debug!("listening for configs");
-        let a = config_watcher.next().await;
-        debug!("got config {:?}", a);
-        let config: Config = match a {
-            Some(Some(v)) => v,
+        let config: Config = match config_watcher.changed().await {
+            Ok(_) => match *config_watcher.borrow() {
+                Some(ref v) => v.clone(),
+                _ => break,
+            },
             _ => break,
         };
 

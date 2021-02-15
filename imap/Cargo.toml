@@ -12,8 +12,7 @@ edition = "2018"
 maintenance = { status = "passively-maintained" }
 
 [dependencies]
-funty = "=1.1.0"
-nom = { version = "6", default-features = false, features = ["std"] }
+nom = { version = "6.1.2", default-features = false, features = ["std"] }
 
 [dev-dependencies]
 assert_matches = "1.3"

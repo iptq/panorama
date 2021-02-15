@@ -106,6 +106,7 @@ async fn watcher_loop(
     // first try opening the config file directly when the program is opened
     // (so the config isn't blank until the user touches the config file)
     let xdg = BaseDirectories::new()?;
+
     if let Some(config_path) = xdg.find_config_file("panorama/panorama.toml") {
         debug!("found config at {:?}", config_path);
         let config = read_config(config_path).await?;
@@ -118,10 +119,15 @@ async fn watcher_loop(
         debug!("new event: {:?}", event);
         use notify::DebouncedEvent::*;
         match event {
-            NoticeWrite(path) | Write(path) => {
-                let config = read_config(path).await?;
-                config_tx.send(Some(config))?;
-            }
+            NoticeWrite(path) | Write(path) => match read_config(path).await {
+                Ok(config) => {
+                    debug!("read new config: {:?}", config);
+                    config_tx.send(Some(config))?;
+                }
+                Err(err) => {
+                    debug!("error reading new config: {:?}", err);
+                }
+            },
             _ => {}
         }
     }
@@ -131,7 +137,7 @@ async fn watcher_loop(
 
 /// Start the entire config watcher system, and return a [ConfigWatcher][self::ConfigWatcher],
 /// which is a cloneable receiver of config update events.
-pub fn spawn_config_watcher() -> Result<(JoinHandle<()>, ConfigWatcher)> {
+pub fn spawn_config_watcher_system() -> Result<(JoinHandle<()>, ConfigWatcher)> {
     let (watcher, config_rx) = start_watcher()?;
     let (config_tx, config_update) = watch::channel(None);
 
