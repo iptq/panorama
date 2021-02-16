@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["begin_authentication",""],["open_imap_connection",""],["perform_tls_negotiation","Performs TLS negotiation, using the webpki_roots and verifying the server name"]]});
+initSidebarItems({"fn":[["begin_authentication",""],["fetch_capabilities",""],["open_imap_connection",""],["perform_tls_negotiation","Performs TLS negotiation, using the webpki_roots and verifying the server name"]],"struct":[["CommandManager",""]],"trait":[["ImapStream",""]]});
