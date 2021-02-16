@@ -8,8 +8,6 @@ extern crate anyhow;
 #[macro_use]
 extern crate crossterm;
 #[macro_use]
-extern crate log;
-#[macro_use]
 extern crate serde;
 #[macro_use]
 extern crate tracing;
@@ -23,5 +21,5 @@ pub type ExitSender = tokio::sync::mpsc::Sender<()>;
 
 /// Consumes any error and dumps it to the logger.
 pub fn report_err(err: anyhow::Error) {
-    error!("error: {:?}", err);
+    error!("error: {}", err);
 }

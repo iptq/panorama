@@ -1,6 +1,7 @@
 #[macro_use]
-extern crate log;
+extern crate tracing;
 
+use std::fs::{File, OpenOptions};
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -13,10 +14,6 @@ use xdg::BaseDirectories;
 #[derive(Debug, StructOpt)]
 #[structopt(author, about)]
 struct Opt {
-    /// Config file
-    #[structopt(long = "config-file", short = "c")]
-    config_path: Option<PathBuf>,
-
     /// The path to the log file. By default, does not log.
     #[structopt(long = "log-file")]
     log_file: Option<PathBuf>,
@@ -28,7 +25,21 @@ async fn main() -> Result<()> {
     let opt = Opt::from_args();
 
     // print logs to file as directed by command line options
-    setup_logger(&opt)?;
+    use tracing_subscriber::filter::LevelFilter;
+
+    let file = tracing_appender::rolling::daily("public", "lol");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file);
+
+    tracing_subscriber::fmt()
+        .with_max_level(LevelFilter::TRACE)
+        .with_writer(non_blocking)
+        .with_thread_ids(true)
+        .init();
+    debug!("shiet");
+
+    // TODO: debug
+    let x = span!(tracing::Level::WARN, "ouais");
+    let _y = x.enter();
 
     let _xdg = BaseDirectories::new()?;
     let (_config_thread, config_update) = spawn_config_watcher_system()?;
@@ -59,24 +70,6 @@ async fn main() -> Result<()> {
 }
 
 fn setup_logger(opt: &Opt) -> Result<()> {
-    let mut fern = fern::Dispatch::new()
-        .format(|out, message, record| {
-            out.finish(format_args!(
-                "{}[{}][{}] {}",
-                chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
-                record.target(),
-                record.level(),
-                message
-            ))
-        })
-        .level(log::LevelFilter::Debug);
-
-    if let Some(path) = &opt.log_file {
-        fern = fern.chain(fern::log_file(path)?);
-    }
-
-    // fern.apply()?;
-    tracing_subscriber::fmt::init();
-
+    debug!("logging set up.");
     Ok(())
 }

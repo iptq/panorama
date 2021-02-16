@@ -2,14 +2,15 @@
 //!
 //! One of the primary goals of panorama is to be able to always hot-reload configuration files.
 
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use futures::{future::TryFutureExt, stream::StreamExt};
 use inotify::{Inotify, WatchMask};
 use tokio::{sync::watch, task::JoinHandle};
+use xdg::BaseDirectories;
 
 use crate::report_err;
 
@@ -81,19 +82,39 @@ async fn read_config(path: impl AsRef<Path>) -> Result<Config> {
 
 async fn start_inotify_stream(
     mut inotify: Inotify,
+    config_home: impl AsRef<Path>,
     config_tx: watch::Sender<Config>,
 ) -> Result<()> {
     let mut buffer = vec![0; 1024];
     let mut event_stream = inotify.event_stream(&mut buffer)?;
+    let config_home = config_home.as_ref().to_path_buf();
+    let config_path = config_home.join("panorama.toml");
 
     while let Some(v) = event_stream.next().await {
-        let event = v?;
-
-        debug!("event: {:?}", event);
+        let event = v.context("event")?;
 
         if let Some(name) = event.name {
             let path = PathBuf::from(name);
-            let config = read_config(path).await?;
+            let path_c = config_home
+                .clone()
+                .join(path.clone())
+                .canonicalize()
+                .context("osu")?;
+            if !path_c.exists() {
+                debug!("path {:?} doesn't exist", path_c);
+                continue;
+            }
+
+            // TODO: any better way to do this?
+            let config_path_c = config_path.canonicalize().context("cfg_path")?;
+            if config_path_c != path_c {
+                debug!("did not match {:?} {:?}", config_path_c, path_c);
+                continue;
+            }
+
+            debug!("reading config from {:?}", path_c);
+            let config = read_config(path_c).await.context("read")?;
+            debug!("sending config {:?}", config);
             config_tx.send(config)?;
         }
     }
@@ -105,9 +126,18 @@ async fn start_inotify_stream(
 /// which is a cloneable receiver of config update events.
 pub fn spawn_config_watcher_system() -> Result<(JoinHandle<()>, ConfigWatcher)> {
     let mut inotify = Inotify::init()?;
-    inotify.add_watch(".", WatchMask::all())?;
+
+    let xdg = BaseDirectories::new()?;
+    let config_home = xdg.get_config_home().join("panorama");
+    if !config_home.exists() {
+        fs::create_dir_all(&config_home)?;
+    }
+    inotify.add_watch(&config_home, WatchMask::all())?;
+    debug!("watching {:?}", config_home);
 
     let (config_tx, config_update) = watch::channel(Config::default());
-    let handle = tokio::spawn(start_inotify_stream(inotify, config_tx).unwrap_or_else(report_err));
+    let handle = tokio::spawn(
+        start_inotify_stream(inotify, config_home, config_tx).unwrap_or_else(report_err),
+    );
     Ok((handle, config_update))
 }
