@@ -649,6 +649,7 @@ dependencies = [
  "inotify",
  "lettre",
  "panorama-imap",
+ "parking_lot",
  "pin-project",
  "rustls-connector",
  "serde",

@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate tracing;
 
-use std::fs::{File, OpenOptions};
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -67,9 +66,4 @@ async fn main() -> Result<()> {
     // shutdown
     std::process::exit(0);
     // Ok(())
-}
-
-fn setup_logger(opt: &Opt) -> Result<()> {
-    debug!("logging set up.");
-    Ok(())
 }

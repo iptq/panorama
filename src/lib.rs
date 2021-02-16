@@ -2,6 +2,8 @@
 //! ===
 
 #![deny(missing_docs)]
+// TODO: get rid of this before any kind of public release
+#![allow(unused_imports)]
 
 #[macro_use]
 extern crate anyhow;
