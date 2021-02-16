@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["LoopExit","Action that should be taken after the connection loop quits."]],"fn":[["listen_loop",""],["open_imap_connection",""]],"struct":[["CommandManager","A struct in charge of managing multiple in-flight commands."]],"type":[["InFlightFunc",""]]});

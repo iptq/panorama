@@ -1,1 +1,1 @@
-initSidebarItems({});
+initSidebarItems({"fn":[["resp_vanished",""]]});
