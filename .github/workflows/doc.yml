@@ -1,0 +1,27 @@
+on: [push]
+
+name: CI
+
+jobs:
+  build_and_test:
+    name: Rust project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - run: |
+          cargo install mdbook
+          mdbook build docs -d $(pwd)/public
+
+          cargo test
+          cargo doc --workspace --no-deps
+          cp -r target/doc public/api
+      - name: deploy
+        uses: JamesIves/github-pages-deploy-action@4.0.0
+        with:
+          branch: gh-pages
+          folder: public
+
+# vim: set sw=2 tw=2 :
