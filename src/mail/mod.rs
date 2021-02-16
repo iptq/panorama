@@ -33,12 +33,10 @@ pub async fn run_mail(
     loop {
         debug!("listening for configs");
         let config: Config = match config_watcher.changed().await {
-            Ok(_) => match *config_watcher.borrow() {
-                Some(ref v) => v.clone(),
-                _ => break,
-            },
+            Ok(_) => config_watcher.borrow().clone(),
             _ => break,
         };
+        debug!("got");
 
         // TODO: gracefully shut down connection
         // just gonna drop the connection for now
@@ -52,6 +50,7 @@ pub async fn run_mail(
                 open_imap_connection(acct.imap).await.unwrap();
             }
         });
+
         curr_conn = Some(handle);
     }
 

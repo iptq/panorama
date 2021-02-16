@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use futures::future::TryFutureExt;
-use panorama::{config::spawn_config_watcher_system, mail, ui};
+use panorama::{config::spawn_config_watcher_system, mail, report_err, ui};
 use structopt::StructOpt;
 use tokio::sync::mpsc;
 use xdg::BaseDirectories;
@@ -22,7 +22,7 @@ struct Opt {
     log_file: Option<PathBuf>,
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
     // parse command line arguments into options struct
     let opt = Opt::from_args();
@@ -39,7 +39,12 @@ async fn main() -> Result<()> {
     // used to send commands to the mail service
     let (_mail_tx, mail_rx) = mpsc::unbounded_channel();
 
-    tokio::spawn(mail::run_mail(config_update.clone(), mail_rx).unwrap_or_else(report_err));
+    tokio::spawn(async move {
+        let config_update = config_update.clone();
+        mail::run_mail(config_update, mail_rx)
+            .unwrap_or_else(report_err)
+            .await;
+    });
 
     let stdout = std::io::stdout();
     tokio::spawn(ui::run_ui(stdout, exit_tx).unwrap_or_else(report_err));
@@ -70,10 +75,8 @@ fn setup_logger(opt: &Opt) -> Result<()> {
         fern = fern.chain(fern::log_file(path)?);
     }
 
-    fern.apply()?;
-    Ok(())
-}
+    // fern.apply()?;
+    tracing_subscriber::fmt::init();
 
-fn report_err(err: anyhow::Error) {
-    error!("error: {:?}", err);
+    Ok(())
 }

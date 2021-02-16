@@ -2,6 +2,7 @@
 
 mod table;
 
+use std::fmt::Debug;
 use std::io::Write;
 use std::time::Duration;
 
@@ -26,7 +27,13 @@ const FRAME: Duration = Duration::from_millis(20);
 pub struct Rect(u16, u16, u16, u16);
 
 /// UI entrypoint.
-pub async fn run_ui(mut w: impl Write, exit: ExitSender) -> Result<()> {
+#[instrument]
+pub async fn run_ui(mut w: impl Write + Debug, exit: ExitSender) -> Result<()> {
+    loop {
+        tokio::time::sleep(Duration::from_secs(5)).await;
+        debug!("1");
+    }
+
     execute!(w, cursor::Hide, terminal::EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
 
