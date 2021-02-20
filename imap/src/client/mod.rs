@@ -18,6 +18,8 @@ use tokio_rustls::{client::TlsStream, rustls::ClientConfig, webpki::DNSNameRef, 
 
 use self::inner::Client;
 
+pub type ClientBuilder = ClientNotConnectedBuilder;
+
 /// An IMAP client that hasn't been connected yet.
 #[derive(Builder, Clone, Debug)]
 pub struct ClientNotConnected {

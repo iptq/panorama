@@ -138,7 +138,16 @@ pub fn spawn_config_watcher_system() -> Result<(JoinHandle<()>, ConfigWatcher)> 
     if !config_home.exists() {
         fs::create_dir_all(&config_home)?;
     }
-    inotify.add_watch(&config_home, WatchMask::all())?;
+    inotify
+        .add_watch(&config_home, WatchMask::all())
+        .context("adding watch for config home")?;
+
+    let config_file_path = config_home.join("panorama.toml");
+    if config_file_path.exists() {
+        inotify
+            .add_watch(config_file_path, WatchMask::CLOSE)
+            .context("adding watch for config file")?;
+    }
     debug!("watching {:?}", config_home);
 
     let (config_tx, config_update) = watch::channel(Config::default());

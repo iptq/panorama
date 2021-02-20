@@ -97,9 +97,11 @@ impl<'a, C> Future for ExecHandle<'a, C> {
 }
 
 async fn listen(conn: impl AsyncRead + Unpin) -> Result<()> {
+    debug!("amogus");
     let mut reader = BufReader::new(conn);
     loop {
         let mut next_line = String::new();
         reader.read_line(&mut next_line).await?;
+        debug!("line: {:?}", next_line);
     }
 }

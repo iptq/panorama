@@ -5,11 +5,11 @@ mod imap2;
 
 use anyhow::Result;
 use futures::stream::StreamExt;
-use panorama_imap::builders::command::Command as ImapCommand;
+use panorama_imap::{client::ClientBuilder, command::Command as ImapCommand};
 use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
 use tokio_stream::wrappers::WatchStream;
 
-use crate::config::{Config, ConfigWatcher};
+use crate::config::{Config, ConfigWatcher, MailAccountConfig, TlsMethod};
 
 use self::imap2::open_imap_connection;
 
@@ -48,12 +48,27 @@ pub async fn run_mail(
         let handle = tokio::spawn(async {
             for acct in config.mail_accounts.into_iter() {
                 debug!("opening imap connection for {:?}", acct);
-                open_imap_connection(acct.imap).await.unwrap();
+                osu(acct).await;
+                // open_imap_connection(acct.imap).await.unwrap();
             }
         });
 
         curr_conn = Some(handle);
     }
+
+    Ok(())
+}
+
+async fn osu(acct: MailAccountConfig) -> Result<()> {
+    let builder = ClientBuilder::default()
+        .hostname(acct.imap.server.clone())
+        .port(acct.imap.port)
+        .tls(matches!(acct.imap.tls, TlsMethod::On))
+        .build()
+        .map_err(|err| anyhow!("err: {}", err))?;
+
+    debug!("connecting to {}:{}", &acct.imap.server, acct.imap.port);
+    let unauth = builder.connect().await;
 
     Ok(())
 }
