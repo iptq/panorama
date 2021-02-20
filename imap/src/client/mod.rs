@@ -4,6 +4,11 @@
 //! The IMAP client in this module is implemented as a state machine in the type system: methods
 //! that are not supported in a particular state (ex. fetch in an unauthenticated state) cannot be
 //! expressed in the type system entirely.
+//!
+//! Because there's many client types for the different types of clients, you'll want to start
+//! here:
+//!
+//! - [ClientBuilder][self::ClientBuilder] : Constructs the config for the IMAP client
 
 mod inner;
 
@@ -18,6 +23,13 @@ use tokio_rustls::{client::TlsStream, rustls::ClientConfig, webpki::DNSNameRef, 
 
 use self::inner::Client;
 
+/// Struct used to start building the config for a client.
+///
+/// Call [`.build`][1] to _build_ the config, then run [`.connect`][2] to actually start opening
+/// the connection to the server.
+///
+/// [1]: self::ClientNotConnectedBuilder::build
+/// [2]: self::ClientNotConnected::connect
 pub type ClientBuilder = ClientNotConnectedBuilder;
 
 /// An IMAP client that hasn't been connected yet.
@@ -52,37 +64,45 @@ impl ClientNotConnected {
 
             let inner = Client::new(conn);
             return Ok(ClientUnauthenticated::Encrypted(
-                ClientEncryptedUnauthenticated { inner },
+                ClientUnauthenticatedEncrypted { inner },
             ));
         }
 
         let inner = Client::new(conn);
         return Ok(ClientUnauthenticated::Unencrypted(
-            ClientUnencryptedUnauthenticated { inner },
+            ClientUnauthenticatedUnencrypted { inner },
         ));
     }
 }
 
 pub enum ClientUnauthenticated {
-    Encrypted(ClientEncryptedUnauthenticated),
-    Unencrypted(ClientUnencryptedUnauthenticated),
+    Encrypted(ClientUnauthenticatedEncrypted),
+    Unencrypted(ClientUnauthenticatedUnencrypted),
 }
 
-impl ClientUnauthenticated {}
+impl ClientUnauthenticated {
+    pub async fn supports(&mut self) -> Result<()> {
+        match self {
+            ClientUnauthenticated::Encrypted(e) => e.inner.supports().await?,
+            ClientUnauthenticated::Unencrypted(e) => e.inner.supports().await?,
+        }
+        Ok(())
+    }
+}
 
-pub struct ClientUnencryptedUnauthenticated {
+pub struct ClientUnauthenticatedUnencrypted {
     /// Connection to the remote server
     inner: Client<TcpStream>,
 }
 
-impl ClientUnencryptedUnauthenticated {
+impl ClientUnauthenticatedUnencrypted {
     pub async fn upgrade(&self) {}
 }
 
 /// An IMAP client that isn't authenticated.
-pub struct ClientEncryptedUnauthenticated {
+pub struct ClientUnauthenticatedEncrypted {
     /// Connection to the remote server
     inner: Client<TlsStream<TcpStream>>,
 }
 
-impl ClientEncryptedUnauthenticated {}
+impl ClientUnauthenticatedEncrypted {}

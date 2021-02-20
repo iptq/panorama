@@ -48,7 +48,7 @@ pub async fn run_mail(
         let handle = tokio::spawn(async {
             for acct in config.mail_accounts.into_iter() {
                 debug!("opening imap connection for {:?}", acct);
-                osu(acct).await;
+                osu(acct).await.unwrap();
                 // open_imap_connection(acct.imap).await.unwrap();
             }
         });
@@ -68,7 +68,10 @@ async fn osu(acct: MailAccountConfig) -> Result<()> {
         .map_err(|err| anyhow!("err: {}", err))?;
 
     debug!("connecting to {}:{}", &acct.imap.server, acct.imap.port);
-    let unauth = builder.connect().await;
+    let mut unauth = builder.connect().await?;
+
+    debug!("sending CAPABILITY");
+    unauth.supports().await?;
 
     Ok(())
 }

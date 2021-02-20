@@ -1,6 +1,7 @@
 use std::fmt;
 
 /// Commands, without the tag part.
+#[derive(Clone, Debug)]
 pub enum Command {
     Capability,
 }
