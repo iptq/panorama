@@ -5,8 +5,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use futures::{
-    future::{Future, TryFuture},
-    stream::Stream,
+    future::{self, BoxFuture, Future, FutureExt, TryFuture},
+    sink::{Sink, SinkExt},
+    stream::{Stream, StreamExt},
 };
 use panorama_imap::builders::command::Command;
 use parking_lot::Mutex;
@@ -16,7 +17,7 @@ use tokio::{
     sync::{oneshot, Notify},
 };
 use tokio_rustls::{rustls::ClientConfig, webpki::DNSNameRef, TlsConnector};
-use tokio_util::codec::{Framed, Decoder, LinesCodec};
+use tokio_util::codec::{Decoder, Framed, FramedRead, FramedWrite, LinesCodec, LinesCodecError};
 
 use crate::config::{ImapConfig, TlsMethod};
 
@@ -26,6 +27,7 @@ pub async fn open_imap_connection(config: ImapConfig) -> Result<()> {
 
     let stream = TcpStream::connect((server, port)).await?;
 
+    debug!("hellosu");
     match config.tls {
         TlsMethod::Off => begin_authentication(config, stream).await,
         TlsMethod::On => {
@@ -33,13 +35,23 @@ pub async fn open_imap_connection(config: ImapConfig) -> Result<()> {
             begin_authentication(config, stream).await
         }
         TlsMethod::Starttls => {
-            let cmd_mgr = CommandManager::new(stream);
+            let (stream, cmd_mgr) = CommandManager::new(stream);
+            let flights = cmd_mgr.flights();
+
+            // listen(stream, flights).await?;
+            // async move {
+            //     let mut cmd_mgr = cmd_mgr;
+            //     cmd_mgr.capabilities().await;
+            // }
+            // .await;
+
             todo!()
         }
     }
 }
 
 /// Performs TLS negotiation, using the webpki_roots and verifying the server name
+#[instrument(skip(server_name, stream))]
 async fn perform_tls_negotiation(
     server_name: impl AsRef<str>,
     stream: impl AsyncRead + AsyncWrite + Unpin,
@@ -61,10 +73,10 @@ async fn fetch_capabilities(stream: impl AsyncRead + AsyncWrite) -> Result<Vec<S
     let codec = LinesCodec::new();
     let framed = codec.framed(stream);
 
-    // framed.send("a0 CAPABILITY");
     todo!()
 }
 
+#[instrument(skip(config, stream))]
 async fn begin_authentication(
     config: ImapConfig,
     stream: impl AsyncRead + AsyncWrite,
@@ -72,40 +84,86 @@ async fn begin_authentication(
     Ok(())
 }
 
-trait ImapStream: AsyncRead + AsyncWrite + Unpin {}
-impl<T: AsyncRead + AsyncWrite + Unpin> ImapStream for T {}
+pub async fn listen(
+    mut stream: impl Stream<Item = Result<String, LinesCodecError>> + Unpin,
+    in_flight: InFlight,
+) -> Result<()> {
+    debug!("listening for messages from server");
+    loop {
+        let line = match stream.next().await {
+            Some(v) => v?,
+            None => break,
+        };
+        debug!("line: {:?}", line);
+
+        let mut parts = line.split(' ');
+        let tag = parts.next().unwrap().parse()?; // TODO: handle empty
+
+        {
+            let mut in_flight = in_flight.lock();
+            if let Some(sender) = in_flight.remove(&tag) {
+                sender.send(()).unwrap();
+            }
+        }
+    }
+
+    Ok(())
+}
+
+// trait ImapStream: AsyncRead + AsyncWrite + Send + Unpin {}
+// impl<T: AsyncRead + AsyncWrite + Send + Unpin> ImapStream for T {}
+
+trait ImapSink: Sink<String, Error = LinesCodecError> + Unpin {}
+impl<T: Sink<String, Error = LinesCodecError> + Unpin> ImapSink for T {}
+
+type InFlightMap = HashMap<usize, oneshot::Sender<()>>;
+type InFlight = Arc<Mutex<InFlightMap>>;
 
 struct CommandManager<'a> {
     id: usize,
     in_flight: Arc<Mutex<HashMap<usize, oneshot::Sender<()>>>>,
-    stream: Framed<Box<dyn ImapStream + 'a>, LinesCodec>,
+    sink: Box<dyn ImapSink + 'a>,
 }
 
 impl<'a> CommandManager<'a> {
-    pub fn new(stream: impl ImapStream + 'a) -> Self {
+    pub fn new(
+        stream: impl AsyncRead + AsyncWrite + 'a,
+    ) -> (impl Stream<Item = Result<String, LinesCodecError>>, Self) {
         let codec = LinesCodec::new();
-        let framed = codec.framed(Box::new(stream) as Box<_>);
+        let framed = codec.framed(stream);
+        let (framed_sink, framed_stream) = framed.split();
 
-        CommandManager {
+        let cmd_mgr = CommandManager {
             id: 0,
             in_flight: Arc::new(Mutex::new(HashMap::new())),
-            stream: framed,
-        }
+            sink: Box::new(framed_sink),
+        };
+        (framed_stream, cmd_mgr)
     }
 
-    pub fn decompose(self) -> impl ImapStream + 'a {
-        let parts = self.stream.into_parts();
-        parts.io
+    pub fn flights(&self) -> Arc<Mutex<HashMap<usize, oneshot::Sender<()>>>> {
+        self.in_flight.clone()
     }
 
-    pub async fn listen(&self) {
-        loop {
-        }
+    pub fn decompose(self) -> impl ImapSink + Unpin + 'a {
+        self.sink
     }
 
-    pub fn run(&mut self, command: Command) -> impl TryFuture {
+    pub async fn capabilities(&mut self) -> Result<Vec<String>> {
+        self.exec(Command {
+            args: b"CAPABILITY".to_vec(),
+            next_state: None,
+        })
+        .await?;
+        Ok(vec![])
+    }
+
+    pub async fn exec(&mut self, command: Command) -> Result<()> {
         let id = self.id;
         self.id += 1;
+
+        let cmd_str = String::from_utf8(command.args)?;
+        self.sink.send(cmd_str).await?;
 
         let (tx, rx) = oneshot::channel();
         {
@@ -113,6 +171,7 @@ impl<'a> CommandManager<'a> {
             in_flight.insert(id, tx);
         }
 
-        async { rx.await }
+        rx.await?;
+        Ok(())
     }
 }

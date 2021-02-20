@@ -1,6 +1,8 @@
 panorama
 ========
 
+[![](https://tokei.rs/b1/github/iptq/panorama?category=lines)](https://github.com/XAMPPRocky/tokei).
+
 Panorama is a terminal Personal Information Manager (PIM).
 
 Goals:

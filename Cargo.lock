@@ -248,6 +248,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
 
 [[package]]
+name = "format-bytes"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc35f5e45d6b31053cea13078ffc6fa52fa8617aa54b7ac2011720d9c009e04f"
+dependencies = [
+ "format-bytes-macros",
+ "proc-macro-hack",
+]
+
+[[package]]
+name = "format-bytes-macros"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b05089e341a0460449e2210c3bf7b61597860b07f0deae58da38dbed0a4c6b6d"
+dependencies = [
+ "proc-macro-hack",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "funty"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -645,6 +667,7 @@ dependencies = [
  "cfg-if",
  "chrono",
  "crossterm",
+ "format-bytes",
  "futures",
  "inotify",
  "lettre",

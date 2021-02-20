@@ -19,6 +19,7 @@ async-trait = "0.1.42"
 cfg-if = "1.0.0"
 chrono = "0.4.19"
 crossterm = "0.19.0"
+format-bytes = "0.2.0"
 futures = "0.3.12"
 inotify = { version = "0.9.2", features = ["stream"] }
 lettre = "0.9.5"

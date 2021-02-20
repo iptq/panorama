@@ -90,6 +90,12 @@ async fn start_inotify_stream(
     let config_home = config_home.as_ref().to_path_buf();
     let config_path = config_home.join("panorama.toml");
 
+    // first shot
+    {
+        let config = read_config(&config_path).await?;
+        config_tx.send(config)?;
+    }
+
     while let Some(v) = event_stream.next().await {
         let event = v.context("event")?;
 

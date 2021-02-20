@@ -21,7 +21,7 @@ struct Opt {
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
     // parse command line arguments into options struct
-    let opt = Opt::from_args();
+    let _opt = Opt::from_args();
 
     // print logs to file as directed by command line options
     use tracing_subscriber::filter::LevelFilter;

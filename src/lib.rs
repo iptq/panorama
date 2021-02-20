@@ -3,12 +3,14 @@
 
 #![deny(missing_docs)]
 // TODO: get rid of this before any kind of public release
-#![allow(unused_imports)]
+#![allow(unused_imports, unused_variables)]
 
 #[macro_use]
 extern crate anyhow;
 #[macro_use]
 extern crate crossterm;
+#[macro_use]
+extern crate format_bytes;
 #[macro_use]
 extern crate serde;
 #[macro_use]

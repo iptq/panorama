@@ -11,7 +11,7 @@ use tokio_stream::wrappers::WatchStream;
 
 use crate::config::{Config, ConfigWatcher};
 
-use self::imap::open_imap_connection;
+use self::imap2::open_imap_connection;
 
 /// Command sent to the mail thread by something else (i.e. UI)
 pub enum MailCommand {
@@ -47,6 +47,7 @@ pub async fn run_mail(
 
         let handle = tokio::spawn(async {
             for acct in config.mail_accounts.into_iter() {
+                debug!("opening imap connection for {:?}", acct);
                 open_imap_connection(acct.imap).await.unwrap();
             }
         });
