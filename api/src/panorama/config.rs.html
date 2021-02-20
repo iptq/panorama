@@ -144,6 +144,12 @@
 <span id="141">141</span>
 <span id="142">142</span>
 <span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Module for setting up config files and watchers.</span>
 <span class="doccomment">//!</span>
@@ -236,6 +242,12 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">event_stream</span> <span class="op">=</span> <span class="ident">inotify</span>.<span class="ident">event_stream</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buffer</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">config_home</span> <span class="op">=</span> <span class="ident">config_home</span>.<span class="ident">as_ref</span>().<span class="ident">to_path_buf</span>();
     <span class="kw">let</span> <span class="ident">config_path</span> <span class="op">=</span> <span class="ident">config_home</span>.<span class="ident">join</span>(<span class="string">&quot;panorama.toml&quot;</span>);
+
+    <span class="comment">// first shot</span>
+    {
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">read_config</span>(<span class="kw-2">&amp;</span><span class="ident">config_path</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="ident">config_tx</span>.<span class="ident">send</span>(<span class="ident">config</span>)<span class="question-mark">?</span>;
+    }
 
     <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">v</span>) <span class="op">=</span> <span class="ident">event_stream</span>.<span class="ident">next</span>().<span class="kw">await</span> {
         <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">context</span>(<span class="string">&quot;event&quot;</span>)<span class="question-mark">?</span>;

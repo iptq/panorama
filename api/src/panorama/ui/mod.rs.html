@@ -116,7 +116,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Rect</span>(<span class="ident">u16</span>, <span class="ident">u16</span>, <span class="ident">u16</span>, <span class="ident">u16</span>);
 
 <span class="doccomment">/// UI entrypoint.</span>
-<span class="attribute">#[<span class="ident">instrument</span>]</span>
+<span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">skip</span>(<span class="ident">w</span>, <span class="ident">exit</span>))]</span>
 <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run_ui</span>(<span class="kw-2">mut</span> <span class="ident">w</span>: <span class="kw">impl</span> <span class="ident">Write</span> <span class="op">+</span> <span class="ident">Debug</span>, <span class="ident">exit</span>: <span class="ident">ExitSender</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="macro">execute</span><span class="macro">!</span>(<span class="ident">w</span>, <span class="ident">cursor</span>::<span class="ident">Hide</span>, <span class="ident">terminal</span>::<span class="ident">EnterAlternateScreen</span>)<span class="question-mark">?</span>;
     <span class="ident">terminal</span>::<span class="ident">enable_raw_mode</span>()<span class="question-mark">?</span>;
