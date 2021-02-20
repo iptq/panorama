@@ -1,4 +1,4 @@
-use imap_proto::Response;
+use panorama_imap::Response;
 use std::io::Write;
 
 fn main() -> std::io::Result<()> {
