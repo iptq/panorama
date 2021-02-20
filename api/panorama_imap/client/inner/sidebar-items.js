@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["listen",""]],"struct":[["Client","The private Client struct, that is shared by all of the exported structs in the state machine."],["ExecHandle",""]],"type":[["BoxedFunc",""]]});
+initSidebarItems({"fn":[["listen",""]],"struct":[["Client","The private Client struct, that is shared by all of the exported structs in the state machine."],["ExecHandle",""]],"type":[["BoxedFunc",""],["ResultMap",""]]});
