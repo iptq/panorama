@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["ClientUnauthenticated",""]],"mod":[["inner",""]],"struct":[["ClientEncryptedUnauthenticated","An IMAP client that isn't authenticated."],["ClientNotConnected","An IMAP client that hasn't been connected yet."],["ClientNotConnectedBuilder","Builder for `ClientNotConnected`."],["ClientUnencryptedUnauthenticated",""]]});
