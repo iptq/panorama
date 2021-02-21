@@ -126,6 +126,26 @@
 <span id="123">123</span>
 <span id="124">124</span>
 <span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! IMAP Client</span>
 <span class="doccomment">//! ===</span>
@@ -141,6 +161,26 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! If you choose not to use the high-level type-safe features of `ClientBuilder`, then you can</span>
 <span class="doccomment">//! also choose to access the lower level [`Client`][self::inner::Client] directly.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! Example</span>
+<span class="doccomment">//! ---</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! The following example connects to `mywebsite.com:143` using STARTTLS.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ```no_run</span>
+<span class="doccomment">//! # use anyhow::Result;</span>
+<span class="doccomment">//! # use panorama_imap::client::ClientConfigBuilder;</span>
+<span class="doccomment">//! # async fn test() -&gt; Result&lt;()&gt; {</span>
+<span class="doccomment">//! let config = ClientConfigBuilder::default()</span>
+<span class="doccomment">//!     .hostname(&quot;mywebsite.com&quot;.to_owned())</span>
+<span class="doccomment">//!     .port(143)</span>
+<span class="doccomment">//!     .tls(false)</span>
+<span class="doccomment">//!     .build().unwrap();</span>
+<span class="doccomment">//! let insecure = config.open().await?;</span>
+<span class="doccomment">//! let unauth = insecure.upgrade().await?;</span>
+<span class="doccomment">//! # Ok(())</span>
+<span class="doccomment">//! # }</span>
+<span class="doccomment">//! ```</span>
 
 <span class="kw">mod</span> <span class="ident">inner</span>;
 
