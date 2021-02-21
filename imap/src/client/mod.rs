@@ -12,6 +12,26 @@
 //!
 //! If you choose not to use the high-level type-safe features of `ClientBuilder`, then you can
 //! also choose to access the lower level [`Client`][self::inner::Client] directly.
+//!
+//! Example
+//! ---
+//!
+//! The following example connects to `mywebsite.com:143` using STARTTLS.
+//!
+//! ```no_run
+//! # use anyhow::Result;
+//! # use panorama_imap::client::ClientConfigBuilder;
+//! # async fn test() -> Result<()> {
+//! let config = ClientConfigBuilder::default()
+//!     .hostname("mywebsite.com".to_owned())
+//!     .port(143)
+//!     .tls(false)
+//!     .build().unwrap();
+//! let insecure = config.open().await?;
+//! let unauth = insecure.upgrade().await?;
+//! # Ok(())
+//! # }
+//! ```
 
 mod inner;
 
