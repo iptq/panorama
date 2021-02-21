@@ -96,8 +96,10 @@ async fn start_inotify_stream(
         config_tx.send(config)?;
     }
 
+    debug!("listening for inotify events");
     while let Some(v) = event_stream.next().await {
         let event = v.context("event")?;
+        debug!("inotify event: {:?}", event);
 
         if let Some(name) = event.name {
             let path = PathBuf::from(name);
@@ -139,15 +141,15 @@ pub fn spawn_config_watcher_system() -> Result<(JoinHandle<()>, ConfigWatcher)> 
         fs::create_dir_all(&config_home)?;
     }
     inotify
-        .add_watch(&config_home, WatchMask::all())
+        .add_watch(&config_home, WatchMask::CLOSE_WRITE)
         .context("adding watch for config home")?;
 
-    let config_file_path = config_home.join("panorama.toml");
-    if config_file_path.exists() {
-        inotify
-            .add_watch(config_file_path, WatchMask::CLOSE)
-            .context("adding watch for config file")?;
-    }
+    // let config_file_path = config_home.join("panorama.toml");
+    // if config_file_path.exists() {
+    //     inotify
+    //         .add_watch(config_file_path, WatchMask::ALL_EVENTS)
+    //         .context("adding watch for config file")?;
+    // }
     debug!("watching {:?}", config_home);
 
     let (config_tx, config_update) = watch::channel(Config::default());

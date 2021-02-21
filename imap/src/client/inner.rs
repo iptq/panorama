@@ -19,6 +19,7 @@ use crate::command::Command;
 use crate::response::Response;
 
 pub type BoxedFunc = Box<dyn Fn()>;
+pub const TAG_PREFIX: &str = "panorama";
 
 /// The private Client struct, that is shared by all of the exported structs in the state machine.
 pub struct Client<C> {
@@ -28,7 +29,6 @@ pub struct Client<C> {
     id: usize,
     results: ResultMap,
 
-    /// Cached capabilities that shouldn't change between
     caps: Vec<StringEntry>,
     handle: JoinHandle<Result<()>>,
 }
@@ -63,7 +63,7 @@ where
             handlers.insert(id, (None, None));
         }
 
-        let cmd_str = format!("pano{} {}\n", id, cmd);
+        let cmd_str = format!("{}{} {}\r\n", TAG_PREFIX, id, cmd);
         debug!("[{}] writing to socket: {:?}", id, cmd_str);
         self.conn.write_all(cmd_str.as_bytes()).await?;
         debug!("[{}] written.", id);
@@ -92,7 +92,7 @@ impl<'a, C> Future for ExecHandle<'a, C> {
     type Output = ();
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         let mut handlers = self.0.results.write();
-        let mut state = handlers.get_mut(&self.1);
+        let state = handlers.get_mut(&self.1);
 
         // TODO: handle the None case here
         debug!("f[{}] {:?}", self.1, state);
@@ -117,18 +117,21 @@ async fn listen(conn: impl AsyncRead + Unpin, results: ResultMap) -> Result<()> 
     loop {
         let mut next_line = String::new();
         reader.read_line(&mut next_line).await?;
+        let next_line = next_line.trim_end_matches('\r');
 
         // debug!("line: {:?}", next_line);
-        let parts = next_line.split(" ").collect::<Vec<_>>();
-        let tag = parts[0];
+        let mut parts = next_line.split(" ");
+        let tag = parts.next().unwrap();
+        let rest = parts.collect::<Vec<_>>().join(" ");
+
         if tag == "*" {
-            debug!("UNTAGGED {:?}", next_line);
-        } else if tag.starts_with("pano") {
-            let id = tag.trim_start_matches("pano").parse::<usize>()?;
-            debug!("set {} to {:?}", id, next_line);
+            debug!("UNTAGGED {:?}", rest);
+        } else if tag.starts_with(TAG_PREFIX) {
+            let id = tag.trim_start_matches(TAG_PREFIX).parse::<usize>()?;
+            debug!("set {} to {:?}", id, rest);
             let mut results = results.write();
             if let Some((c, w)) = results.get_mut(&id) {
-                *c = Some(next_line);
+                *c = Some(rest.to_string());
                 let w = w.take().unwrap();
                 w.wake();
             }
