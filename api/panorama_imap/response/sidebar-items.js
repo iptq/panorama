@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["Response",""]]});
+initSidebarItems({"enum":[["Capability",""],["Response",""],["ResponseCode",""],["Status",""]],"struct":[["RequestId",""]]});

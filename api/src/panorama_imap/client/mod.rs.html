@@ -109,6 +109,21 @@
 <span id="106">106</span>
 <span id="107">107</span>
 <span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! IMAP Client</span>
 <span class="doccomment">//! ===</span>
@@ -133,7 +148,7 @@
 };
 <span class="kw">use</span> <span class="ident">tokio_rustls</span>::{<span class="ident">client</span>::<span class="ident">TlsStream</span>, <span class="ident">rustls</span>::<span class="ident">ClientConfig</span>, <span class="ident">webpki</span>::<span class="ident">DNSNameRef</span>, <span class="ident">TlsConnector</span>};
 
-<span class="kw">use</span> <span class="self">self</span>::<span class="ident">inner</span>::<span class="ident">Client</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">inner</span>::<span class="ident">Client</span>;
 
 <span class="doccomment">/// Struct used to start building the config for a client.</span>
 <span class="doccomment">///</span>
@@ -160,7 +175,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ClientNotConnected</span> {
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">connect</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ClientUnauthenticated</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">open</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ClientUnauthenticated</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">hostname</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">hostname</span>.<span class="ident">as_ref</span>();
         <span class="kw">let</span> <span class="ident">port</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">port</span>;
         <span class="kw">let</span> <span class="ident">conn</span> <span class="op">=</span> <span class="ident">TcpStream</span>::<span class="ident">connect</span>((<span class="ident">hostname</span>, <span class="ident">port</span>)).<span class="kw">await</span><span class="question-mark">?</span>;
@@ -174,16 +189,18 @@
             <span class="kw">let</span> <span class="ident">dnsname</span> <span class="op">=</span> <span class="ident">DNSNameRef</span>::<span class="ident">try_from_ascii_str</span>(<span class="ident">hostname</span>).<span class="ident">unwrap</span>();
             <span class="kw">let</span> <span class="ident">conn</span> <span class="op">=</span> <span class="ident">tls_config</span>.<span class="ident">connect</span>(<span class="ident">dnsname</span>, <span class="ident">conn</span>).<span class="kw">await</span><span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">Client</span>::<span class="ident">new</span>(<span class="ident">conn</span>);
+            <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">Client</span>::<span class="ident">new</span>(<span class="ident">conn</span>, <span class="self">self</span>);
+            <span class="ident">inner</span>.<span class="ident">wait_for_greeting</span>().<span class="kw">await</span>;
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">ClientUnauthenticated</span>::<span class="ident">Encrypted</span>(
                 <span class="ident">ClientUnauthenticatedEncrypted</span> { <span class="ident">inner</span> },
             ));
+        } <span class="kw">else</span> {
+            <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">Client</span>::<span class="ident">new</span>(<span class="ident">conn</span>, <span class="self">self</span>);
+            <span class="ident">inner</span>.<span class="ident">wait_for_greeting</span>().<span class="kw">await</span>;
+            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">ClientUnauthenticated</span>::<span class="ident">Unencrypted</span>(
+                <span class="ident">ClientUnauthenticatedUnencrypted</span> { <span class="ident">inner</span> },
+            ));
         }
-
-        <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">Client</span>::<span class="ident">new</span>(<span class="ident">conn</span>);
-        <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">ClientUnauthenticated</span>::<span class="ident">Unencrypted</span>(
-            <span class="ident">ClientUnauthenticatedUnencrypted</span> { <span class="ident">inner</span> },
-        ));
     }
 }
 
@@ -193,10 +210,23 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ClientUnauthenticated</span> {
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">supports</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">upgrade</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ClientUnauthenticated</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">ClientUnauthenticated</span>::<span class="ident">Encrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">inner</span>.<span class="ident">supports</span>().<span class="kw">await</span><span class="question-mark">?</span>,
-            <span class="ident">ClientUnauthenticated</span>::<span class="ident">Unencrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">inner</span>.<span class="ident">supports</span>().<span class="kw">await</span><span class="question-mark">?</span>,
+            <span class="comment">// this is a no-op, we don&#39;t need to upgrade</span>
+            <span class="ident">ClientUnauthenticated</span>::<span class="ident">Encrypted</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="self">self</span>),
+            <span class="ident">ClientUnauthenticated</span>::<span class="ident">Unencrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">ClientUnauthenticatedEncrypted</span> {
+                    <span class="ident">inner</span>: <span class="ident">e</span>.<span class="ident">inner</span>.<span class="ident">upgrade</span>().<span class="kw">await</span><span class="question-mark">?</span>,
+                };
+                <span class="prelude-val">Ok</span>(<span class="ident">ClientUnauthenticated</span>::<span class="ident">Encrypted</span>(<span class="ident">client</span>))
+            }
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">capabilities</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">ClientUnauthenticated</span>::<span class="ident">Encrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">inner</span>.<span class="ident">capabilities</span>().<span class="kw">await</span><span class="question-mark">?</span>,
+            <span class="ident">ClientUnauthenticated</span>::<span class="ident">Unencrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">inner</span>.<span class="ident">capabilities</span>().<span class="kw">await</span><span class="question-mark">?</span>,
         }
         <span class="prelude-val">Ok</span>(())
     }

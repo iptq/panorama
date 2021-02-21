@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["MailCommand","Command sent to the mail thread by something else (i.e. UI)"]],"fn":[["osu",""],["run_mail","Main entrypoint for the mail listener."]],"mod":[["imap",""],["imap2",""]]});
+initSidebarItems({"enum":[["MailCommand","Command sent to the mail thread by something else (i.e. UI)"]],"fn":[["imap_main","The main sequence of steps for the IMAP thread to follow"],["run_mail","Main entrypoint for the mail listener."]],"mod":[["imap",""],["imap2",""]]});
