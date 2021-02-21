@@ -161,6 +161,17 @@
 <span id="158">158</span>
 <span id="159">159</span>
 <span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Module for setting up config files and watchers.</span>
 <span class="doccomment">//!</span>
@@ -209,14 +220,25 @@
     <span class="doccomment">/// Port of the IMAP server</span>
     <span class="kw">pub</span> <span class="ident">port</span>: <span class="ident">u16</span>,
 
-    <span class="doccomment">/// Username for authenticating to IMAP</span>
-    <span class="kw">pub</span> <span class="ident">username</span>: <span class="ident">String</span>,
-
-    <span class="doccomment">/// Password for authenticating to IMAP</span>
-    <span class="kw">pub</span> <span class="ident">password</span>: <span class="ident">String</span>,
-
     <span class="doccomment">/// TLS</span>
     <span class="kw">pub</span> <span class="ident">tls</span>: <span class="ident">TlsMethod</span>,
+
+    <span class="doccomment">/// Auth</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">flatten</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">auth</span>: <span class="ident">ImapAuth</span>,
+}
+
+<span class="doccomment">/// Method of authentication for the IMAP server</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;auth&quot;</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ImapAuth</span> {
+    <span class="doccomment">/// Use plain username/password authentication</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;plain&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
+    <span class="ident">Plain</span> {
+        <span class="ident">username</span>: <span class="ident">String</span>,
+        <span class="ident">password</span>: <span class="ident">String</span>,
+    }
 }
 
 <span class="doccomment">/// Describes when to perform the TLS handshake</span>

@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["panorama"] = [{"text":"impl Serialize for Config","synthetic":false,"types":[]},{"text":"impl Serialize for MailAccountConfig","synthetic":false,"types":[]},{"text":"impl Serialize for ImapConfig","synthetic":false,"types":[]},{"text":"impl Serialize for TlsMethod","synthetic":false,"types":[]}];
+implementors["panorama"] = [{"text":"impl Serialize for Config","synthetic":false,"types":[]},{"text":"impl Serialize for MailAccountConfig","synthetic":false,"types":[]},{"text":"impl Serialize for ImapConfig","synthetic":false,"types":[]},{"text":"impl Serialize for ImapAuth","synthetic":false,"types":[]},{"text":"impl Serialize for TlsMethod","synthetic":false,"types":[]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
