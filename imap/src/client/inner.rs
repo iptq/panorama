@@ -5,7 +5,6 @@ use std::task::{Context, Poll, Waker};
 
 use anyhow::{Context as AnyhowContext, Result};
 use futures::future::{self, Either, Future, FutureExt};
-use panorama_strings::{StringEntry, StringStore};
 use parking_lot::{Mutex, RwLock};
 use tokio::{
     io::{
@@ -33,13 +32,12 @@ pub const TAG_PREFIX: &str = "panorama";
 pub struct Client<C> {
     config: ClientConfig,
     conn: WriteHalf<C>,
-    symbols: StringStore,
 
     id: usize,
     results: ResultMap,
 
     /// cached set of capabilities
-    caps: Vec<StringEntry>,
+    caps: Vec<String>,
 
     /// join handle for the listener thread
     listener_handle: JoinHandle<Result<ReadHalf<C>>>,
@@ -71,7 +69,6 @@ where
         Client {
             config,
             conn: write_half,
-            symbols: StringStore::new(256),
             id: 0,
             results,
             caps: Vec::new(),

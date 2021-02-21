@@ -8,7 +8,10 @@
 //! Because there's many client types for the different types of clients, you'll want to start
 //! here:
 //!
-//! - [ClientBuilder][self::ClientBuilder] : Constructs the config for the IMAP client
+//! - [`ClientBuilder`][self::ClientBuilder] : Constructs the config for the IMAP client
+//!
+//! If you choose not to use the high-level type-safe features of `ClientBuilder`, then you can
+//! also choose to access the lower level [`Client`][self::inner::Client] directly.
 
 mod inner;
 

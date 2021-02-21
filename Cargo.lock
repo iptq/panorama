@@ -780,17 +780,12 @@ dependencies = [
  "futures",
  "nom 6.1.2",
  "owning_ref",
- "panorama-strings",
  "parking_lot",
  "tokio",
  "tokio-rustls",
  "tracing",
  "webpki-roots",
 ]
-
-[[package]]
-name = "panorama-strings"
-version = "0.1.0"
 
 [[package]]
 name = "parking_lot"

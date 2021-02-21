@@ -9,7 +9,7 @@ readme = "README.md"
 license = "GPL-3.0-or-later"
 
 [workspace]
-members = ["imap", "strings"]
+members = ["imap"]
 
 [dependencies]
 anyhow = "1.0.38"
