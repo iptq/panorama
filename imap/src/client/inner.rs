@@ -97,6 +97,7 @@ where
         let cmd_str = format!("{}{} {}\r\n", TAG_PREFIX, id, cmd);
         debug!("[{}] writing to socket: {:?}", id, cmd_str);
         self.conn.write_all(cmd_str.as_bytes()).await?;
+        self.conn.flush().await?;
         debug!("[{}] written.", id);
 
         ExecHandle(self, id).await;
@@ -215,6 +216,7 @@ where
 
         match future::select(fut, fut2).await {
             Either::Left((_, _)) => {
+                debug!("got a new line");
                 let next_line = next_line.trim_end_matches('\n').trim_end_matches('\r');
 
                 let mut parts = next_line.split(" ");
@@ -223,6 +225,8 @@ where
 
                 if tag == "*" {
                     debug!("UNTAGGED {:?}", rest);
+                    
+                    // TODO: verify that the greeting is actually an OK
                     if let Some(greeting) = greeting.take() {
                         let (greeting, waker) = &mut *greeting.write();
                         debug!("got greeting");
@@ -249,8 +253,6 @@ where
                 break;
             }
         }
-
-        reader.read_line(&mut next_line).await?;
     }
 
     let conn = reader.into_inner();
