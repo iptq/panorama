@@ -10,6 +10,13 @@ pub enum Response {
     },
 }
 
+impl FromStr for Response {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        todo!()
+    }
+}
+
 pub enum Capability {
     Imap4rev1,
     Auth(String),

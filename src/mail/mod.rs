@@ -1,8 +1,5 @@
 //! Mail
 
-mod imap;
-mod imap2;
-
 use anyhow::Result;
 use futures::stream::StreamExt;
 use panorama_imap::{
@@ -13,8 +10,6 @@ use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
 use tokio_stream::wrappers::WatchStream;
 
 use crate::config::{Config, ConfigWatcher, MailAccountConfig, TlsMethod};
-
-use self::imap2::open_imap_connection;
 
 /// Command sent to the mail thread by something else (i.e. UI)
 pub enum MailCommand {
@@ -30,7 +25,7 @@ pub async fn run_mail(
     mut config_watcher: ConfigWatcher,
     _cmd_in: UnboundedReceiver<MailCommand>,
 ) -> Result<()> {
-    let mut curr_conn: Option<JoinHandle<_>> = None;
+    let mut curr_conn: Vec<JoinHandle<_>> = Vec::new();
 
     // let mut config_watcher = WatchStream::new(config_watcher);
     loop {
@@ -43,13 +38,13 @@ pub async fn run_mail(
 
         // TODO: gracefully shut down connection
         // just gonna drop the connection for now
-        if let Some(curr_conn) = curr_conn.take() {
-            debug!("dropping connection...");
-            curr_conn.abort();
+        debug!("dropping all connections...");
+        for conn in curr_conn.drain(0..) {
+            conn.abort();
         }
 
-        let handle = tokio::spawn(async {
-            for acct in config.mail_accounts.into_iter() {
+        for acct in config.mail_accounts.into_iter() {
+            let handle = tokio::spawn(async move {
                 debug!("opening imap connection for {:?}", acct);
                 match imap_main(acct).await {
                     Ok(_) => {}
@@ -57,11 +52,9 @@ pub async fn run_mail(
                         error!("IMAP Error: {}", err);
                     }
                 }
-                // open_imap_connection(acct.imap).await.unwrap();
-            }
-        });
-
-        curr_conn = Some(handle);
+            });
+            curr_conn.push(handle);
+        }
     }
 
     Ok(())
@@ -69,31 +62,32 @@ pub async fn run_mail(
 
 /// The main sequence of steps for the IMAP thread to follow
 async fn imap_main(acct: MailAccountConfig) -> Result<()> {
-    let builder: ClientConfig = ClientBuilder::default()
-        .hostname(acct.imap.server.clone())
-        .port(acct.imap.port)
-        .tls(matches!(acct.imap.tls, TlsMethod::On))
-        .build()
-        .map_err(|err| anyhow!("err: {}", err))?;
+    // loop ensures that the connection is retried after it dies
+    loop {
+        let builder: ClientConfig = ClientBuilder::default()
+            .hostname(acct.imap.server.clone())
+            .port(acct.imap.port)
+            .tls(matches!(acct.imap.tls, TlsMethod::On))
+            .build()
+            .map_err(|err| anyhow!("err: {}", err))?;
 
-    debug!("connecting to {}:{}", &acct.imap.server, acct.imap.port);
-    let unauth = builder.open().await?;
+        debug!("connecting to {}:{}", &acct.imap.server, acct.imap.port);
+        let unauth = builder.open().await?;
 
-    let mut unauth = if matches!(acct.imap.tls, TlsMethod::Starttls) {
-        debug!("attempting to upgrade");
-        let client = unauth.upgrade().await?;
-        debug!("upgrade successful");
-        client
-    } else {
-        unauth
-    };
+        let mut unauth = if matches!(acct.imap.tls, TlsMethod::Starttls) {
+            debug!("attempting to upgrade");
+            let client = unauth.upgrade().await?;
+            debug!("upgrade successful");
+            client
+        } else {
+            unauth
+        };
 
-    debug!("preparing to auth");
-    // check if the authentication method is supported
-    unauth.capabilities().await?;
+        debug!("preparing to auth");
+        // check if the authentication method is supported
+        unauth.capabilities().await?;
 
-    // debug!("sending CAPABILITY");
-    // let result = unauth.capabilities().await?;
-
-    Ok(())
+        // debug!("sending CAPABILITY");
+        // let result = unauth.capabilities().await?;
+    }
 }

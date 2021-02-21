@@ -9,9 +9,13 @@ Goals:
 
 - Never have to actually close the application.
 - Handles email, calendar, and address books using open standards.
-- Unified "feed" that any app can submit to.
 - Hot-reload on-disk config.
+
+Stretch goals:
+- Unified "feed" that any app can submit to.
 - Submit notifications to gotify-shaped notification servers.
+- RSS aggregator.
+- IRC client??
 
 Credits
 -------
