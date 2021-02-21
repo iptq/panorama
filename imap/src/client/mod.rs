@@ -21,7 +21,7 @@ use tokio::{
 };
 use tokio_rustls::{client::TlsStream, rustls::ClientConfig, webpki::DNSNameRef, TlsConnector};
 
-use self::inner::Client;
+pub use self::inner::Client;
 
 /// Struct used to start building the config for a client.
 ///
@@ -48,7 +48,7 @@ pub struct ClientNotConnected {
 }
 
 impl ClientNotConnected {
-    pub async fn connect(self) -> Result<ClientUnauthenticated> {
+    pub async fn open(self) -> Result<ClientUnauthenticated> {
         let hostname = self.hostname.as_ref();
         let port = self.port;
         let conn = TcpStream::connect((hostname, port)).await?;
@@ -62,16 +62,18 @@ impl ClientNotConnected {
             let dnsname = DNSNameRef::try_from_ascii_str(hostname).unwrap();
             let conn = tls_config.connect(dnsname, conn).await?;
 
-            let inner = Client::new(conn);
+            let inner = Client::new(conn, self);
+            inner.wait_for_greeting().await;
             return Ok(ClientUnauthenticated::Encrypted(
                 ClientUnauthenticatedEncrypted { inner },
             ));
+        } else {
+            let inner = Client::new(conn, self);
+            inner.wait_for_greeting().await;
+            return Ok(ClientUnauthenticated::Unencrypted(
+                ClientUnauthenticatedUnencrypted { inner },
+            ));
         }
-
-        let inner = Client::new(conn);
-        return Ok(ClientUnauthenticated::Unencrypted(
-            ClientUnauthenticatedUnencrypted { inner },
-        ));
     }
 }
 
@@ -81,10 +83,23 @@ pub enum ClientUnauthenticated {
 }
 
 impl ClientUnauthenticated {
-    pub async fn supports(&mut self) -> Result<()> {
+    pub async fn upgrade(self) -> Result<ClientUnauthenticated> {
         match self {
-            ClientUnauthenticated::Encrypted(e) => e.inner.supports().await?,
-            ClientUnauthenticated::Unencrypted(e) => e.inner.supports().await?,
+            // this is a no-op, we don't need to upgrade
+            ClientUnauthenticated::Encrypted(_) => Ok(self),
+            ClientUnauthenticated::Unencrypted(e) => {
+                let client = ClientUnauthenticatedEncrypted {
+                    inner: e.inner.upgrade().await?,
+                };
+                Ok(ClientUnauthenticated::Encrypted(client))
+            }
+        }
+    }
+
+    pub async fn capabilities(&mut self) -> Result<()> {
+        match self {
+            ClientUnauthenticated::Encrypted(e) => e.inner.capabilities().await?,
+            ClientUnauthenticated::Unencrypted(e) => e.inner.capabilities().await?,
         }
         Ok(())
     }

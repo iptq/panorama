@@ -12,8 +12,6 @@ license = "GPL-3.0-or-later"
 members = ["imap", "strings"]
 
 [dependencies]
-# log = "0.4.14"
-# fern = "0.6.0"
 anyhow = "1.0.38"
 async-trait = "0.1.42"
 cfg-if = "1.0.0"

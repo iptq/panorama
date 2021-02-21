@@ -1,36 +1,52 @@
 use std::collections::HashMap;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::task::{Context, Poll};
+use std::task::{Context, Poll, Waker};
 
-use anyhow::Result;
-use futures::future::{Future, FutureExt};
+use anyhow::{Context as AnyhowContext, Result};
+use futures::future::{self, Either, Future, FutureExt};
 use panorama_strings::{StringEntry, StringStore};
 use parking_lot::{Mutex, RwLock};
 use tokio::{
     io::{
         self, AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader,
-        WriteHalf,
+        ReadHalf, WriteHalf,
     },
+    sync::{mpsc, oneshot},
     task::JoinHandle,
 };
+use tokio_rustls::{client::TlsStream, rustls::ClientConfig, webpki::DNSNameRef, TlsConnector};
 
 use crate::command::Command;
-use crate::response::Response;
+use crate::types::Response;
+
+use super::ClientNotConnected;
 
 pub type BoxedFunc = Box<dyn Fn()>;
+pub type ResultMap = Arc<RwLock<HashMap<usize, (Option<String>, Option<Waker>)>>>;
+pub type GreetingRx = Arc<RwLock<(bool, Option<Waker>)>>;
 pub const TAG_PREFIX: &str = "panorama";
 
-/// The private Client struct, that is shared by all of the exported structs in the state machine.
+/// The lower-level Client struct, that is shared by all of the exported structs in the state machine.
 pub struct Client<C> {
+    config: ClientNotConnected,
     conn: WriteHalf<C>,
     symbols: StringStore,
 
     id: usize,
     results: ResultMap,
 
+    /// cached set of capabilities
     caps: Vec<StringEntry>,
-    handle: JoinHandle<Result<()>>,
+
+    /// join handle for the listener thread
+    listener_handle: JoinHandle<Result<ReadHalf<C>>>,
+
+    /// used for telling the listener thread to stop and return the read half
+    exit_tx: mpsc::Sender<()>,
+
+    /// used for receiving the greeting
+    greeting: GreetingRx,
 }
 
 impl<C> Client<C>
@@ -38,23 +54,38 @@ where
     C: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
     /// Creates a new client that wraps a connection
-    pub fn new(conn: C) -> Self {
+    pub fn new(conn: C, config: ClientNotConnected) -> Self {
         let (read_half, write_half) = io::split(conn);
         let results = Arc::new(RwLock::new(HashMap::new()));
-        let listen_fut = tokio::spawn(listen(read_half, results.clone()));
+        let (exit_tx, exit_rx) = mpsc::channel(1);
+        let greeting = Arc::new(RwLock::new((false, None)));
+        let listen_fut = tokio::spawn(listen(
+            read_half,
+            results.clone(),
+            exit_rx,
+            greeting.clone(),
+        ));
 
         Client {
+            config,
             conn: write_half,
             symbols: StringStore::new(256),
             id: 0,
             results,
             caps: Vec::new(),
-            handle: listen_fut,
+            listener_handle: listen_fut,
+            exit_tx,
+            greeting,
         }
     }
 
+    pub fn wait_for_greeting(&self) -> GreetingHandler {
+        debug!("waiting for greeting");
+        GreetingHandler(self.greeting.clone())
+    }
+
     /// Sends a command to the server and returns a handle to retrieve the result
-    pub async fn execute(&mut self, cmd: Command) -> Result<Response> {
+    pub async fn execute(&mut self, cmd: Command) -> Result<String> {
         debug!("executing command {:?}", cmd);
         let id = self.id;
         self.id += 1;
@@ -73,16 +104,69 @@ where
             let mut handlers = self.results.write();
             handlers.remove(&id).unwrap().0.unwrap()
         };
-        Ok(Response(resp))
+        Ok(resp)
     }
 
     /// Executes the CAPABILITY command
-    pub async fn supports(&mut self) -> Result<()> {
+    pub async fn capabilities(&mut self) -> Result<()> {
         let cmd = Command::Capability;
         debug!("sending: {:?} {:?}", cmd, cmd.to_string());
-        let result = self.execute(cmd).await?;
-        debug!("result from supports: {:?}", result);
+        let result = self
+            .execute(cmd)
+            .await
+            .context("error executing CAPABILITY command")?;
+        let (_, resp) = Response::from_bytes(result.as_bytes())
+            .map_err(|err| anyhow!(""))
+            .context("error parsing response from CAPABILITY")?;
+        debug!("cap resp: {:?}", resp);
+        if let Response::Capabilities(caps) = resp {
+            debug!("capabilities: {:?}", caps);
+        }
         Ok(())
+    }
+
+    /// Attempts to upgrade this connection using STARTTLS
+    pub async fn upgrade(mut self) -> Result<Client<TlsStream<C>>> {
+        // TODO: make sure STARTTLS is in the capability list
+        // first, send the STARTTLS command
+        let resp = self.execute(Command::Starttls).await?;
+        debug!("server response to starttls: {:?}", resp);
+
+        debug!("sending exit ()");
+        self.exit_tx.send(()).await?;
+        let reader = self.listener_handle.await??;
+        let writer = self.conn;
+
+        let conn = reader.unsplit(writer);
+
+        let server_name = &self.config.hostname;
+
+        let mut tls_config = ClientConfig::new();
+        tls_config
+            .root_store
+            .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
+        let tls_config = TlsConnector::from(Arc::new(tls_config));
+        let dnsname = DNSNameRef::try_from_ascii_str(server_name).unwrap();
+        let stream = tls_config.connect(dnsname, conn).await?;
+
+        Ok(Client::new(stream, self.config))
+    }
+}
+
+pub struct GreetingHandler(GreetingRx);
+
+impl Future for GreetingHandler {
+    type Output = ();
+    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        let (state, waker) = &mut *self.0.write();
+        if waker.is_none() {
+            *waker = Some(cx.waker().clone());
+        }
+
+        match state {
+            true => Poll::Ready(()),
+            false => Poll::Pending,
+        }
     }
 }
 
@@ -108,33 +192,67 @@ impl<'a, C> Future for ExecHandle<'a, C> {
     }
 }
 
-use std::task::Waker;
-pub type ResultMap = Arc<RwLock<HashMap<usize, (Option<String>, Option<Waker>)>>>;
-
-async fn listen(conn: impl AsyncRead + Unpin, results: ResultMap) -> Result<()> {
+/// Main listen loop for the application
+async fn listen<C>(
+    conn: C,
+    results: ResultMap,
+    mut exit: mpsc::Receiver<()>,
+    greeting: GreetingRx,
+) -> Result<C>
+where
+    C: AsyncRead + Unpin,
+{
     debug!("amogus");
     let mut reader = BufReader::new(conn);
+    let mut greeting = Some(greeting);
+
     loop {
         let mut next_line = String::new();
-        reader.read_line(&mut next_line).await?;
-        let next_line = next_line.trim_end_matches('\r');
+        let fut = reader.read_line(&mut next_line).fuse();
+        pin_mut!(fut);
+        let fut2 = exit.recv().fuse();
+        pin_mut!(fut2);
 
-        // debug!("line: {:?}", next_line);
-        let mut parts = next_line.split(" ");
-        let tag = parts.next().unwrap();
-        let rest = parts.collect::<Vec<_>>().join(" ");
+        match future::select(fut, fut2).await {
+            Either::Left((_, _)) => {
+                let next_line = next_line.trim_end_matches('\n').trim_end_matches('\r');
 
-        if tag == "*" {
-            debug!("UNTAGGED {:?}", rest);
-        } else if tag.starts_with(TAG_PREFIX) {
-            let id = tag.trim_start_matches(TAG_PREFIX).parse::<usize>()?;
-            debug!("set {} to {:?}", id, rest);
-            let mut results = results.write();
-            if let Some((c, w)) = results.get_mut(&id) {
-                *c = Some(rest.to_string());
-                let w = w.take().unwrap();
-                w.wake();
+                let mut parts = next_line.split(" ");
+                let tag = parts.next().unwrap();
+                let rest = parts.collect::<Vec<_>>().join(" ");
+
+                if tag == "*" {
+                    debug!("UNTAGGED {:?}", rest);
+                    if let Some(greeting) = greeting.take() {
+                        let (greeting, waker) = &mut *greeting.write();
+                        debug!("got greeting");
+                        *greeting = true;
+                        if let Some(waker) = waker.take() {
+                            waker.wake();
+                        }
+                    }
+                } else if tag.starts_with(TAG_PREFIX) {
+                    let id = tag.trim_start_matches(TAG_PREFIX).parse::<usize>()?;
+                    debug!("set {} to {:?}", id, rest);
+                    let mut results = results.write();
+                    if let Some((c, w)) = results.get_mut(&id) {
+                        // *c = Some(rest.to_string());
+                        *c = Some(next_line.to_owned());
+                        if let Some(waker) = w.take() {
+                            waker.wake();
+                        }
+                    }
+                }
+            }
+            Either::Right((_, _)) => {
+                debug!("exiting read loop");
+                break;
             }
         }
+
+        reader.read_line(&mut next_line).await?;
     }
+
+    let conn = reader.into_inner();
+    Ok(conn)
 }

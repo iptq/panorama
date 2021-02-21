@@ -5,7 +5,10 @@ mod imap2;
 
 use anyhow::Result;
 use futures::stream::StreamExt;
-use panorama_imap::{client::ClientBuilder, command::Command as ImapCommand};
+use panorama_imap::{
+    client::{ClientBuilder, ClientNotConnected},
+    command::Command as ImapCommand,
+};
 use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
 use tokio_stream::wrappers::WatchStream;
 
@@ -48,7 +51,12 @@ pub async fn run_mail(
         let handle = tokio::spawn(async {
             for acct in config.mail_accounts.into_iter() {
                 debug!("opening imap connection for {:?}", acct);
-                osu(acct).await.unwrap();
+                match imap_main(acct).await {
+                    Ok(_) => {}
+                    Err(err) => {
+                        error!("IMAP Error: {}", err);
+                    }
+                }
                 // open_imap_connection(acct.imap).await.unwrap();
             }
         });
@@ -59,8 +67,9 @@ pub async fn run_mail(
     Ok(())
 }
 
-async fn osu(acct: MailAccountConfig) -> Result<()> {
-    let builder = ClientBuilder::default()
+/// The main sequence of steps for the IMAP thread to follow
+async fn imap_main(acct: MailAccountConfig) -> Result<()> {
+    let builder: ClientNotConnected = ClientBuilder::default()
         .hostname(acct.imap.server.clone())
         .port(acct.imap.port)
         .tls(matches!(acct.imap.tls, TlsMethod::On))
@@ -68,10 +77,22 @@ async fn osu(acct: MailAccountConfig) -> Result<()> {
         .map_err(|err| anyhow!("err: {}", err))?;
 
     debug!("connecting to {}:{}", &acct.imap.server, acct.imap.port);
-    let mut unauth = builder.connect().await?;
+    let unauth = builder.open().await?;
 
-    debug!("sending CAPABILITY");
-    unauth.supports().await?;
+    let unauth = if matches!(acct.imap.tls, TlsMethod::Starttls) {
+        debug!("attempting to upgrade");
+        let client = unauth.upgrade().await?;
+        debug!("upgrade successful");
+        client
+    } else {
+        unauth
+    };
+
+    debug!("preparing to auth");
+    // check if the authentication method is supported
+
+    // debug!("sending CAPABILITY");
+    // let result = unauth.capabilities().await?;
 
     Ok(())
 }
