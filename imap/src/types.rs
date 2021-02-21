@@ -44,7 +44,7 @@ impl<'a> Response<'a> {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Status {
     Ok,
     No,

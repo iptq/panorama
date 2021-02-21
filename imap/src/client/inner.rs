@@ -19,12 +19,11 @@ use tokio_rustls::{
 };
 
 use crate::command::Command;
-use crate::types::Response;
+use crate::response::Response;
 
 use super::ClientConfig;
 
-pub type BoxedFunc = Box<dyn Fn()>;
-pub type ResultMap = Arc<RwLock<HashMap<usize, (Option<String>, Option<Waker>)>>>;
+pub type ResultMap = Arc<RwLock<HashMap<usize, (Option<Response>, Option<Waker>)>>>;
 pub type GreetingState = Arc<RwLock<(bool, Option<Waker>)>>;
 pub const TAG_PREFIX: &str = "panorama";
 
@@ -85,7 +84,7 @@ where
     }
 
     /// Sends a command to the server and returns a handle to retrieve the result
-    pub async fn execute(&mut self, cmd: Command) -> Result<String> {
+    pub async fn execute(&mut self, cmd: Command) -> Result<Response> {
         debug!("executing command {:?}", cmd);
         let id = self.id;
         self.id += 1;
@@ -116,13 +115,10 @@ where
             .execute(cmd)
             .await
             .context("error executing CAPABILITY command")?;
-        let (_, resp) = Response::from_bytes(result.as_bytes())
-            .map_err(|err| anyhow!(""))
-            .context("error parsing response from CAPABILITY")?;
-        debug!("cap resp: {:?}", resp);
-        if let Response::Capabilities(caps) = resp {
-            debug!("capabilities: {:?}", caps);
-        }
+        debug!("cap resp: {:?}", result);
+        // if let Response::Capabilities(caps) = resp {
+        //     debug!("capabilities: {:?}", caps);
+        // }
         Ok(())
     }
 
@@ -217,6 +213,9 @@ where
         match future::select(fut, fut2).await {
             Either::Left((_, _)) => {
                 debug!("got a new line");
+                let (_, resp) = crate::parser::parse_response(next_line.as_bytes()).unwrap();
+                let resp = Response::from(resp);
+                debug!("parsed as: {:?}", resp);
                 let next_line = next_line.trim_end_matches('\n').trim_end_matches('\r');
 
                 let mut parts = next_line.split(" ");
@@ -241,7 +240,7 @@ where
                     let mut results = results.write();
                     if let Some((c, w)) = results.get_mut(&id) {
                         // *c = Some(rest.to_string());
-                        *c = Some(next_line.to_owned());
+                        *c = Some(resp);
                         if let Some(waker) = w.take() {
                             waker.wake();
                         }

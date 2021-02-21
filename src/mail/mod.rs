@@ -89,5 +89,10 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
 
         // debug!("sending CAPABILITY");
         // let result = unauth.capabilities().await?;
+
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            debug!("heartbeat");
+        }
     }
 }
