@@ -45,14 +45,25 @@ pub struct ImapConfig {
     /// Port of the IMAP server
     pub port: u16,
 
-    /// Username for authenticating to IMAP
-    pub username: String,
-
-    /// Password for authenticating to IMAP
-    pub password: String,
-
     /// TLS
     pub tls: TlsMethod,
+
+    /// Auth
+    #[serde(flatten)]
+    pub auth: ImapAuth,
+}
+
+/// Method of authentication for the IMAP server
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(tag = "auth")]
+pub enum ImapAuth {
+    /// Use plain username/password authentication
+    #[serde(rename = "plain")]
+    #[allow(missing_docs)]
+    Plain {
+        username: String,
+        password: String,
+    }
 }
 
 /// Describes when to perform the TLS handshake

@@ -9,3 +9,11 @@ imap routine
 - at this point, tls should be figured out, so moving on to auth
 - check if the auth type that the user specified is in the list of auth types (prob support plain and oauth2?)
 
+
+list of shit to do
+---
+
+- [x] starttls impl
+- [ ] auth impl
+  - [ ] auth plain impl
+- [ ] fetch impl

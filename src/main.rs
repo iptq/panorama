@@ -20,6 +20,17 @@ struct Opt {
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
+    // use panorama::config::*;
+    // let c = ImapConfig{
+    //     server:String::from("ouais"),
+    //     port: 1,
+    //     tls: TlsMethod::Starttls,
+    //     auth: ImapAuth::Plain{username:String::from("osu"), password:String::from("game")},
+    // };
+    // let s = toml::to_string(&c)?;
+    // println!("{}", s);
+    // panic!();
+
     // parse command line arguments into options struct
     let _opt = Opt::from_args();
 
