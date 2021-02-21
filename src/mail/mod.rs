@@ -6,7 +6,7 @@ mod imap2;
 use anyhow::Result;
 use futures::stream::StreamExt;
 use panorama_imap::{
-    client::{ClientBuilder, ClientNotConnected},
+    client::{ClientBuilder, ClientConfig},
     command::Command as ImapCommand,
 };
 use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
@@ -69,7 +69,7 @@ pub async fn run_mail(
 
 /// The main sequence of steps for the IMAP thread to follow
 async fn imap_main(acct: MailAccountConfig) -> Result<()> {
-    let builder: ClientNotConnected = ClientBuilder::default()
+    let builder: ClientConfig = ClientBuilder::default()
         .hostname(acct.imap.server.clone())
         .port(acct.imap.port)
         .tls(matches!(acct.imap.tls, TlsMethod::On))
@@ -79,7 +79,7 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
     debug!("connecting to {}:{}", &acct.imap.server, acct.imap.port);
     let unauth = builder.open().await?;
 
-    let unauth = if matches!(acct.imap.tls, TlsMethod::Starttls) {
+    let mut unauth = if matches!(acct.imap.tls, TlsMethod::Starttls) {
         debug!("attempting to upgrade");
         let client = unauth.upgrade().await?;
         debug!("upgrade successful");
@@ -90,6 +90,7 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
 
     debug!("preparing to auth");
     // check if the authentication method is supported
+    unauth.capabilities().await?;
 
     // debug!("sending CAPABILITY");
     // let result = unauth.capabilities().await?;

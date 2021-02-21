@@ -15,21 +15,23 @@ use tokio::{
     sync::{mpsc, oneshot},
     task::JoinHandle,
 };
-use tokio_rustls::{client::TlsStream, rustls::ClientConfig, webpki::DNSNameRef, TlsConnector};
+use tokio_rustls::{
+    client::TlsStream, rustls::ClientConfig as RustlsConfig, webpki::DNSNameRef, TlsConnector,
+};
 
 use crate::command::Command;
 use crate::types::Response;
 
-use super::ClientNotConnected;
+use super::ClientConfig;
 
 pub type BoxedFunc = Box<dyn Fn()>;
 pub type ResultMap = Arc<RwLock<HashMap<usize, (Option<String>, Option<Waker>)>>>;
-pub type GreetingRx = Arc<RwLock<(bool, Option<Waker>)>>;
+pub type GreetingState = Arc<RwLock<(bool, Option<Waker>)>>;
 pub const TAG_PREFIX: &str = "panorama";
 
 /// The lower-level Client struct, that is shared by all of the exported structs in the state machine.
 pub struct Client<C> {
-    config: ClientNotConnected,
+    config: ClientConfig,
     conn: WriteHalf<C>,
     symbols: StringStore,
 
@@ -46,7 +48,7 @@ pub struct Client<C> {
     exit_tx: mpsc::Sender<()>,
 
     /// used for receiving the greeting
-    greeting: GreetingRx,
+    greeting: GreetingState,
 }
 
 impl<C> Client<C>
@@ -54,7 +56,7 @@ where
     C: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
     /// Creates a new client that wraps a connection
-    pub fn new(conn: C, config: ClientNotConnected) -> Self {
+    pub fn new(conn: C, config: ClientConfig) -> Self {
         let (read_half, write_half) = io::split(conn);
         let results = Arc::new(RwLock::new(HashMap::new()));
         let (exit_tx, exit_rx) = mpsc::channel(1);
@@ -79,9 +81,10 @@ where
         }
     }
 
-    pub fn wait_for_greeting(&self) -> GreetingHandler {
+    /// Returns a future that doesn't resolve until we receive a greeting from the server.
+    pub fn wait_for_greeting(&self) -> GreetingWaiter {
         debug!("waiting for greeting");
-        GreetingHandler(self.greeting.clone())
+        GreetingWaiter(self.greeting.clone())
     }
 
     /// Sends a command to the server and returns a handle to retrieve the result
@@ -100,7 +103,7 @@ where
         self.conn.flush().await?;
         debug!("[{}] written.", id);
 
-        ExecHandle(self, id).await;
+        ExecWaiter(self, id).await;
         let resp = {
             let mut handlers = self.results.write();
             handlers.remove(&id).unwrap().0.unwrap()
@@ -142,7 +145,7 @@ where
 
         let server_name = &self.config.hostname;
 
-        let mut tls_config = ClientConfig::new();
+        let mut tls_config = RustlsConfig::new();
         tls_config
             .root_store
             .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
@@ -154,9 +157,9 @@ where
     }
 }
 
-pub struct GreetingHandler(GreetingRx);
+pub struct GreetingWaiter(GreetingState);
 
-impl Future for GreetingHandler {
+impl Future for GreetingWaiter {
     type Output = ();
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         let (state, waker) = &mut *self.0.write();
@@ -171,9 +174,9 @@ impl Future for GreetingHandler {
     }
 }
 
-pub struct ExecHandle<'a, C>(&'a Client<C>, usize);
+pub struct ExecWaiter<'a, C>(&'a Client<C>, usize);
 
-impl<'a, C> Future for ExecHandle<'a, C> {
+impl<'a, C> Future for ExecWaiter<'a, C> {
     type Output = ();
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         let mut handlers = self.0.results.write();
@@ -198,7 +201,7 @@ async fn listen<C>(
     conn: C,
     results: ResultMap,
     mut exit: mpsc::Receiver<()>,
-    greeting: GreetingRx,
+    greeting: GreetingState,
 ) -> Result<C>
 where
     C: AsyncRead + Unpin,
@@ -225,7 +228,7 @@ where
 
                 if tag == "*" {
                     debug!("UNTAGGED {:?}", rest);
-                    
+
                     // TODO: verify that the greeting is actually an OK
                     if let Some(greeting) = greeting.take() {
                         let (greeting, waker) = &mut *greeting.write();

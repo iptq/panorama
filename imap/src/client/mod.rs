@@ -15,11 +15,10 @@ mod inner;
 use std::sync::Arc;
 
 use anyhow::Result;
-use tokio::{
-    io::{self, AsyncRead, AsyncWrite, ReadHalf, WriteHalf},
-    net::TcpStream,
+use tokio::net::TcpStream;
+use tokio_rustls::{
+    client::TlsStream, rustls::ClientConfig as RustlsConfig, webpki::DNSNameRef, TlsConnector,
 };
-use tokio_rustls::{client::TlsStream, rustls::ClientConfig, webpki::DNSNameRef, TlsConnector};
 
 pub use self::inner::Client;
 
@@ -28,13 +27,13 @@ pub use self::inner::Client;
 /// Call [`.build`][1] to _build_ the config, then run [`.connect`][2] to actually start opening
 /// the connection to the server.
 ///
-/// [1]: self::ClientNotConnectedBuilder::build
-/// [2]: self::ClientNotConnected::connect
-pub type ClientBuilder = ClientNotConnectedBuilder;
+/// [1]: self::ClientConfigBuilder::build
+/// [2]: self::ClientConfig::connect
+pub type ClientBuilder = ClientConfigBuilder;
 
 /// An IMAP client that hasn't been connected yet.
 #[derive(Builder, Clone, Debug)]
-pub struct ClientNotConnected {
+pub struct ClientConfig {
     /// The hostname of the IMAP server. If using TLS, must be an address
     hostname: String,
 
@@ -47,14 +46,14 @@ pub struct ClientNotConnected {
     tls: bool,
 }
 
-impl ClientNotConnected {
+impl ClientConfig {
     pub async fn open(self) -> Result<ClientUnauthenticated> {
         let hostname = self.hostname.as_ref();
         let port = self.port;
         let conn = TcpStream::connect((hostname, port)).await?;
 
         if self.tls {
-            let mut tls_config = ClientConfig::new();
+            let mut tls_config = RustlsConfig::new();
             tls_config
                 .root_store
                 .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
