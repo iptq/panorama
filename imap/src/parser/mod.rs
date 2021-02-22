@@ -97,13 +97,36 @@ fn build_resp_cond_state(pair: Pair<Rule>) -> (Status, Option<ResponseCode>, Opt
     let mut code = None;
     let mut information = None;
 
+    println!("pairs: {:#?}", pairs);
+    let pair = pairs.next().unwrap();
+    let mut pairs = pair.into_inner();
     for pair in pairs {
         match pair.as_rule() {
-            Rule::resp_text => information = Some(pair.as_str().to_owned()),
+            Rule::resp_text_code => code = Some(build_resp_code(pair)),
+            Rule::text => information = Some(pair.as_str().to_owned()),
             _ => unreachable!("{:#?}", pair),
         }
     }
+
     (status, code, information)
+}
+
+fn build_resp_code(pair: Pair<Rule>) -> ResponseCode {
+    if !matches!(pair.as_rule(), Rule::resp_text_code) {
+        unreachable!("{:#?}", pair);
+    }
+
+    let mut pairs = pair.into_inner();
+    let pair = pairs.next().unwrap();
+    match pair.as_rule() {
+        Rule::resp_text_code_unseen => {
+            let mut pairs = pair.into_inner();
+            let pair = pairs.next().unwrap();
+            let number = pair.as_str().parse::<u32>().unwrap();
+            ResponseCode::Unseen(number)
+        }
+        _ => unreachable!("{:#?}", pair),
+    }
 }
 
 fn build_status(pair: Pair<Rule>) -> Status {
@@ -161,6 +184,12 @@ fn build_mailbox_data(pair: Pair<Rule>) -> MailboxData {
             let pair = pairs.next().unwrap();
             let flags = build_flag_list(pair);
             MailboxData::Flags(flags)
+        }
+        Rule::mailbox_data_recent => {
+            let mut pairs = pair.into_inner();
+            let pair = pairs.next().unwrap();
+            let number = pair.as_str().parse::<u32>().unwrap();
+            MailboxData::Recent(number)
         }
         _ => unreachable!("{:#?}", pair),
     }
@@ -229,6 +258,20 @@ mod tests {
                 Flag::Seen,
                 Flag::Draft,
             ])))
+        );
+
+        assert_eq!(
+            parse_response("* 2 RECENT\r\n"),
+            Ok(Response::MailboxData(MailboxData::Recent(2)))
+        );
+
+        assert_eq!(
+            parse_response("* OK [UNSEEN 17] Message 17 is the first unseen message\r\n"),
+            Ok(Response::Data {
+                status: Status::Ok,
+                code: Some(ResponseCode::Unseen(17)),
+                information: Some("Message 17 is the first unseen message".to_owned()),
+            })
         );
     }
 }
