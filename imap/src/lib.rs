@@ -6,9 +6,12 @@ extern crate derive_builder;
 extern crate futures;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate pest_derive;
 
 pub mod client;
 pub mod command;
+pub mod parser;
 pub mod response;
 
 // pub mod builders;

@@ -1,0 +1,17 @@
+// formal syntax from https://tools.ietf.org/html/rfc3501#section-9
+atom = @{ atom_char{1,} }
+atom_char = @{ !atom_specials ~ char }
+atom_specials = @{ "(" | ")" | "{" | sp | ctl | list_wildcards | quoted_specials | resp_specials }
+auth_type = { atom }
+capability = ${ "AUTH=" ~ auth_type | atom }
+list_wildcards = @{ "%" | "*" }
+quoted_specials = @{ dquote | "\\" }
+resp_specials = @{ "]" }
+nil = { "NIL" }
+
+// core rules from https://tools.ietf.org/html/rfc2234#section-6.1
+char = @{ '\x01'..'\x7f' }
+ctl = @{ '\x00'..'\x1f' | "\x7f" }
+dquote = @{ "\"" }
+sp = @{ " " }
+
