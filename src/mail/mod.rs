@@ -1,7 +1,7 @@
 //! Mail
 
 use anyhow::Result;
-use futures::stream::StreamExt;
+use futures::{future::FutureExt, stream::StreamExt};
 use panorama_imap::{
     client::{ClientBuilder, ClientConfig},
     command::Command as ImapCommand,
@@ -46,11 +46,15 @@ pub async fn run_mail(
         for acct in config.mail_accounts.into_iter() {
             let handle = tokio::spawn(async move {
                 debug!("opening imap connection for {:?}", acct);
-                match imap_main(acct).await {
-                    Ok(_) => {}
-                    Err(err) => {
-                        error!("IMAP Error: {}", err);
+                loop {
+                    match imap_main(acct.clone()).await {
+                        Ok(_) => {}
+                        Err(err) => {
+                            error!("IMAP Error: {}", err);
+                        }
                     }
+
+                    warn!("connection dropped, retrying");
                 }
             });
             curr_conn.push(handle);
@@ -91,7 +95,7 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
         // let result = unauth.capabilities().await?;
 
         loop {
-            tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
             debug!("heartbeat");
         }
     }

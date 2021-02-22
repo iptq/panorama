@@ -33,8 +33,8 @@ async fn main() -> Result<()> {
     let mut logger = fern::Dispatch::new()
         .format(move |out, message, record| {
             out.finish(format_args!(
-                "{}[{}][{}] {}",
-                chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
+                "[{}][{}] {}",
+                // chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
                 record.target(),
                 colors.color(record.level()),
                 message
