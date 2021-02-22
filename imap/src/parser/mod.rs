@@ -1,4 +1,8 @@
-use pest::{error::Error, Parser, iterators::{Pair, Pairs}};
+use pest::{
+    error::Error,
+    iterators::{Pair, Pairs},
+    Parser,
+};
 
 use crate::response::*;
 
@@ -6,8 +10,8 @@ use crate::response::*;
 #[grammar = "parser/rfc3501.pest"]
 struct Rfc3501;
 
-pub fn parse_capability(s: &str) -> Result<Capability, Error<Rule>> {
-    let mut pairs = Rfc3501::parse(Rule::capability, s)?;
+pub fn parse_capability(s: impl AsRef<str>) -> Result<Capability, Error<Rule>> {
+    let mut pairs = Rfc3501::parse(Rule::capability, s.as_ref())?;
     let pair = pairs.next().unwrap();
     let cap = match pair.as_rule() {
         Rule::capability => {
@@ -27,57 +31,108 @@ pub fn parse_capability(s: &str) -> Result<Capability, Error<Rule>> {
     Ok(cap)
 }
 
-pub fn parse_response(s: &str) -> Result<Response, Error<Rule>> {
-    let mut pairs = Rfc3501::parse(Rule::response, s)?;
+pub fn parse_response(s: impl AsRef<str>) -> Result<Response, Error<Rule>> {
+    let mut pairs = Rfc3501::parse(Rule::response, s.as_ref())?;
     let pair = pairs.next().unwrap();
     Ok(build_response(pair))
 }
 
 fn build_response(pair: Pair<Rule>) -> Response {
+    if !matches!(pair.as_rule(), Rule::response) {
+        unreachable!("{:#?}", pair);
+    }
+
+    let mut pairs = pair.into_inner();
+    let pair = pairs.next().unwrap();
     match pair.as_rule() {
-        Rule::response => {
+        Rule::response_done => {
             let mut pairs = pair.into_inner();
             let pair = pairs.next().unwrap();
             match pair.as_rule() {
-                Rule::response_data => {
+                Rule::response_tagged => {
                     let mut pairs = pair.into_inner();
                     let pair = pairs.next().unwrap();
-                    match pair.as_rule() {
-                        Rule::resp_cond_state => {
-                            let mut pairs = pair.into_inner();
-                            let pair = pairs.next().unwrap();
-                            let status = build_status(pair);
-                            let mut code = None;
-                            let mut information = None;
+                    let tag = pair.as_str().to_owned();
 
-                            for pair in pairs {
-                                if let resp_text = pair.as_rule() {
-                                    information = Some(pair.as_str().to_owned());
-                                }
-                            }
-                            Response::Data { status, code, information }
-                        }
-                        _ => unreachable!("{:?}", pair),
+                    let pair = pairs.next().unwrap();
+                    let (status, code, information) = build_resp_cond_state(pair);
+                    Response::Done {
+                        tag,
+                        status,
+                        code,
+                        information,
                     }
                 }
-                _ => unreachable!("{:?}", pair),
+                _ => unreachable!("{:#?}", pair),
             }
         }
-        _ => unreachable!("{:?}", pair),
+        Rule::response_data => {
+            let mut pairs = pair.into_inner();
+            let pair = pairs.next().unwrap();
+            match pair.as_rule() {
+                Rule::resp_cond_state => {
+                    let (status, code, information) = build_resp_cond_state(pair);
+                    Response::Data {
+                        status,
+                        code,
+                        information,
+                    }
+                }
+                Rule::mailbox_data => Response::MailboxData(build_mailbox_data(pair)),
+                _ => unreachable!("{:#?}", pair),
+            }
+        }
+        _ => unreachable!("{:#?}", pair),
     }
+}
+
+fn build_resp_cond_state(pair: Pair<Rule>) -> (Status, Option<ResponseCode>, Option<String>) {
+    if !matches!(pair.as_rule(), Rule::resp_cond_state) {
+        unreachable!("{:#?}", pair);
+    }
+
+    let mut pairs = pair.into_inner();
+    let pair = pairs.next().unwrap();
+    let status = build_status(pair);
+    let mut code = None;
+    let mut information = None;
+
+    for pair in pairs {
+        match pair.as_rule() {
+            Rule::resp_text => information = Some(pair.as_str().to_owned()),
+            _ => unreachable!("{:#?}", pair),
+        }
+    }
+    (status, code, information)
 }
 
 fn build_status(pair: Pair<Rule>) -> Status {
     match pair.as_rule() {
-        Rule::resp_status => {
-            match pair.as_str().to_uppercase().as_str() {
-                "OK" => Status::Ok,
-                "NO" => Status::No,
-                "BAD" => Status::Bad,
-                s => unreachable!("invalid status {:?}", s),
-            }
-        }
+        Rule::resp_status => match pair.as_str().to_uppercase().as_str() {
+            "OK" => Status::Ok,
+            "NO" => Status::No,
+            "BAD" => Status::Bad,
+            s => unreachable!("invalid status {:?}", s),
+        },
         _ => unreachable!("{:?}", pair),
+    }
+}
+
+fn build_mailbox_data(pair: Pair<Rule>) -> MailboxData {
+    if !matches!(pair.as_rule(), Rule::mailbox_data) {
+        unreachable!("{:#?}", pair);
+    }
+
+    let mut pairs = pair.into_inner();
+    let pair = pairs.next().unwrap();
+    match pair.as_rule() {
+        Rule::mailbox_data_exists => {
+            let mut pairs = pair.into_inner();
+            let pair = pairs.next().unwrap();
+            let number = pair.as_str().parse::<u32>().unwrap();
+            MailboxData::Exists(number)
+        }
+        _ => unreachable!("{:#?}", pair),
     }
 }
 
@@ -115,5 +170,14 @@ mod tests {
             code: None,
             information: Some("IMAP4rev1 Service Ready".to_owned()),
         }));
+
+        assert_eq!(parse_response("a001 OK LOGIN completed\r\n"), Ok(Response::Done {
+            tag: "a001".to_owned(),
+            status: Status::Ok,
+            code: None,
+            information: Some("LOGIN completed".to_owned()),
+        }));
+
+        assert_eq!(parse_response("* 18 EXISTS\r\n"), Ok(Response::MailboxData(MailboxData::Exists(18))));
     }
 }

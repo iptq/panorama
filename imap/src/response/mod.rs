@@ -24,7 +24,7 @@ pub enum Response {
         uids: Vec<RangeInclusive<u32>>,
     },
     Fetch(u32, Vec<AttributeValue>),
-    MailboxData(MailboxDatum),
+    MailboxData(MailboxData),
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -63,7 +63,46 @@ pub enum UidSetMember {
 pub enum AttributeValue {}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum MailboxDatum {}
+pub enum MailboxData {
+    Exists(u32),
+    Flags(Vec<String>),
+    List {
+        flags: Vec<String>,
+        delimiter: Option<String>,
+        name: String,
+    },
+    Search(Vec<u32>),
+    Status {
+        mailbox: String,
+        status: Vec<StatusAttribute>,
+    },
+    Recent(u32),
+    MetadataSolicited {
+        mailbox: String,
+        values: Vec<Metadata>,
+    },
+    MetadataUnsolicited {
+        mailbox: String,
+        values: Vec<String>,
+    },
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct Metadata {
+    pub entry: String,
+    pub value: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum StatusAttribute {
+    HighestModSeq(u64), // RFC 4551
+    Messages(u32),
+    Recent(u32),
+    UidNext(u32),
+    UidValidity(u32),
+    Unseen(u32),
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Status {
