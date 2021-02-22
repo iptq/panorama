@@ -139,9 +139,6 @@
 <span id="136">136</span>
 <span id="137">137</span>
 <span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ops</span>::<span class="ident">RangeInclusive</span>;
 
@@ -209,7 +206,7 @@
                 <span class="ident">information</span>: <span class="ident">information</span>.<span class="ident">map</span>(<span class="ident">str</span>::<span class="ident">to_owned</span>),
             },
             <span class="ident">Expunge</span>(<span class="ident">n</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Response</span>::<span class="ident">Expunge</span>(<span class="ident">n</span>),
-            <span class="ident">Vanished</span> {<span class="ident">earlier</span>, <span class="ident">uids</span>} <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Response</span>::<span class="ident">Vanished</span>{<span class="ident">earlier</span>, <span class="ident">uids</span>},
+            <span class="ident">Vanished</span> { <span class="ident">earlier</span>, <span class="ident">uids</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Response</span>::<span class="ident">Vanished</span> { <span class="ident">earlier</span>, <span class="ident">uids</span> },
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">todo</span><span class="macro">!</span>(<span class="string">&quot;nyi: {:?}&quot;</span>, <span class="ident">b</span>),
         }
     }
@@ -277,12 +274,9 @@
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">AttributeValue</span> {
-}
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">AttributeValue</span> {}
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">MailboxDatum</span> {
-
-}
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">MailboxDatum</span> {}
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "panorama_imap";</script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

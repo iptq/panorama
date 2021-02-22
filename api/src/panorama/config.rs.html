@@ -169,9 +169,6 @@
 <span id="166">166</span>
 <span id="167">167</span>
 <span id="168">168</span>
-<span id="169">169</span>
-<span id="170">170</span>
-<span id="171">171</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Module for setting up config files and watchers.</span>
 <span class="doccomment">//!</span>
@@ -235,10 +232,7 @@
     <span class="doccomment">/// Use plain username/password authentication</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;plain&quot;</span>)]</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
-    <span class="ident">Plain</span> {
-        <span class="ident">username</span>: <span class="ident">String</span>,
-        <span class="ident">password</span>: <span class="ident">String</span>,
-    }
+    <span class="ident">Plain</span> { <span class="ident">username</span>: <span class="ident">String</span>, <span class="ident">password</span>: <span class="ident">String</span> },
 }
 
 <span class="doccomment">/// Describes when to perform the TLS handshake</span>
