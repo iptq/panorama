@@ -85,7 +85,8 @@ quoted = @{ dquote ~ quoted_char* ~ dquote }
 quoted_char = @{ (!quoted_specials ~ char) | ("\\" ~ quoted_specials) }
 quoted_specials = @{ dquote | "\\" }
 resp_cond_bye = { ^"BYE" ~ sp ~ resp_text }
-resp_cond_state = { (^"OK" | ^"NO" | ^"BAD") ~ resp_text }
+resp_cond_state = { resp_status ~ sp ~ resp_text }
+resp_status = { (^"OK" | ^"NO" | ^"BAD") }
 resp_specials = @{ "]" }
 resp_text = { ("[" ~ resp_text_code ~ "]" ~ sp)? ~ text }
 resp_text_code = { ^"ALERT" | (^"BADCHARSET" ~ (sp ~ "(" ~ astring ~ (sp ~ astring)* ~ ")")?) | capability_data | ^"PARSE" | (^"PERMANENTFLAGS" ~ sp ~ "(" ~ (flag_perm ~ (sp ~ flag_perm)*)? ~ ")") | ^"READ-ONLY" | ^"READ-WRITE" | ^"TRYCREATE" | (^"UIDNEXT" ~ sp ~ nz_number) | (^"UIDVALIDITY" ~ sp ~ nz_number) | (^"UNSEEN" ~ sp ~ nz_number) | (atom ~ (sp ~ resp_text_code_atom)?) }
@@ -120,5 +121,5 @@ ctl = @{ '\x00'..'\x1f' | "\x7f" }
 digit = @{ '\x30'..'\x39' }
 dquote = @{ "\"" }
 lf = @{ "\x0a" }
-sp = @{ " " }
+sp = _{ " " }
 

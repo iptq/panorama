@@ -1,6 +1,6 @@
 use std::ops::RangeInclusive;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Response {
     Capabilities(Vec<Capability>),
     Continue {
@@ -34,7 +34,7 @@ pub enum Capability {
     Atom(String),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ResponseCode {
     Alert,
     BadCharset(Option<Vec<String>>),
@@ -53,16 +53,16 @@ pub enum ResponseCode {
     UidNotSticky,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum UidSetMember {
     UidRange(RangeInclusive<u32>),
     Uid(u32),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AttributeValue {}
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MailboxDatum {}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
