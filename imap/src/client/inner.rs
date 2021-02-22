@@ -5,13 +5,12 @@ use std::task::{Context, Poll, Waker};
 
 use anyhow::{Context as AnyhowContext, Result};
 use futures::future::{self, Either, Future, FutureExt};
-use parking_lot::{Mutex, RwLock};
+use parking_lot::RwLock;
 use tokio::{
     io::{
-        self, AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader,
-        ReadHalf, WriteHalf,
+        self, AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader, ReadHalf, WriteHalf,
     },
-    sync::{mpsc, oneshot},
+    sync::mpsc,
     task::JoinHandle,
 };
 use tokio_rustls::{
@@ -19,8 +18,8 @@ use tokio_rustls::{
 };
 
 use crate::command::Command;
-use crate::response::{Capability, Response, ResponseCode};
-use crate::types::{Capability as Capability_, Status};
+use crate::response::{Capability, Response, ResponseCode, Status};
+// use crate::types::{Capability as Capability_, Status};
 
 use super::ClientConfig;
 
@@ -166,17 +165,17 @@ where
 
         let cap_bytes = cap.as_bytes();
         debug!("cap_bytes {:?}", cap_bytes);
-        let (_, cap) = match crate::oldparser::rfc3501::capability(cap_bytes) {
-            Ok(v) => v,
-            Err(err) => {
-                error!("ERROR PARSING {:?} {} {:?}", cap, err, err);
-                use std::error::Error;
-                let bt = err.backtrace().unwrap();
-                error!("{}", bt);
-                std::process::exit(1);
-            }
-        };
-        let cap = Capability::from(cap);
+        // let (_, cap) = match crate::oldparser::rfc3501::capability(cap_bytes) {
+        //     Ok(v) => v,
+        //     Err(err) => {
+        //         error!("ERROR PARSING {:?} {} {:?}", cap, err, err);
+        //         use std::error::Error;
+        //         let bt = err.backtrace().unwrap();
+        //         error!("{}", bt);
+        //         std::process::exit(1);
+        //     }
+        // };
+        let cap = Capability::from(Capability::Atom(cap));
 
         let caps = &*self.caps.read();
         // TODO: refresh caps
@@ -258,13 +257,14 @@ where
                 }
 
                 debug!("got a new line {:?}", next_line);
-                let (_, resp) = match crate::oldparser::parse_response(next_line.as_bytes()) {
-                    Ok(v) => v,
-                    Err(err) => {
-                        debug!("shiet: {:?}", err);
-                        continue;
-                    }
-                };
+                let resp = Response::Capabilities(vec![]);
+                // let (_, resp) = match crate::oldparser::parse_response(next_line.as_bytes()) {
+                //     Ok(v) => v,
+                //     Err(err) => {
+                //         debug!("shiet: {:?}", err);
+                //         continue;
+                //     }
+                // };
 
                 if let Some(greeting) = greeting.take() {
                     let (greeting, waker) = &mut *greeting.write();
@@ -299,9 +299,8 @@ where
                     }
 
                     Response::Done { tag, .. } => {
-                        let tag_str = &tag.0;
-                        if tag_str.starts_with(TAG_PREFIX) {
-                            let id = tag_str.trim_start_matches(TAG_PREFIX).parse::<usize>()?;
+                        if tag.starts_with(TAG_PREFIX) {
+                            let id = tag.trim_start_matches(TAG_PREFIX).parse::<usize>()?;
                             let mut results = results.write();
                             if let Some((c, waker)) = results.get_mut(&id) {
                                 *c = Some(resp);
