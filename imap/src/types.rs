@@ -40,7 +40,7 @@ pub enum Response<'a> {
 
 impl<'a> Response<'a> {
     pub fn from_bytes(buf: &'a [u8]) -> crate::ParseResult {
-        crate::parser::parse_response(buf)
+        crate::oldparser::parse_response(buf)
     }
 }
 

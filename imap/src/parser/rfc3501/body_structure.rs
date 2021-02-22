@@ -9,7 +9,7 @@ use nom::{
 };
 
 use crate::{
-    parser::{core::*, rfc3501::envelope},
+    oldparser::{core::*, rfc3501::envelope},
     types::*,
 };
 

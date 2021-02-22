@@ -1,3 +1,5 @@
+#![feature(backtrace)]
+
 #[macro_use]
 extern crate anyhow;
 #[macro_use]
@@ -10,9 +12,9 @@ extern crate log;
 pub mod builders;
 pub mod client;
 pub mod command;
-pub mod parser;
+pub mod oldparser;
 pub mod response;
 pub mod types;
 
-pub use crate::parser::ParseResult;
+pub use crate::oldparser::ParseResult;
 pub use crate::types::*;

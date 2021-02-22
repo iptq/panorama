@@ -70,7 +70,7 @@ impl<'a> From<Response_<'a>> for Response {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum Capability {
     Imap4rev1,
     Auth(String),

@@ -13,7 +13,7 @@ use nom::{
     IResult,
 };
 
-use crate::{parser::core::*, types::*};
+use crate::{oldparser::core::*, types::*};
 
 fn is_entry_component_char(c: u8) -> bool {
     c < 0x80 && c > 0x19 && c != b'*' && c != b'%' && c != b'/'

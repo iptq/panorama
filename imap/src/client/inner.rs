@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
@@ -20,11 +20,11 @@ use tokio_rustls::{
 
 use crate::command::Command;
 use crate::response::{Capability, Response, ResponseCode};
-use crate::types::Status;
+use crate::types::{Capability as Capability_, Status};
 
 use super::ClientConfig;
 
-pub type CapsLock = Arc<RwLock<Option<Vec<Capability>>>>;
+pub type CapsLock = Arc<RwLock<Option<HashSet<Capability>>>>;
 pub type ResultMap = Arc<RwLock<HashMap<usize, (Option<Response>, Option<Waker>)>>>;
 pub type GreetingState = Arc<RwLock<(bool, Option<Waker>)>>;
 pub const TAG_PREFIX: &str = "panorama";
@@ -130,6 +130,10 @@ where
     /// Attempts to upgrade this connection using STARTTLS
     pub async fn upgrade(mut self) -> Result<Client<TlsStream<C>>> {
         // TODO: make sure STARTTLS is in the capability list
+        if !self.has_capability("STARTTLS").await? {
+            bail!("server doesn't support this capability");
+        }
+
         // first, send the STARTTLS command
         let resp = self.execute(Command::Starttls).await?;
         debug!("server response to starttls: {:?}", resp);
@@ -153,6 +157,34 @@ where
         debug!("upgraded, stream is using TLS now");
 
         Ok(Client::new(stream, self.config))
+    }
+
+    /// Check if this client has a particular capability
+    pub async fn has_capability(&self, cap: impl AsRef<str>) -> Result<bool> {
+        let cap = cap.as_ref().to_owned();
+        debug!("checking for the capability: {:?}", cap);
+
+        let cap_bytes = cap.as_bytes();
+        debug!("cap_bytes {:?}", cap_bytes);
+        let (_, cap) = match crate::oldparser::rfc3501::capability(cap_bytes) {
+            Ok(v) => v,
+            Err(err) => {
+                error!("ERROR PARSING {:?} {} {:?}", cap, err, err);
+                use std::error::Error;
+                let bt = err.backtrace().unwrap();
+                error!("{}", bt);
+                std::process::exit(1);
+            }
+        };
+        let cap = Capability::from(cap);
+
+        let caps = &*self.caps.read();
+        // TODO: refresh caps
+
+        let caps = caps.as_ref().unwrap();
+        let result = caps.contains(&cap);
+        debug!("cap result: {:?}", result);
+        Ok(result)
     }
 }
 
@@ -226,7 +258,7 @@ where
                 }
 
                 debug!("got a new line {:?}", next_line);
-                let (_, resp) = match crate::parser::parse_response(next_line.as_bytes()) {
+                let (_, resp) = match crate::oldparser::parse_response(next_line.as_bytes()) {
                     Ok(v) => v,
                     Err(err) => {
                         debug!("shiet: {:?}", err);
@@ -246,6 +278,7 @@ where
                 let resp = Response::from(resp);
                 debug!("resp: {:?}", resp);
                 match &resp {
+                    // capabilities list
                     Response::Capabilities(new_caps)
                     | Response::Data {
                         status: Status::Ok,
@@ -253,8 +286,16 @@ where
                         ..
                     } => {
                         let caps = &mut *caps.write();
-                        *caps = Some(new_caps.clone());
+                        *caps = Some(new_caps.iter().cloned().collect());
                         debug!("new caps: {:?}", caps);
+                    }
+
+                    // bye
+                    Response::Data {
+                        status: Status::Bye,
+                        ..
+                    } => {
+                        bail!("disconnected");
                     }
 
                     Response::Done { tag, .. } => {
