@@ -1,9 +1,11 @@
 #[macro_use]
-extern crate tracing;
+extern crate log;
 
+use std::fs::OpenOptions;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use fern::colors::{Color, ColoredLevelConfig};
 use futures::future::TryFutureExt;
 use panorama::{config::spawn_config_watcher_system, mail, report_err, ui};
 use structopt::StructOpt;
@@ -20,36 +22,29 @@ struct Opt {
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
-    // use panorama::config::*;
-    // let c = ImapConfig{
-    //     server:String::from("ouais"),
-    //     port: 1,
-    //     tls: TlsMethod::Starttls,
-    //     auth: ImapAuth::Plain{username:String::from("osu"), password:String::from("game")},
-    // };
-    // let s = toml::to_string(&c)?;
-    // println!("{}", s);
-    // panic!();
-
     // parse command line arguments into options struct
-    let _opt = Opt::from_args();
+    let opt = Opt::from_args();
 
-    // print logs to file as directed by command line options
-    use tracing_subscriber::filter::LevelFilter;
-
-    let file = tracing_appender::rolling::daily("public", "lol");
-    let (non_blocking, _guard) = tracing_appender::non_blocking(file);
-
-    tracing_subscriber::fmt()
-        .with_max_level(LevelFilter::TRACE)
-        .with_writer(non_blocking)
-        .with_thread_ids(true)
-        .init();
-    debug!("shiet");
-
-    // TODO: debug
-    let x = span!(tracing::Level::WARN, "ouais");
-    let _y = x.enter();
+    let colors = ColoredLevelConfig::new()
+        .info(Color::Blue)
+        .debug(Color::BrightBlack)
+        .warn(Color::Yellow)
+        .error(Color::Red);
+    let mut logger = fern::Dispatch::new()
+        .format(move |out, message, record| {
+            out.finish(format_args!(
+                "{}[{}][{}] {}",
+                chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
+                record.target(),
+                colors.color(record.level()),
+                message
+            ))
+        })
+        .level(log::LevelFilter::Debug);
+    if let Some(log_file) = opt.log_file {
+        logger = logger.chain(fern::log_file(log_file)?);
+    }
+    logger.apply()?;
 
     let _xdg = BaseDirectories::new()?;
     let (_config_thread, config_update) = spawn_config_watcher_system()?;

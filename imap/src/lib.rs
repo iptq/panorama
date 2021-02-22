@@ -5,7 +5,7 @@ extern crate derive_builder;
 #[macro_use]
 extern crate futures;
 #[macro_use]
-extern crate tracing;
+extern crate log;
 
 pub mod builders;
 pub mod client;

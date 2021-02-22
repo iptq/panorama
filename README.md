@@ -5,6 +5,8 @@ panorama
 
 Panorama is a terminal Personal Information Manager (PIM).
 
+Status: **not done yet**
+
 Goals:
 
 - Never have to actually close the application.

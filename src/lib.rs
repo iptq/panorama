@@ -14,7 +14,7 @@ extern crate format_bytes;
 #[macro_use]
 extern crate serde;
 #[macro_use]
-extern crate tracing;
+extern crate log;
 
 pub mod config;
 pub mod mail;

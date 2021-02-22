@@ -60,10 +60,7 @@ pub enum ImapAuth {
     /// Use plain username/password authentication
     #[serde(rename = "plain")]
     #[allow(missing_docs)]
-    Plain {
-        username: String,
-        password: String,
-    }
+    Plain { username: String, password: String },
 }
 
 /// Describes when to perform the TLS handshake

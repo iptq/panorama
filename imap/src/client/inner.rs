@@ -211,9 +211,16 @@ where
         pin_mut!(fut2);
 
         match future::select(fut, fut2).await {
-            Either::Left((_, _)) => {
-                debug!("got a new line");
-                let (_, resp) = crate::parser::parse_response(next_line.as_bytes()).unwrap();
+            Either::Left((res, _)) => {
+                res.context("read failed")?;
+                debug!("got a new line {:?}", next_line);
+                let (_, resp) = match crate::parser::parse_response(next_line.as_bytes()) {
+                    Ok(v) => v,
+                    Err(err) => {
+                        debug!("shiet: {:?}", err);
+                        continue;
+                    }
+                };
                 let resp = Response::from(resp);
                 debug!("parsed as: {:?}", resp);
                 let next_line = next_line.trim_end_matches('\n').trim_end_matches('\r');

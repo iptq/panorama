@@ -64,7 +64,7 @@ impl<'a> From<Response_<'a>> for Response {
                 information: information.map(str::to_owned),
             },
             Expunge(n) => Response::Expunge(n),
-            Vanished {earlier, uids} => Response::Vanished{earlier, uids},
+            Vanished { earlier, uids } => Response::Vanished { earlier, uids },
             _ => todo!("nyi: {:?}", b),
         }
     }
@@ -132,10 +132,7 @@ pub enum UidSetMember {
 }
 
 #[derive(Clone, Debug)]
-pub enum AttributeValue {
-}
+pub enum AttributeValue {}
 
 #[derive(Clone, Debug)]
-pub enum MailboxDatum {
-
-}
+pub enum MailboxDatum {}
