@@ -118,6 +118,30 @@ fn build_status(pair: Pair<Rule>) -> Status {
     }
 }
 
+fn build_flag_list(pair: Pair<Rule>) -> Vec<Flag> {
+    if !matches!(pair.as_rule(), Rule::flag_list) {
+        unreachable!("{:#?}", pair);
+    }
+
+    pair.into_inner().map(build_flag).collect()
+}
+
+fn build_flag(pair: Pair<Rule>) -> Flag {
+    if !matches!(pair.as_rule(), Rule::flag) {
+        unreachable!("{:#?}", pair);
+    }
+
+    match pair.as_str() {
+        "\\Answered" => Flag::Answered,
+        "\\Flagged" => Flag::Flagged,
+        "\\Deleted" => Flag::Deleted,
+        "\\Seen" => Flag::Seen,
+        "\\Draft" => Flag::Draft,
+        s if s.starts_with("\\") => Flag::Ext(s.to_owned()),
+        _ => unreachable!("{:#?}", pair.as_str()),
+    }
+}
+
 fn build_mailbox_data(pair: Pair<Rule>) -> MailboxData {
     if !matches!(pair.as_rule(), Rule::mailbox_data) {
         unreachable!("{:#?}", pair);
@@ -132,18 +156,24 @@ fn build_mailbox_data(pair: Pair<Rule>) -> MailboxData {
             let number = pair.as_str().parse::<u32>().unwrap();
             MailboxData::Exists(number)
         }
+        Rule::mailbox_data_flags => {
+            let mut pairs = pair.into_inner();
+            let pair = pairs.next().unwrap();
+            let flags = build_flag_list(pair);
+            MailboxData::Flags(flags)
+        }
         _ => unreachable!("{:#?}", pair),
     }
 }
 
 #[cfg(test)]
-#[rustfmt::skip]
 mod tests {
     use super::*;
     use crate::response::*;
     use pest::Parser;
 
     #[test]
+#[rustfmt::skip]
     fn test_capability() {
         assert_eq!(parse_capability("IMAP4rev1"), Ok(Capability::Imap4rev1));
         assert_eq!(parse_capability("LOGINDISABLED"), Ok(Capability::Atom("LOGINDISABLED".to_owned())));
@@ -155,6 +185,7 @@ mod tests {
     }
 
     #[test]
+#[rustfmt::skip]
     fn test_nil() {
         assert!(Rfc3501::parse(Rule::nil, "NIL").is_ok());
         assert!(Rfc3501::parse(Rule::nil, "anything else").is_err());
@@ -165,19 +196,39 @@ mod tests {
         // this little exchange is from section 8 of rfc3501
         // https://tools.ietf.org/html/rfc3501#section-8
 
-        assert_eq!(parse_response("* OK IMAP4rev1 Service Ready\r\n"), Ok(Response::Data {
-            status: Status::Ok,
-            code: None,
-            information: Some("IMAP4rev1 Service Ready".to_owned()),
-        }));
+        assert_eq!(
+            parse_response("* OK IMAP4rev1 Service Ready\r\n"),
+            Ok(Response::Data {
+                status: Status::Ok,
+                code: None,
+                information: Some("IMAP4rev1 Service Ready".to_owned()),
+            })
+        );
 
-        assert_eq!(parse_response("a001 OK LOGIN completed\r\n"), Ok(Response::Done {
-            tag: "a001".to_owned(),
-            status: Status::Ok,
-            code: None,
-            information: Some("LOGIN completed".to_owned()),
-        }));
+        assert_eq!(
+            parse_response("a001 OK LOGIN completed\r\n"),
+            Ok(Response::Done {
+                tag: "a001".to_owned(),
+                status: Status::Ok,
+                code: None,
+                information: Some("LOGIN completed".to_owned()),
+            })
+        );
 
-        assert_eq!(parse_response("* 18 EXISTS\r\n"), Ok(Response::MailboxData(MailboxData::Exists(18))));
+        assert_eq!(
+            parse_response("* 18 EXISTS\r\n"),
+            Ok(Response::MailboxData(MailboxData::Exists(18)))
+        );
+
+        assert_eq!(
+            parse_response("* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\r\n"),
+            Ok(Response::MailboxData(MailboxData::Flags(vec![
+                Flag::Answered,
+                Flag::Flagged,
+                Flag::Deleted,
+                Flag::Seen,
+                Flag::Draft,
+            ])))
+        );
     }
 }
