@@ -267,6 +267,59 @@
 <span id="264">264</span>
 <span id="265">265</span>
 <span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">pin</span>::<span class="ident">Pin</span>;
@@ -289,10 +342,12 @@
 };
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">command</span>::<span class="ident">Command</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">response</span>::<span class="ident">Response</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">response</span>::{<span class="ident">Capability</span>, <span class="ident">Response</span>, <span class="ident">ResponseCode</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">types</span>::<span class="ident">Status</span>;
 
 <span class="kw">use</span> <span class="kw">super</span>::<span class="ident">ClientConfig</span>;
 
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">CapsLock</span> <span class="op">=</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Capability</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">ResultMap</span> <span class="op">=</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">usize</span>, (<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Waker</span><span class="op">&gt;</span>)<span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">GreetingState</span> <span class="op">=</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span>(<span class="ident">bool</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Waker</span><span class="op">&gt;</span>)<span class="op">&gt;</span><span class="op">&gt;</span>;
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TAG_PREFIX</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;panorama&quot;</span>;
@@ -306,7 +361,7 @@
     <span class="ident">results</span>: <span class="ident">ResultMap</span>,
 
     <span class="doccomment">/// cached set of capabilities</span>
-    <span class="ident">caps</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="ident">caps</span>: <span class="ident">CapsLock</span>,
 
     <span class="doccomment">/// join handle for the listener thread</span>
     <span class="ident">listener_handle</span>: <span class="ident">JoinHandle</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ReadHalf</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
@@ -328,8 +383,11 @@
         <span class="kw">let</span> <span class="ident">results</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">RwLock</span>::<span class="ident">new</span>(<span class="ident">HashMap</span>::<span class="ident">new</span>()));
         <span class="kw">let</span> (<span class="ident">exit_tx</span>, <span class="ident">exit_rx</span>) <span class="op">=</span> <span class="ident">mpsc</span>::<span class="ident">channel</span>(<span class="number">1</span>);
         <span class="kw">let</span> <span class="ident">greeting</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">RwLock</span>::<span class="ident">new</span>((<span class="bool-val">false</span>, <span class="prelude-val">None</span>)));
-        <span class="kw">let</span> <span class="ident">listen_fut</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">spawn</span>(<span class="ident">listen</span>(
+        <span class="kw">let</span> <span class="ident">caps</span>: <span class="ident">CapsLock</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">RwLock</span>::<span class="ident">new</span>(<span class="prelude-val">None</span>));
+
+        <span class="kw">let</span> <span class="ident">listener_handle</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">spawn</span>(<span class="ident">listen</span>(
             <span class="ident">read_half</span>,
+            <span class="ident">caps</span>.<span class="ident">clone</span>(),
             <span class="ident">results</span>.<span class="ident">clone</span>(),
             <span class="ident">exit_rx</span>,
             <span class="ident">greeting</span>.<span class="ident">clone</span>(),
@@ -340,8 +398,8 @@
             <span class="ident">conn</span>: <span class="ident">write_half</span>,
             <span class="ident">id</span>: <span class="number">0</span>,
             <span class="ident">results</span>,
-            <span class="ident">caps</span>: <span class="ident">Vec</span>::<span class="ident">new</span>(),
-            <span class="ident">listener_handle</span>: <span class="ident">listen_fut</span>,
+            <span class="ident">listener_handle</span>,
+            <span class="ident">caps</span>,
             <span class="ident">exit_tx</span>,
             <span class="ident">greeting</span>,
         }
@@ -399,7 +457,7 @@
         <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute</span>(<span class="ident">Command</span>::<span class="ident">Starttls</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;server response to starttls: {:?}&quot;</span>, <span class="ident">resp</span>);
 
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;sending exit ()&quot;</span>);
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;sending exit for upgrade&quot;</span>);
         <span class="self">self</span>.<span class="ident">exit_tx</span>.<span class="ident">send</span>(()).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">reader</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">listener_handle</span>.<span class="kw">await</span><span class="question-mark">?</span><span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">writer</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">conn</span>;
@@ -415,6 +473,7 @@
         <span class="kw">let</span> <span class="ident">tls_config</span> <span class="op">=</span> <span class="ident">TlsConnector</span>::<span class="ident">from</span>(<span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">tls_config</span>));
         <span class="kw">let</span> <span class="ident">dnsname</span> <span class="op">=</span> <span class="ident">DNSNameRef</span>::<span class="ident">try_from_ascii_str</span>(<span class="ident">server_name</span>).<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">stream</span> <span class="op">=</span> <span class="ident">tls_config</span>.<span class="ident">connect</span>(<span class="ident">dnsname</span>, <span class="ident">conn</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;upgraded, stream is using TLS now&quot;</span>);
 
         <span class="prelude-val">Ok</span>(<span class="ident">Client</span>::<span class="ident">new</span>(<span class="ident">stream</span>, <span class="self">self</span>.<span class="ident">config</span>))
     }
@@ -426,6 +485,7 @@
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> ();
     <span class="kw">fn</span> <span class="ident">poll</span>(<span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Output</span><span class="op">&gt;</span> {
         <span class="kw">let</span> (<span class="ident">state</span>, <span class="ident">waker</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">write</span>();
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;g {:?}&quot;</span>, <span class="ident">state</span>);
         <span class="kw">if</span> <span class="ident">waker</span>.<span class="ident">is_none</span>() {
             <span class="kw-2">*</span><span class="ident">waker</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">cx</span>.<span class="ident">waker</span>().<span class="ident">clone</span>());
         }
@@ -462,6 +522,7 @@
 <span class="doccomment">/// Main listen loop for the application</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">listen</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>(
     <span class="ident">conn</span>: <span class="ident">C</span>,
+    <span class="ident">caps</span>: <span class="ident">CapsLock</span>,
     <span class="ident">results</span>: <span class="ident">ResultMap</span>,
     <span class="kw-2">mut</span> <span class="ident">exit</span>: <span class="ident">mpsc</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     <span class="ident">greeting</span>: <span class="ident">GreetingState</span>,
@@ -482,7 +543,11 @@
 
         <span class="kw">match</span> <span class="ident">future</span>::<span class="ident">select</span>(<span class="ident">fut</span>, <span class="ident">fut2</span>).<span class="kw">await</span> {
             <span class="ident">Either</span>::<span class="ident">Left</span>((<span class="ident">res</span>, <span class="kw">_</span>)) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">res</span>.<span class="ident">context</span>(<span class="string">&quot;read failed&quot;</span>)<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">bytes</span> <span class="op">=</span> <span class="ident">res</span>.<span class="ident">context</span>(<span class="string">&quot;read failed&quot;</span>)<span class="question-mark">?</span>;
+                <span class="kw">if</span> <span class="ident">bytes</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
+                    <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;connection probably died&quot;</span>);
+                }
+
                 <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;got a new line {:?}&quot;</span>, <span class="ident">next_line</span>);
                 <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">resp</span>) <span class="op">=</span> <span class="kw">match</span> <span class="kw">crate</span>::<span class="ident">parser</span>::<span class="ident">parse_response</span>(<span class="ident">next_line</span>.<span class="ident">as_bytes</span>()) {
                     <span class="prelude-val">Ok</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>,
@@ -491,39 +556,80 @@
                         <span class="kw">continue</span>;
                     }
                 };
-                <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">Response</span>::<span class="ident">from</span>(<span class="ident">resp</span>);
-                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;parsed as: {:?}&quot;</span>, <span class="ident">resp</span>);
-                <span class="kw">let</span> <span class="ident">next_line</span> <span class="op">=</span> <span class="ident">next_line</span>.<span class="ident">trim_end_matches</span>(<span class="string">&#39;\n&#39;</span>).<span class="ident">trim_end_matches</span>(<span class="string">&#39;\r&#39;</span>);
 
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">parts</span> <span class="op">=</span> <span class="ident">next_line</span>.<span class="ident">split</span>(<span class="string">&quot; &quot;</span>);
-                <span class="kw">let</span> <span class="ident">tag</span> <span class="op">=</span> <span class="ident">parts</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
-                <span class="kw">let</span> <span class="ident">rest</span> <span class="op">=</span> <span class="ident">parts</span>.<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>().<span class="ident">join</span>(<span class="string">&quot; &quot;</span>);
-
-                <span class="kw">if</span> <span class="ident">tag</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;*&quot;</span> {
-                    <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;UNTAGGED {:?}&quot;</span>, <span class="ident">rest</span>);
-
-                    <span class="comment">// TODO: verify that the greeting is actually an OK</span>
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">greeting</span>) <span class="op">=</span> <span class="ident">greeting</span>.<span class="ident">take</span>() {
-                        <span class="kw">let</span> (<span class="ident">greeting</span>, <span class="ident">waker</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">greeting</span>.<span class="ident">write</span>();
-                        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;got greeting&quot;</span>);
-                        <span class="kw-2">*</span><span class="ident">greeting</span> <span class="op">=</span> <span class="bool-val">true</span>;
-                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">waker</span>) <span class="op">=</span> <span class="ident">waker</span>.<span class="ident">take</span>() {
-                            <span class="ident">waker</span>.<span class="ident">wake</span>();
-                        }
-                    }
-                } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">tag</span>.<span class="ident">starts_with</span>(<span class="ident">TAG_PREFIX</span>) {
-                    <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">tag</span>.<span class="ident">trim_start_matches</span>(<span class="ident">TAG_PREFIX</span>).<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
-                    <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;set {} to {:?}&quot;</span>, <span class="ident">id</span>, <span class="ident">rest</span>);
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">results</span> <span class="op">=</span> <span class="ident">results</span>.<span class="ident">write</span>();
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">c</span>, <span class="ident">w</span>)) <span class="op">=</span> <span class="ident">results</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">id</span>) {
-                        <span class="comment">// *c = Some(rest.to_string());</span>
-                        <span class="kw-2">*</span><span class="ident">c</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">resp</span>);
-                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">waker</span>) <span class="op">=</span> <span class="ident">w</span>.<span class="ident">take</span>() {
-                            <span class="ident">waker</span>.<span class="ident">wake</span>();
-                        }
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">greeting</span>) <span class="op">=</span> <span class="ident">greeting</span>.<span class="ident">take</span>() {
+                    <span class="kw">let</span> (<span class="ident">greeting</span>, <span class="ident">waker</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">greeting</span>.<span class="ident">write</span>();
+                    <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;received greeting!&quot;</span>);
+                    <span class="kw-2">*</span><span class="ident">greeting</span> <span class="op">=</span> <span class="bool-val">true</span>;
+                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">waker</span>) <span class="op">=</span> <span class="ident">waker</span>.<span class="ident">take</span>() {
+                        <span class="ident">waker</span>.<span class="ident">wake</span>();
                     }
                 }
+
+                <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">Response</span>::<span class="ident">from</span>(<span class="ident">resp</span>);
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;resp: {:?}&quot;</span>, <span class="ident">resp</span>);
+                <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">resp</span> {
+                    <span class="ident">Response</span>::<span class="ident">Capabilities</span>(<span class="ident">new_caps</span>)
+                    <span class="op">|</span> <span class="ident">Response</span>::<span class="ident">Data</span> {
+                        <span class="ident">status</span>: <span class="ident">Status</span>::<span class="prelude-val">Ok</span>,
+                        <span class="ident">code</span>: <span class="prelude-val">Some</span>(<span class="ident">ResponseCode</span>::<span class="ident">Capabilities</span>(<span class="ident">new_caps</span>)),
+                        ..
+                    } <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="kw">let</span> <span class="ident">caps</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">caps</span>.<span class="ident">write</span>();
+                        <span class="kw-2">*</span><span class="ident">caps</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">new_caps</span>.<span class="ident">clone</span>());
+                        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;new caps: {:?}&quot;</span>, <span class="ident">caps</span>);
+                    }
+
+                    <span class="ident">Response</span>::<span class="ident">Done</span> { <span class="ident">tag</span>, .. } <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="kw">let</span> <span class="ident">tag_str</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">tag</span>.<span class="number">0</span>;
+                        <span class="kw">if</span> <span class="ident">tag_str</span>.<span class="ident">starts_with</span>(<span class="ident">TAG_PREFIX</span>) {
+                            <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">tag_str</span>.<span class="ident">trim_start_matches</span>(<span class="ident">TAG_PREFIX</span>).<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">results</span> <span class="op">=</span> <span class="ident">results</span>.<span class="ident">write</span>();
+                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">c</span>, <span class="ident">waker</span>)) <span class="op">=</span> <span class="ident">results</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">id</span>) {
+                                <span class="kw-2">*</span><span class="ident">c</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">resp</span>);
+                                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">waker</span>) <span class="op">=</span> <span class="ident">waker</span>.<span class="ident">take</span>() {
+                                    <span class="ident">waker</span>.<span class="ident">wake</span>();
+                                }
+                            }
+                        }
+                    }
+
+                    <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">todo</span><span class="macro">!</span>(<span class="string">&quot;unhandled response: {:?}&quot;</span>, <span class="ident">resp</span>),
+                }
+
+                <span class="comment">// debug!(&quot;parsed as: {:?}&quot;, resp);</span>
+                <span class="comment">// let next_line = next_line.trim_end_matches(&#39;\n&#39;).trim_end_matches(&#39;\r&#39;);</span>
+
+                <span class="comment">// let mut parts = next_line.split(&quot; &quot;);</span>
+                <span class="comment">// let tag = parts.next().unwrap();</span>
+                <span class="comment">// let rest = parts.collect::&lt;Vec&lt;_&gt;&gt;().join(&quot; &quot;);</span>
+
+                <span class="comment">// if tag == &quot;*&quot; {</span>
+                <span class="comment">//     debug!(&quot;UNTAGGED {:?}&quot;, rest);</span>
+
+                <span class="comment">//     // TODO: verify that the greeting is actually an OK</span>
+                <span class="comment">//     if let Some(greeting) = greeting.take() {</span>
+                <span class="comment">//         let (greeting, waker) = &amp;mut *greeting.write();</span>
+                <span class="comment">//         debug!(&quot;got greeting&quot;);</span>
+                <span class="comment">//         *greeting = true;</span>
+                <span class="comment">//         if let Some(waker) = waker.take() {</span>
+                <span class="comment">//             waker.wake();</span>
+                <span class="comment">//         }</span>
+                <span class="comment">//     }</span>
+                <span class="comment">// } else if tag.starts_with(TAG_PREFIX) {</span>
+                <span class="comment">//     let id = tag.trim_start_matches(TAG_PREFIX).parse::&lt;usize&gt;()?;</span>
+                <span class="comment">//     debug!(&quot;set {} to {:?}&quot;, id, rest);</span>
+                <span class="comment">//     let mut results = results.write();</span>
+                <span class="comment">//     if let Some((c, w)) = results.get_mut(&amp;id) {</span>
+                <span class="comment">//         // *c = Some(rest.to_string());</span>
+                <span class="comment">//         *c = Some(resp);</span>
+                <span class="comment">//         if let Some(waker) = w.take() {</span>
+                <span class="comment">//             waker.wake();</span>
+                <span class="comment">//         }</span>
+                <span class="comment">//     }</span>
+                <span class="comment">// }</span>
             }
+
             <span class="ident">Either</span>::<span class="ident">Right</span>((<span class="kw">_</span>, <span class="kw">_</span>)) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;exiting read loop&quot;</span>);
                 <span class="kw">break</span>;
