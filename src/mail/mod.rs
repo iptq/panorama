@@ -3,7 +3,10 @@
 use anyhow::Result;
 use futures::{future::FutureExt, stream::StreamExt};
 use panorama_imap::{
-    client::{ClientBuilder, ClientConfig, auth::{self, Auth}},
+    client::{
+        auth::{self, Auth},
+        ClientBuilder, ClientConfig,
+    },
     command::Command as ImapCommand,
 };
 use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
@@ -91,7 +94,7 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
         // check if the authentication method is supported
         let mut authed = match acct.imap.auth {
             ImapAuth::Plain { username, password } => {
-                let auth = auth::Plain {username, password};
+                let auth = auth::Plain { username, password };
                 auth.perform_auth(unauth).await?
             }
         };

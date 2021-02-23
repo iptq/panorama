@@ -147,7 +147,10 @@ impl ClientAuthenticated {
     }
 
     pub async fn list(&mut self) -> Result<()> {
-        let cmd = Command::List { reference: "".to_owned(), mailbox: "*".to_owned() };
+        let cmd = Command::List {
+            reference: "".to_owned(),
+            mailbox: "*".to_owned(),
+        };
         let resp = self.execute(cmd).await?;
         debug!("list response: {:?}", resp);
         Ok(())

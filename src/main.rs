@@ -1,15 +1,14 @@
 #[macro_use]
 extern crate log;
 
-use std::fs::OpenOptions;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use fern::colors::{Color, ColoredLevelConfig};
-use futures::future::TryFutureExt;
+use futures::future::{FutureExt, TryFutureExt};
 use panorama::{config::spawn_config_watcher_system, mail, report_err, ui};
 use structopt::StructOpt;
-use tokio::sync::mpsc;
+use tokio::{runtime::Runtime, sync::mpsc};
 use xdg::BaseDirectories;
 
 #[derive(Debug, StructOpt)]
@@ -18,36 +17,25 @@ struct Opt {
     /// The path to the log file. By default, does not log.
     #[structopt(long = "log-file")]
     log_file: Option<PathBuf>,
+
+    /// Run this application headlessly
+    #[structopt(long = "headless")]
+    headless: bool,
 }
 
-#[tokio::main(flavor = "multi_thread")]
-async fn main() -> Result<()> {
-    let now = chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]");
-
+fn main() -> Result<()> {
     // parse command line arguments into options struct
     let opt = Opt::from_args();
+    setup_logger(opt.log_file.as_ref())?;
 
-    let colors = ColoredLevelConfig::new()
-        .info(Color::Blue)
-        .debug(Color::BrightBlack)
-        .warn(Color::Yellow)
-        .error(Color::Red);
-    let mut logger = fern::Dispatch::new()
-        .format(move |out, message, record| {
-            out.finish(format_args!(
-                "{}[{}][{}] {}",
-                now,
-                record.target(),
-                colors.color(record.level()),
-                message
-            ))
-        })
-        .level(log::LevelFilter::Debug);
-    if let Some(log_file) = opt.log_file {
-        logger = logger.chain(fern::log_file(log_file)?);
-    }
-    logger.apply()?;
+    let rt = Runtime::new().unwrap();
+    rt.block_on(run(opt)).unwrap();
 
+    Ok(())
+}
+
+// #[tokio::main(flavor = "multi_thread")]
+async fn run(opt: Opt) -> Result<()> {
     let _xdg = BaseDirectories::new()?;
     let (_config_thread, config_update) = spawn_config_watcher_system()?;
 
@@ -64,8 +52,10 @@ async fn main() -> Result<()> {
             .await;
     });
 
-    let stdout = std::io::stdout();
-    tokio::spawn(ui::run_ui(stdout, exit_tx).unwrap_or_else(report_err));
+    if !opt.headless {
+        let stdout = std::io::stdout();
+        tokio::spawn(ui::run_ui(stdout, exit_tx).unwrap_or_else(report_err));
+    }
 
     exit_rx.recv().await;
 
@@ -74,4 +64,30 @@ async fn main() -> Result<()> {
     // shutdown
     std::process::exit(0);
     // Ok(())
+}
+
+fn setup_logger(log_file: Option<impl AsRef<Path>>) -> Result<()> {
+    let now = chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]");
+    let colors = ColoredLevelConfig::new()
+        .info(Color::Blue)
+        .debug(Color::BrightBlack)
+        .warn(Color::Yellow)
+        .error(Color::Red);
+    let mut logger = fern::Dispatch::new()
+        .format(move |out, message, record| {
+            out.finish(format_args!(
+                "{}[{}][{}] {}",
+                now,
+                record.target(),
+                colors.color(record.level()),
+                message
+            ))
+        })
+        .level(log::LevelFilter::Debug);
+    if let Some(log_file) = log_file {
+        logger = logger.chain(fern::log_file(log_file)?);
+    }
+    logger.apply()?;
+
+    Ok(())
 }

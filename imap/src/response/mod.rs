@@ -60,7 +60,149 @@ pub enum UidSetMember {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum AttributeValue {}
+pub enum AttributeValue {
+    BodySection {
+        section: Option<SectionPath>,
+        index: Option<u32>,
+        data: Option<String>,
+    },
+    BodyStructure(BodyStructure),
+    Envelope(Box<Envelope>),
+    Flags(Vec<String>),
+    InternalDate(String),
+    ModSeq(u64), // RFC 4551, section 3.3.2
+    Rfc822(Option<String>),
+    Rfc822Header(Option<String>),
+    Rfc822Size(u32),
+    Rfc822Text(Option<String>),
+    Uid(u32),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum BodyStructure {
+    Basic {
+        common: BodyContentCommon,
+        other: BodyContentSinglePart,
+        extension: Option<BodyExtension>,
+    },
+    Text {
+        common: BodyContentCommon,
+        other: BodyContentSinglePart,
+        lines: u32,
+        extension: Option<BodyExtension>,
+    },
+    Message {
+        common: BodyContentCommon,
+        other: BodyContentSinglePart,
+        envelope: Envelope,
+        body: Box<BodyStructure>,
+        lines: u32,
+        extension: Option<BodyExtension>,
+    },
+    Multipart {
+        common: BodyContentCommon,
+        bodies: Vec<BodyStructure>,
+        extension: Option<BodyExtension>,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BodyContentSinglePart {
+    pub id: Option<String>,
+    pub md5: Option<String>,
+    pub description: Option<String>,
+    pub transfer_encoding: ContentEncoding,
+    pub octets: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BodyContentCommon {
+    pub ty: ContentType,
+    pub disposition: Option<ContentDisposition>,
+    pub language: Option<Vec<String>>,
+    pub location: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ContentType {
+    pub ty: String,
+    pub subtype: String,
+    pub params: BodyParams,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ContentDisposition {
+    pub ty: String,
+    pub params: BodyParams,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ContentEncoding {
+    SevenBit,
+    EightBit,
+    Binary,
+    Base64,
+    QuotedPrintable,
+    Other(String),
+}
+
+pub type BodyParams = Option<Vec<(String, String)>>;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum BodyExtension {
+    Num(u32),
+    Str(Option<String>),
+    List(Vec<BodyExtension>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Envelope {
+    pub date: Option<String>,
+    pub subject: Option<String>,
+    pub from: Option<Vec<Address>>,
+    pub sender: Option<Vec<Address>>,
+    pub reply_to: Option<Vec<Address>>,
+    pub to: Option<Vec<Address>>,
+    pub cc: Option<Vec<Address>>,
+    pub bcc: Option<Vec<Address>>,
+    pub in_reply_to: Option<String>,
+    pub message_id: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Address {
+    pub name: Option<String>,
+    pub adl: Option<String>,
+    pub mailbox: Option<String>,
+    pub host: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum Attribute {
+    Body,
+    Envelope,
+    Flags,
+    InternalDate,
+    ModSeq, // RFC 4551, section 3.3.2
+    Rfc822,
+    Rfc822Size,
+    Rfc822Text,
+    Uid,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MessageSection {
+    Header,
+    Mime,
+    Text,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum SectionPath {
+    Full(MessageSection),
+    Part(Vec<u32>, Option<MessageSection>),
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MailboxData {

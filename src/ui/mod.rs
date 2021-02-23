@@ -20,7 +20,7 @@ use crate::ExitSender;
 
 use self::table::Table;
 
-const FRAME: Duration = Duration::from_millis(20);
+const FRAME_DURATION: Duration = Duration::from_millis(20);
 
 /// X Y W H
 #[derive(Copy, Clone)]
@@ -28,10 +28,6 @@ pub struct Rect(u16, u16, u16, u16);
 
 /// UI entrypoint.
 pub async fn run_ui(mut w: impl Write + Debug, exit: ExitSender) -> Result<()> {
-    loop {
-        tokio::time::sleep(Duration::from_secs(4000)).await;
-    }
-
     execute!(w, cursor::Hide, terminal::EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
 
@@ -57,10 +53,10 @@ pub async fn run_ui(mut w: impl Write + Debug, exit: ExitSender) -> Result<()> {
         w.flush()?;
 
         // approx 60fps
-        time::sleep(FRAME).await;
+        time::sleep(FRAME_DURATION).await;
 
         // check to see if there's even an event this frame. otherwise, just keep going
-        if event::poll(FRAME)? {
+        if event::poll(FRAME_DURATION)? {
             let event = event::read()?;
             table.update(&event);
 
