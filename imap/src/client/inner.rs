@@ -1,17 +1,17 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::mem;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
 
 use anyhow::{Context as AnyhowContext, Result};
 use futures::future::{self, Either, Future, FutureExt};
-use parking_lot::{Mutex, RwLock};
+use parking_lot::{RwLock, RwLockWriteGuard};
 use tokio::{
     io::{
-        self, AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader,
-        ReadHalf, WriteHalf,
+        self, AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader, ReadHalf, WriteHalf,
     },
-    sync::{mpsc, oneshot},
+    sync::mpsc,
     task::JoinHandle,
 };
 use tokio_rustls::{
@@ -19,14 +19,15 @@ use tokio_rustls::{
 };
 
 use crate::command::Command;
-use crate::response::{Capability, Response, ResponseCode};
-use crate::types::Status;
+use crate::parser::{parse_capability, parse_response};
+use crate::response::{Capability, Response, ResponseCode, Status};
+// use crate::types::{Capability as Capability_, Status};
 
 use super::ClientConfig;
 
-pub type CapsLock = Arc<RwLock<Option<Vec<Capability>>>>;
-pub type ResultMap = Arc<RwLock<HashMap<usize, (Option<Response>, Option<Waker>)>>>;
-pub type GreetingState = Arc<RwLock<(bool, Option<Waker>)>>;
+pub type CapsLock = Arc<RwLock<Option<HashSet<Capability>>>>;
+pub type ResultMap = Arc<RwLock<VecDeque<(usize, Option<Response>, Vec<Response>, Option<Waker>)>>>;
+pub type GreetingState = Arc<RwLock<(Option<Response>, Option<Waker>)>>;
 pub const TAG_PREFIX: &str = "panorama";
 
 /// The lower-level Client struct, that is shared by all of the exported structs in the state machine.
@@ -57,9 +58,9 @@ where
     /// Creates a new client that wraps a connection
     pub fn new(conn: C, config: ClientConfig) -> Self {
         let (read_half, write_half) = io::split(conn);
-        let results = Arc::new(RwLock::new(HashMap::new()));
+        let results = Arc::new(RwLock::new(VecDeque::new()));
         let (exit_tx, exit_rx) = mpsc::channel(1);
-        let greeting = Arc::new(RwLock::new((false, None)));
+        let greeting = Arc::new(RwLock::new((None, None)));
         let caps: CapsLock = Arc::new(RwLock::new(None));
 
         let listener_handle = tokio::spawn(listen(
@@ -89,13 +90,13 @@ where
     }
 
     /// Sends a command to the server and returns a handle to retrieve the result
-    pub async fn execute(&mut self, cmd: Command) -> Result<Response> {
+    pub async fn execute(&mut self, cmd: Command) -> Result<(Response, Vec<Response>)> {
         debug!("executing command {:?}", cmd);
         let id = self.id;
         self.id += 1;
         {
             let mut handlers = self.results.write();
-            handlers.insert(id, (None, None));
+            handlers.push_back((id, None, vec![], None));
         }
 
         let cmd_str = format!("{}{} {}\r\n", TAG_PREFIX, id, cmd);
@@ -104,23 +105,39 @@ where
         self.conn.flush().await?;
         debug!("[{}] written.", id);
 
-        ExecWaiter(self, id).await;
-        let resp = {
-            let mut handlers = self.results.write();
-            handlers.remove(&id).unwrap().0.unwrap()
-        };
+        let resp = ExecWaiter(self, id, false).await;
+        // let resp = {
+        //     let mut handlers = self.results.write();
+        //     handlers.remove(&id).unwrap().0.unwrap()
+        // };
         Ok(resp)
     }
 
     /// Executes the CAPABILITY command
-    pub async fn capabilities(&mut self) -> Result<()> {
+    pub async fn capabilities(&mut self, force: bool) -> Result<()> {
+        {
+            let caps = &*self.caps.read();
+            if caps.is_some() && !force {
+                return Ok(());
+            }
+        }
+
         let cmd = Command::Capability;
         debug!("sending: {:?} {:?}", cmd, cmd.to_string());
-        let result = self
+        let (result, intermediate) = self
             .execute(cmd)
             .await
             .context("error executing CAPABILITY command")?;
         debug!("cap resp: {:?}", result);
+
+        if let Some(Response::Capabilities(new_caps)) = intermediate
+            .iter()
+            .find(|resp| matches!(resp, Response::Capabilities(_)))
+        {
+            let caps = &mut *self.caps.write();
+            *caps = Some(new_caps.iter().cloned().collect());
+        }
+
         // if let Response::Capabilities(caps) = resp {
         //     debug!("capabilities: {:?}", caps);
         // }
@@ -130,6 +147,10 @@ where
     /// Attempts to upgrade this connection using STARTTLS
     pub async fn upgrade(mut self) -> Result<Client<TlsStream<C>>> {
         // TODO: make sure STARTTLS is in the capability list
+        if !self.has_capability("STARTTLS").await? {
+            bail!("server doesn't support this capability");
+        }
+
         // first, send the STARTTLS command
         let resp = self.execute(Command::Starttls).await?;
         debug!("server response to starttls: {:?}", resp);
@@ -154,12 +175,28 @@ where
 
         Ok(Client::new(stream, self.config))
     }
+
+    /// Check if this client has a particular capability
+    pub async fn has_capability(&mut self, cap: impl AsRef<str>) -> Result<bool> {
+        let cap = cap.as_ref().to_owned();
+        debug!("checking for the capability: {:?}", cap);
+        let cap = parse_capability(cap)?;
+
+        self.capabilities(false).await?;
+        let caps = &*self.caps.read();
+        // TODO: refresh caps
+
+        let caps = caps.as_ref().unwrap();
+        let result = caps.contains(&cap);
+        debug!("cap result: {:?}", result);
+        Ok(result)
+    }
 }
 
 pub struct GreetingWaiter(GreetingState);
 
 impl Future for GreetingWaiter {
-    type Output = ();
+    type Output = Response;
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         let (state, waker) = &mut *self.0.write();
         debug!("g {:?}", state);
@@ -167,32 +204,43 @@ impl Future for GreetingWaiter {
             *waker = Some(cx.waker().clone());
         }
 
-        match state {
-            true => Poll::Ready(()),
-            false => Poll::Pending,
+        match state.take() {
+            Some(v) => Poll::Ready(v),
+            None => Poll::Pending,
         }
     }
 }
 
-pub struct ExecWaiter<'a, C>(&'a Client<C>, usize);
+pub struct ExecWaiter<'a, C>(&'a Client<C>, usize, bool);
 
 impl<'a, C> Future for ExecWaiter<'a, C> {
-    type Output = ();
-    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        let mut handlers = self.0.results.write();
-        let state = handlers.get_mut(&self.1);
-
-        // TODO: handle the None case here
-        debug!("f[{}] {:?}", self.1, state);
-        let (result, waker) = state.unwrap();
-
-        match result {
-            Some(_) => Poll::Ready(()),
-            None => {
-                *waker = Some(cx.waker().clone());
-                Poll::Pending
+    type Output = (Response, Vec<Response>);
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        // add the waker
+        let mut results = self.0.results.write();
+        if !self.2 {
+            if let Some((_, _, _, waker_ref)) =
+                results.iter_mut().find(|(id, _, _, _)| *id == self.1)
+            {
+                let waker = cx.waker().clone();
+                *waker_ref = Some(waker);
+                self.2 = true;
             }
         }
+
+        // if this struct exists then there's definitely at least one entry
+        let (id, last_response, _, _) = &results[0];
+        if *id != self.1 || last_response.is_none() {
+            return Poll::Pending;
+        }
+
+        let (_, last_response, intermediate_responses, _) = results.pop_front().unwrap();
+        mem::drop(results);
+
+        Poll::Ready((
+            last_response.expect("already checked"),
+            intermediate_responses,
+        ))
     }
 }
 
@@ -226,26 +274,19 @@ where
                 }
 
                 debug!("got a new line {:?}", next_line);
-                let (_, resp) = match crate::parser::parse_response(next_line.as_bytes()) {
-                    Ok(v) => v,
-                    Err(err) => {
-                        debug!("shiet: {:?}", err);
-                        continue;
-                    }
-                };
+                let resp = parse_response(next_line)?;
 
                 if let Some(greeting) = greeting.take() {
                     let (greeting, waker) = &mut *greeting.write();
                     debug!("received greeting!");
-                    *greeting = true;
+                    *greeting = Some(resp.clone());
                     if let Some(waker) = waker.take() {
                         waker.wake();
                     }
                 }
 
-                let resp = Response::from(resp);
-                debug!("resp: {:?}", resp);
                 match &resp {
+                    // capabilities list
                     Response::Capabilities(new_caps)
                     | Response::Data {
                         status: Status::Ok,
@@ -253,17 +294,24 @@ where
                         ..
                     } => {
                         let caps = &mut *caps.write();
-                        *caps = Some(new_caps.clone());
+                        *caps = Some(new_caps.iter().cloned().collect());
                         debug!("new caps: {:?}", caps);
                     }
 
+                    // bye
+                    Response::Data {
+                        status: Status::Bye,
+                        ..
+                    } => {
+                        bail!("disconnected");
+                    }
+
                     Response::Done { tag, .. } => {
-                        let tag_str = &tag.0;
-                        if tag_str.starts_with(TAG_PREFIX) {
-                            let id = tag_str.trim_start_matches(TAG_PREFIX).parse::<usize>()?;
+                        if tag.starts_with(TAG_PREFIX) {
+                            let id = tag.trim_start_matches(TAG_PREFIX).parse::<usize>()?;
                             let mut results = results.write();
-                            if let Some((c, waker)) = results.get_mut(&id) {
-                                *c = Some(resp);
+                            if let Some((_, opt, _, waker)) = results.iter_mut().next() {
+                                *opt = Some(resp);
                                 if let Some(waker) = waker.take() {
                                     waker.wake();
                                 }
@@ -271,7 +319,7 @@ where
                         }
                     }
 
-                    _ => todo!("unhandled response: {:?}", resp),
+                    _ => {}
                 }
 
                 // debug!("parsed as: {:?}", resp);

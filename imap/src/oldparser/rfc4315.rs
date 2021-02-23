@@ -13,7 +13,7 @@ use nom::{
     IResult,
 };
 
-use crate::parser::core::number;
+use crate::oldparser::core::number;
 use crate::types::*;
 
 /// Extends resp-text-code as follows:

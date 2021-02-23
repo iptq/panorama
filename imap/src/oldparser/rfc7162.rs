@@ -10,7 +10,7 @@ use nom::{
     IResult,
 };
 
-use crate::parser::core::sequence_set;
+use crate::oldparser::core::sequence_set;
 use crate::types::*;
 
 // The VANISHED response reports that the specified UIDs have been

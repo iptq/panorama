@@ -1,11 +1,6 @@
 use std::ops::RangeInclusive;
 
-use crate::types::{
-    AttributeValue as AttributeValue_, Capability as Capability_, MailboxDatum as MailboxDatum_,
-    RequestId, Response as Response_, ResponseCode as ResponseCode_, State, Status,
-};
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Response {
     Capabilities(Vec<Capability>),
     Continue {
@@ -13,7 +8,7 @@ pub enum Response {
         information: Option<String>,
     },
     Done {
-        tag: RequestId,
+        tag: String,
         status: Status,
         code: Option<ResponseCode>,
         information: Option<String>,
@@ -29,66 +24,17 @@ pub enum Response {
         uids: Vec<RangeInclusive<u32>>,
     },
     Fetch(u32, Vec<AttributeValue>),
-    MailboxData(MailboxDatum),
+    MailboxData(MailboxData),
 }
 
-impl<'a> From<Response_<'a>> for Response {
-    fn from(b: Response_) -> Self {
-        use Response_::*;
-        match b {
-            Capabilities(caps) => {
-                Response::Capabilities(caps.into_iter().map(Capability::from).collect())
-            }
-            Continue { code, information } => Response::Continue {
-                code: code.map(ResponseCode::from),
-                information: information.map(str::to_owned),
-            },
-            Done {
-                tag,
-                status,
-                code,
-                information,
-            } => Response::Done {
-                tag,
-                status,
-                code: code.map(ResponseCode::from),
-                information: information.map(str::to_owned),
-            },
-            Data {
-                status,
-                code,
-                information,
-            } => Response::Data {
-                status,
-                code: code.map(ResponseCode::from),
-                information: information.map(str::to_owned),
-            },
-            Expunge(n) => Response::Expunge(n),
-            Vanished { earlier, uids } => Response::Vanished { earlier, uids },
-            _ => todo!("nyi: {:?}", b),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum Capability {
     Imap4rev1,
     Auth(String),
     Atom(String),
 }
 
-impl<'a> From<Capability_<'a>> for Capability {
-    fn from(b: Capability_) -> Self {
-        use Capability_::*;
-        match b {
-            Imap4rev1 => Capability::Imap4rev1,
-            Auth(s) => Capability::Auth(s.to_owned()),
-            Atom(s) => Capability::Atom(s.to_owned()),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ResponseCode {
     Alert,
     BadCharset(Option<Vec<String>>),
@@ -107,32 +53,72 @@ pub enum ResponseCode {
     UidNotSticky,
 }
 
-impl<'a> From<ResponseCode_<'a>> for ResponseCode {
-    fn from(b: ResponseCode_) -> Self {
-        use ResponseCode_::*;
-        match b {
-            Alert => ResponseCode::Alert,
-            BadCharset(s) => {
-                ResponseCode::BadCharset(s.map(|v| v.into_iter().map(str::to_owned).collect()))
-            }
-            Capabilities(v) => {
-                ResponseCode::Capabilities(v.into_iter().map(Capability::from).collect())
-            }
-            HighestModSeq(n) => ResponseCode::HighestModSeq(n),
-            Parse => ResponseCode::Parse,
-            _ => todo!("nyi: {:?}", b),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum UidSetMember {
     UidRange(RangeInclusive<u32>),
     Uid(u32),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AttributeValue {}
 
-#[derive(Clone, Debug)]
-pub enum MailboxDatum {}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum MailboxData {
+    Exists(u32),
+    Flags(Vec<Flag>),
+    List {
+        flags: Vec<String>,
+        delimiter: Option<String>,
+        name: String,
+    },
+    Search(Vec<u32>),
+    Status {
+        mailbox: String,
+        status: Vec<StatusAttribute>,
+    },
+    Recent(u32),
+    MetadataSolicited {
+        mailbox: String,
+        values: Vec<Metadata>,
+    },
+    MetadataUnsolicited {
+        mailbox: String,
+        values: Vec<String>,
+    },
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum Flag {
+    Answered,
+    Flagged,
+    Deleted,
+    Seen,
+    Draft,
+    Ext(String),
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct Metadata {
+    pub entry: String,
+    pub value: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum StatusAttribute {
+    HighestModSeq(u64), // RFC 4551
+    Messages(u32),
+    Recent(u32),
+    UidNext(u32),
+    UidValidity(u32),
+    Unseen(u32),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Status {
+    Ok,
+    No,
+    Bad,
+    PreAuth,
+    Bye,
+}

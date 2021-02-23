@@ -13,7 +13,7 @@ use nom::{
     IResult,
 };
 
-use crate::parser::core::atom;
+use crate::oldparser::core::atom;
 use crate::types::*;
 
 // The ENABLED response lists capabilities that were enabled in response
@@ -23,7 +23,7 @@ pub(crate) fn resp_enabled(i: &[u8]) -> IResult<&[u8], Response> {
     map(enabled_data, Response::Capabilities)(i)
 }
 
-fn enabled_data(i: &[u8]) -> IResult<&[u8], Vec<Capability>> {
+pub fn enabled_data(i: &[u8]) -> IResult<&[u8], Vec<Capability>> {
     let (i, (_, capabilities)) = tuple((
         tag_no_case("ENABLED"),
         many0(preceded(char(' '), capability)),
@@ -31,6 +31,6 @@ fn enabled_data(i: &[u8]) -> IResult<&[u8], Vec<Capability>> {
     Ok((i, capabilities))
 }
 
-fn capability(i: &[u8]) -> IResult<&[u8], Capability> {
+pub fn capability(i: &[u8]) -> IResult<&[u8], Capability> {
     map(atom, Capability::Atom)(i)
 }

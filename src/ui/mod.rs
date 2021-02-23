@@ -28,6 +28,10 @@ pub struct Rect(u16, u16, u16, u16);
 
 /// UI entrypoint.
 pub async fn run_ui(mut w: impl Write + Debug, exit: ExitSender) -> Result<()> {
+    loop {
+        tokio::time::sleep(Duration::from_secs(4000)).await;
+    }
+
     execute!(w, cursor::Hide, terminal::EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
 

@@ -8,7 +8,7 @@
 use nom::{bytes::streaming::tag_no_case, sequence::tuple, IResult};
 
 use crate::{
-    parser::core::{number_64, paren_delimited},
+    oldparser::core::{number_64, paren_delimited},
     types::*,
 };
 

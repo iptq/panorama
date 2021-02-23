@@ -9,7 +9,7 @@ use panorama_imap::{
 use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
 use tokio_stream::wrappers::WatchStream;
 
-use crate::config::{Config, ConfigWatcher, MailAccountConfig, TlsMethod};
+use crate::config::{Config, ConfigWatcher, ImapAuth, MailAccountConfig, TlsMethod};
 
 /// Command sent to the mail thread by something else (i.e. UI)
 pub enum MailCommand {
@@ -89,7 +89,13 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
 
         debug!("preparing to auth");
         // check if the authentication method is supported
-        unauth.capabilities().await?;
+        let authed = match acct.imap.auth {
+            ImapAuth::Plain { username, password } => {
+                let ok = unauth.has_capability("AUTH=PLAIN").await?;
+                let res = unauth.execute(ImapCommand::Login { username, password }).await?;
+                debug!("res: {:?}", res);
+            }
+        };
 
         // debug!("sending CAPABILITY");
         // let result = unauth.capabilities().await?;

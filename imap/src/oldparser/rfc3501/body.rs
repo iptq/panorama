@@ -8,7 +8,7 @@ use nom::{
     IResult,
 };
 
-use crate::{parser::core::*, types::*};
+use crate::{oldparser::core::*, types::*};
 
 pub fn section_part(i: &[u8]) -> IResult<&[u8], Vec<u32>> {
     let (i, (part, mut rest)) = tuple((number, many0(preceded(char('.'), number))))(i)?;

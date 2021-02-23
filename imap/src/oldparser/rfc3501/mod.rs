@@ -17,7 +17,7 @@ use nom::{
 };
 
 use crate::{
-    parser::{
+    oldparser::{
         core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4315, rfc4551, rfc5161, rfc5464,
         rfc7162,
     },
@@ -181,7 +181,7 @@ fn resp_text_code(i: &[u8]) -> IResult<&[u8], ResponseCode> {
     )(i)
 }
 
-fn capability(i: &[u8]) -> IResult<&[u8], Capability> {
+pub fn capability(i: &[u8]) -> IResult<&[u8], Capability> {
     alt((
         map(tag_no_case(b"IMAP4rev1"), |_| Capability::Imap4rev1),
         map(preceded(tag_no_case(b"AUTH="), atom), Capability::Auth),
