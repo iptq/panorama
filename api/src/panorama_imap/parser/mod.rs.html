@@ -334,6 +334,10 @@
 <span id="331">331</span>
 <span id="332">332</span>
 <span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
@@ -533,8 +537,12 @@
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
             <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
             <span class="kw">let</span> (<span class="ident">flags</span>, <span class="ident">delimiter</span>, <span class="ident">name</span>) <span class="op">=</span> <span class="ident">build_mailbox_list</span>(<span class="ident">pair</span>);
-            <span class="ident">MailboxData</span>::<span class="ident">List</span> { <span class="ident">flags</span>, <span class="ident">delimiter</span>, <span class="ident">name</span> }
-        },
+            <span class="ident">MailboxData</span>::<span class="ident">List</span> {
+                <span class="ident">flags</span>,
+                <span class="ident">delimiter</span>,
+                <span class="ident">name</span>,
+            }
+        }
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
     }
 }
@@ -659,13 +667,13 @@
             })
         );
 
-        <span class="comment">// assert_eq!(</span>
-        <span class="comment">//     parse_response(concat!(</span>
-        <span class="comment">//         r#&quot;* 12 FETCH (FLAGS (\Seen) INTERNALDATE &quot;17-Jul-1996 02:44:25 -0700&quot; RFC822.SIZE 4286 ENVELOPE (&quot;Wed, 17 Jul 1996 02:23:25 -0700 (PDT)&quot; &quot;IMAP4rev1 WG mtg summary and minutes&quot; ((&quot;Terry Gray&quot; NIL &quot;gray&quot; &quot;cac.washington.edu&quot;)) ((&quot;Terry Gray&quot; NIL &quot;gray&quot; &quot;cac.washington.edu&quot;)) ((&quot;Terry Gray&quot; NIL &quot;gray&quot; &quot;cac.washington.edu&quot;)) ((NIL NIL &quot;imap&quot; &quot;cac.washington.edu&quot;)) ((NIL NIL &quot;minutes&quot; &quot;CNRI.Reston.VA.US&quot;) (&quot;John Klensin&quot; NIL &quot;KLENSIN&quot; &quot;MIT.EDU&quot;)) NIL NIL &quot;&lt;B27397-0100000@cac.washington.edu&gt;&quot;) BODY (&quot;TEXT&quot; &quot;PLAIN&quot; (&quot;CHARSET&quot; &quot;US-ASCII&quot;) NIL NIL &quot;7BIT&quot; 3028 92))&quot;#,</span>
-        <span class="comment">//         &quot;\r\n&quot;,</span>
-        <span class="comment">//     )),</span>
-        <span class="comment">//     Ok(Response::Fetch(12, vec![]))</span>
-        <span class="comment">// );</span>
+        <span class="macro">assert_eq</span><span class="macro">!</span>(
+            <span class="ident">parse_response</span>(<span class="macro">concat</span><span class="macro">!</span>(
+                <span class="string">r#&quot;* 12 FETCH (FLAGS (\Seen) INTERNALDATE &quot;17-Jul-1996 02:44:25 -0700&quot; RFC822.SIZE 4286 ENVELOPE (&quot;Wed, 17 Jul 1996 02:23:25 -0700 (PDT)&quot; &quot;IMAP4rev1 WG mtg summary and minutes&quot; ((&quot;Terry Gray&quot; NIL &quot;gray&quot; &quot;cac.washington.edu&quot;)) ((&quot;Terry Gray&quot; NIL &quot;gray&quot; &quot;cac.washington.edu&quot;)) ((&quot;Terry Gray&quot; NIL &quot;gray&quot; &quot;cac.washington.edu&quot;)) ((NIL NIL &quot;imap&quot; &quot;cac.washington.edu&quot;)) ((NIL NIL &quot;minutes&quot; &quot;CNRI.Reston.VA.US&quot;) (&quot;John Klensin&quot; NIL &quot;KLENSIN&quot; &quot;MIT.EDU&quot;)) NIL NIL &quot;&lt;B27397-0100000@cac.washington.edu&gt;&quot;) BODY (&quot;TEXT&quot; &quot;PLAIN&quot; (&quot;CHARSET&quot; &quot;US-ASCII&quot;) NIL NIL &quot;7BIT&quot; 3028 92))&quot;#</span>,
+                <span class="string">&quot;\r\n&quot;</span>,
+            )),
+            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Fetch</span>(<span class="number">12</span>, <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">AttributeValue</span>]))
+        );
     }
 }
 </pre></div>

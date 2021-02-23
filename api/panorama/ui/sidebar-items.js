@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["FRAME",""]],"fn":[["run_ui","UI entrypoint."]],"mod":[["table",""]],"struct":[["Rect","X Y W H"]]});
+initSidebarItems({"constant":[["FRAME_DURATION",""]],"fn":[["run_ui","UI entrypoint."]],"mod":[["table",""]],"struct":[["Rect","X Y W H"]]});
