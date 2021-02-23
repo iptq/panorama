@@ -41,6 +41,7 @@ pub async fn run_mail(
 
         // TODO: gracefully shut down connection
         // just gonna drop the connection for now
+        // FUTURE TODO: possible to hash the connections and only reconn the ones that changed
         debug!("dropping all connections...");
         for conn in curr_conn.drain(0..) {
             conn.abort();
@@ -100,9 +101,6 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
         };
 
         debug!("authentication successful!");
-
-        // debug!("sending CAPABILITY");
-        // let result = unauth.capabilities().await?;
 
         loop {
             debug!("listing all emails...");

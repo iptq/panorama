@@ -3,7 +3,7 @@ on:
     branches:
       - master
 
-name: CI
+name: publish-documentation
 
 jobs:
   doc:
