@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["AttributeValue",""],["Capability",""],["MailboxDatum",""],["Response",""],["ResponseCode",""],["UidSetMember",""]]});
+initSidebarItems({"enum":[["AttributeValue",""],["Capability",""],["MailboxData",""],["MailboxFlag",""],["Response",""],["ResponseCode",""],["Status",""],["StatusAttribute",""],["UidSetMember",""]],"struct":[["Metadata",""]]});

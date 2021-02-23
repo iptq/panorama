@@ -146,6 +146,16 @@
 <span id="143">143</span>
 <span id="144">144</span>
 <span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! IMAP Client</span>
 <span class="doccomment">//! ===</span>
@@ -182,6 +192,7 @@
 <span class="doccomment">//! # }</span>
 <span class="doccomment">//! ```</span>
 
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">auth</span>;
 <span class="kw">mod</span> <span class="ident">inner</span>;
 
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
@@ -191,6 +202,9 @@
 <span class="kw">use</span> <span class="ident">tokio_rustls</span>::{
     <span class="ident">client</span>::<span class="ident">TlsStream</span>, <span class="ident">rustls</span>::<span class="ident">ClientConfig</span> <span class="kw">as</span> <span class="ident">RustlsConfig</span>, <span class="ident">webpki</span>::<span class="ident">DNSNameRef</span>, <span class="ident">TlsConnector</span>,
 };
+
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">command</span>::<span class="ident">Command</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">response</span>::<span class="ident">Response</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">inner</span>::<span class="ident">Client</span>;
 
@@ -235,22 +249,18 @@
 
             <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">Client</span>::<span class="ident">new</span>(<span class="ident">conn</span>, <span class="self">self</span>);
             <span class="ident">inner</span>.<span class="ident">wait_for_greeting</span>().<span class="kw">await</span>;
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">ClientUnauthenticated</span>::<span class="ident">Encrypted</span>(
-                <span class="ident">ClientUnauthenticatedEncrypted</span> { <span class="ident">inner</span> },
-            ));
+            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">ClientUnauthenticated</span>::<span class="ident">Encrypted</span>(<span class="ident">inner</span>));
         } <span class="kw">else</span> {
             <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">Client</span>::<span class="ident">new</span>(<span class="ident">conn</span>, <span class="self">self</span>);
             <span class="ident">inner</span>.<span class="ident">wait_for_greeting</span>().<span class="kw">await</span>;
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">ClientUnauthenticated</span>::<span class="ident">Unencrypted</span>(
-                <span class="ident">ClientUnauthenticatedUnencrypted</span> { <span class="ident">inner</span> },
-            ));
+            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">ClientUnauthenticated</span>::<span class="ident">Unencrypted</span>(<span class="ident">inner</span>));
         }
     }
 }
 
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ClientUnauthenticated</span> {
-    <span class="ident">Encrypted</span>(<span class="ident">ClientUnauthenticatedEncrypted</span>),
-    <span class="ident">Unencrypted</span>(<span class="ident">ClientUnauthenticatedUnencrypted</span>),
+    <span class="ident">Encrypted</span>(<span class="ident">Client</span><span class="op">&lt;</span><span class="ident">TlsStream</span><span class="op">&lt;</span><span class="ident">TcpStream</span><span class="op">&gt;</span><span class="op">&gt;</span>),
+    <span class="ident">Unencrypted</span>(<span class="ident">Client</span><span class="op">&lt;</span><span class="ident">TcpStream</span><span class="op">&gt;</span>),
 }
 
 <span class="kw">impl</span> <span class="ident">ClientUnauthenticated</span> {
@@ -259,38 +269,48 @@
             <span class="comment">// this is a no-op, we don&#39;t need to upgrade</span>
             <span class="ident">ClientUnauthenticated</span>::<span class="ident">Encrypted</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="self">self</span>),
             <span class="ident">ClientUnauthenticated</span>::<span class="ident">Unencrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">ClientUnauthenticatedEncrypted</span> {
-                    <span class="ident">inner</span>: <span class="ident">e</span>.<span class="ident">inner</span>.<span class="ident">upgrade</span>().<span class="kw">await</span><span class="question-mark">?</span>,
-                };
-                <span class="prelude-val">Ok</span>(<span class="ident">ClientUnauthenticated</span>::<span class="ident">Encrypted</span>(<span class="ident">client</span>))
+                <span class="prelude-val">Ok</span>(<span class="ident">ClientUnauthenticated</span>::<span class="ident">Encrypted</span>(<span class="ident">e</span>.<span class="ident">upgrade</span>().<span class="kw">await</span><span class="question-mark">?</span>))
             }
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">capabilities</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="doccomment">/// Exposing low-level execute</span>
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">execute</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">cmd</span>: <span class="ident">Command</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Response</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">ClientUnauthenticated</span>::<span class="ident">Encrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">inner</span>.<span class="ident">capabilities</span>().<span class="kw">await</span><span class="question-mark">?</span>,
-            <span class="ident">ClientUnauthenticated</span>::<span class="ident">Unencrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">inner</span>.<span class="ident">capabilities</span>().<span class="kw">await</span><span class="question-mark">?</span>,
+            <span class="ident">ClientUnauthenticated</span>::<span class="ident">Encrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span>,
+            <span class="ident">ClientUnauthenticated</span>::<span class="ident">Unencrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span>,
         }
-        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="doccomment">/// Checks if the server that the client is talking to has support for the given capability.</span>
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">has_capability</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">cap</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">ClientUnauthenticated</span>::<span class="ident">Encrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">has_capability</span>(<span class="ident">cap</span>).<span class="kw">await</span>,
+            <span class="ident">ClientUnauthenticated</span>::<span class="ident">Unencrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">has_capability</span>(<span class="ident">cap</span>).<span class="kw">await</span>,
+        }
     }
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ClientUnauthenticatedUnencrypted</span> {
-    <span class="doccomment">/// Connection to the remote server</span>
-    <span class="ident">inner</span>: <span class="ident">Client</span><span class="op">&lt;</span><span class="ident">TcpStream</span><span class="op">&gt;</span>,
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ClientAuthenticated</span> {
+    <span class="ident">Encrypted</span>(<span class="ident">Client</span><span class="op">&lt;</span><span class="ident">TlsStream</span><span class="op">&lt;</span><span class="ident">TcpStream</span><span class="op">&gt;</span><span class="op">&gt;</span>),
+    <span class="ident">Unencrypted</span>(<span class="ident">Client</span><span class="op">&lt;</span><span class="ident">TcpStream</span><span class="op">&gt;</span>),
 }
 
-<span class="kw">impl</span> <span class="ident">ClientUnauthenticatedUnencrypted</span> {
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">upgrade</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {}
-}
+<span class="kw">impl</span> <span class="ident">ClientAuthenticated</span> {
+    <span class="doccomment">/// Exposing low-level execute</span>
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">execute</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">cmd</span>: <span class="ident">Command</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Response</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">ClientAuthenticated</span>::<span class="ident">Encrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span>,
+            <span class="ident">ClientAuthenticated</span>::<span class="ident">Unencrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span>,
+        }
+    }
 
-<span class="doccomment">/// An IMAP client that isn&#39;t authenticated.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ClientUnauthenticatedEncrypted</span> {
-    <span class="doccomment">/// Connection to the remote server</span>
-    <span class="ident">inner</span>: <span class="ident">Client</span><span class="op">&lt;</span><span class="ident">TlsStream</span><span class="op">&lt;</span><span class="ident">TcpStream</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">list</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="ident">Command</span>::<span class="ident">List</span> { <span class="ident">reference</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_owned</span>(), <span class="ident">mailbox</span>: <span class="string">&quot;*&quot;</span>.<span class="ident">to_owned</span>() };
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;list response: {:?}&quot;</span>, <span class="ident">resp</span>);
+        <span class="prelude-val">Ok</span>(())
+    }
 }
-
-<span class="kw">impl</span> <span class="ident">ClientUnauthenticatedEncrypted</span> {}
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "panorama_imap";</script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

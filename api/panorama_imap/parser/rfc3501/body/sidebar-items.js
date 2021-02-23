@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["msg_att_body_section",""],["section",""],["section_msgtext",""],["section_part",""],["section_spec",""],["section_text",""]]});
