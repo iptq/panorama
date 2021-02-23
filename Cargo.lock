@@ -781,6 +781,7 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "assert_matches",
+ "async-trait",
  "derive_builder",
  "futures",
  "log",

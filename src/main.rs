@@ -22,6 +22,8 @@ struct Opt {
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
+    let now = chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]");
+
     // parse command line arguments into options struct
     let opt = Opt::from_args();
 
@@ -33,8 +35,8 @@ async fn main() -> Result<()> {
     let mut logger = fern::Dispatch::new()
         .format(move |out, message, record| {
             out.finish(format_args!(
-                "[{}][{}] {}",
-                // chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
+                "{}[{}][{}] {}",
+                now,
                 record.target(),
                 colors.color(record.level()),
                 message

@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate anyhow;
 #[macro_use]
+extern crate async_trait;
+#[macro_use]
 extern crate derive_builder;
 #[macro_use]
 extern crate futures;

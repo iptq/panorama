@@ -65,7 +65,7 @@ pub enum AttributeValue {}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MailboxData {
     Exists(u32),
-    Flags(Vec<Flag>),
+    Flags(Vec<MailboxFlag>),
     List {
         flags: Vec<String>,
         delimiter: Option<String>,
@@ -88,7 +88,7 @@ pub enum MailboxData {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub enum Flag {
+pub enum MailboxFlag {
     Answered,
     Flagged,
     Deleted,

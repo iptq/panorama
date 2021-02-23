@@ -33,6 +33,7 @@
 //! # }
 //! ```
 
+pub mod auth;
 mod inner;
 
 use std::sync::Arc;
@@ -89,22 +90,18 @@ impl ClientConfig {
 
             let inner = Client::new(conn, self);
             inner.wait_for_greeting().await;
-            return Ok(ClientUnauthenticated::Encrypted(
-                ClientUnauthenticatedEncrypted { inner },
-            ));
+            return Ok(ClientUnauthenticated::Encrypted(inner));
         } else {
             let inner = Client::new(conn, self);
             inner.wait_for_greeting().await;
-            return Ok(ClientUnauthenticated::Unencrypted(
-                ClientUnauthenticatedUnencrypted { inner },
-            ));
+            return Ok(ClientUnauthenticated::Unencrypted(inner));
         }
     }
 }
 
 pub enum ClientUnauthenticated {
-    Encrypted(ClientUnauthenticatedEncrypted),
-    Unencrypted(ClientUnauthenticatedUnencrypted),
+    Encrypted(Client<TlsStream<TcpStream>>),
+    Unencrypted(Client<TcpStream>),
 }
 
 impl ClientUnauthenticated {
@@ -113,44 +110,46 @@ impl ClientUnauthenticated {
             // this is a no-op, we don't need to upgrade
             ClientUnauthenticated::Encrypted(_) => Ok(self),
             ClientUnauthenticated::Unencrypted(e) => {
-                let client = ClientUnauthenticatedEncrypted {
-                    inner: e.inner.upgrade().await?,
-                };
-                Ok(ClientUnauthenticated::Encrypted(client))
+                Ok(ClientUnauthenticated::Encrypted(e.upgrade().await?))
             }
         }
     }
 
-    /// TODO: Exposing low-level execute , shoudl remove later
-    pub async fn execute(&mut self, cmd: Command) -> Result<(Response, Vec<Response>)> {
+    /// Exposing low-level execute
+    async fn execute(&mut self, cmd: Command) -> Result<(Response, Vec<Response>)> {
         match self {
-            ClientUnauthenticated::Encrypted(e) => e.inner.execute(cmd).await,
-            ClientUnauthenticated::Unencrypted(e) => e.inner.execute(cmd).await,
+            ClientUnauthenticated::Encrypted(e) => e.execute(cmd).await,
+            ClientUnauthenticated::Unencrypted(e) => e.execute(cmd).await,
         }
     }
 
     /// Checks if the server that the client is talking to has support for the given capability.
     pub async fn has_capability(&mut self, cap: impl AsRef<str>) -> Result<bool> {
         match self {
-            ClientUnauthenticated::Encrypted(e) => e.inner.has_capability(cap).await,
-            ClientUnauthenticated::Unencrypted(e) => e.inner.has_capability(cap).await,
+            ClientUnauthenticated::Encrypted(e) => e.has_capability(cap).await,
+            ClientUnauthenticated::Unencrypted(e) => e.has_capability(cap).await,
         }
     }
 }
 
-pub struct ClientUnauthenticatedUnencrypted {
-    /// Connection to the remote server
-    inner: Client<TcpStream>,
+pub enum ClientAuthenticated {
+    Encrypted(Client<TlsStream<TcpStream>>),
+    Unencrypted(Client<TcpStream>),
 }
 
-impl ClientUnauthenticatedUnencrypted {
-    pub async fn upgrade(&self) {}
-}
+impl ClientAuthenticated {
+    /// Exposing low-level execute
+    async fn execute(&mut self, cmd: Command) -> Result<(Response, Vec<Response>)> {
+        match self {
+            ClientAuthenticated::Encrypted(e) => e.execute(cmd).await,
+            ClientAuthenticated::Unencrypted(e) => e.execute(cmd).await,
+        }
+    }
 
-/// An IMAP client that isn't authenticated.
-pub struct ClientUnauthenticatedEncrypted {
-    /// Connection to the remote server
-    inner: Client<TlsStream<TcpStream>>,
+    pub async fn list(&mut self) -> Result<()> {
+        let cmd = Command::List { reference: "".to_owned(), mailbox: "*".to_owned() };
+        let resp = self.execute(cmd).await?;
+        debug!("list response: {:?}", resp);
+        Ok(())
+    }
 }
-
-impl ClientUnauthenticatedEncrypted {}

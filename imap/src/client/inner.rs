@@ -116,7 +116,7 @@ where
     /// Executes the CAPABILITY command
     pub async fn capabilities(&mut self, force: bool) -> Result<()> {
         {
-            let caps = &*self.caps.read();
+            let caps = self.caps.read();
             if caps.is_some() && !force {
                 return Ok(());
             }
@@ -134,13 +134,10 @@ where
             .iter()
             .find(|resp| matches!(resp, Response::Capabilities(_)))
         {
-            let caps = &mut *self.caps.write();
+            let mut caps = self.caps.write();
             *caps = Some(new_caps.iter().cloned().collect());
         }
 
-        // if let Response::Capabilities(caps) = resp {
-        //     debug!("capabilities: {:?}", caps);
-        // }
         Ok(())
     }
 
@@ -183,7 +180,7 @@ where
         let cap = parse_capability(cap)?;
 
         self.capabilities(false).await?;
-        let caps = &*self.caps.read();
+        let caps = self.caps.read();
         // TODO: refresh caps
 
         let caps = caps.as_ref().unwrap();
@@ -276,6 +273,7 @@ where
                 debug!("got a new line {:?}", next_line);
                 let resp = parse_response(next_line)?;
 
+                // if this is the very first message, treat it as a greeting
                 if let Some(greeting) = greeting.take() {
                     let (greeting, waker) = &mut *greeting.write();
                     debug!("received greeting!");
@@ -285,17 +283,29 @@ where
                     }
                 }
 
+                // update capabilities list
+                // TODO: probably not really necessary here (done somewhere else)?
+                if let Response::Capabilities(new_caps)
+                | Response::Data {
+                    status: Status::Ok,
+                    code: Some(ResponseCode::Capabilities(new_caps)),
+                    ..
+                } = &resp
+                {
+                    let caps = &mut *caps.write();
+                    *caps = Some(new_caps.iter().cloned().collect());
+                    debug!("new caps: {:?}", caps);
+                }
+
                 match &resp {
-                    // capabilities list
-                    Response::Capabilities(new_caps)
-                    | Response::Data {
-                        status: Status::Ok,
-                        code: Some(ResponseCode::Capabilities(new_caps)),
-                        ..
+                    Response::Data {
+                        status: Status::Ok, ..
                     } => {
-                        let caps = &mut *caps.write();
-                        *caps = Some(new_caps.iter().cloned().collect());
-                        debug!("new caps: {:?}", caps);
+                        let mut results = results.write();
+                        if let Some((_, _, intermediate, _)) = results.iter_mut().next() {
+                            debug!("pushed to intermediate: {:?}", resp);
+                            intermediate.push(resp);
+                        }
                     }
 
                     // bye
@@ -308,7 +318,7 @@ where
 
                     Response::Done { tag, .. } => {
                         if tag.starts_with(TAG_PREFIX) {
-                            let id = tag.trim_start_matches(TAG_PREFIX).parse::<usize>()?;
+                            // let id = tag.trim_start_matches(TAG_PREFIX).parse::<usize>()?;
                             let mut results = results.write();
                             if let Some((_, opt, _, waker)) = results.iter_mut().next() {
                                 *opt = Some(resp);
@@ -321,38 +331,6 @@ where
 
                     _ => {}
                 }
-
-                // debug!("parsed as: {:?}", resp);
-                // let next_line = next_line.trim_end_matches('\n').trim_end_matches('\r');
-
-                // let mut parts = next_line.split(" ");
-                // let tag = parts.next().unwrap();
-                // let rest = parts.collect::<Vec<_>>().join(" ");
-
-                // if tag == "*" {
-                //     debug!("UNTAGGED {:?}", rest);
-
-                //     // TODO: verify that the greeting is actually an OK
-                //     if let Some(greeting) = greeting.take() {
-                //         let (greeting, waker) = &mut *greeting.write();
-                //         debug!("got greeting");
-                //         *greeting = true;
-                //         if let Some(waker) = waker.take() {
-                //             waker.wake();
-                //         }
-                //     }
-                // } else if tag.starts_with(TAG_PREFIX) {
-                //     let id = tag.trim_start_matches(TAG_PREFIX).parse::<usize>()?;
-                //     debug!("set {} to {:?}", id, rest);
-                //     let mut results = results.write();
-                //     if let Some((c, w)) = results.get_mut(&id) {
-                //         // *c = Some(rest.to_string());
-                //         *c = Some(resp);
-                //         if let Some(waker) = w.take() {
-                //             waker.wake();
-                //         }
-                //     }
-                // }
             }
 
             Either::Right((_, _)) => {

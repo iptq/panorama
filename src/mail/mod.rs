@@ -3,7 +3,7 @@
 use anyhow::Result;
 use futures::{future::FutureExt, stream::StreamExt};
 use panorama_imap::{
-    client::{ClientBuilder, ClientConfig},
+    client::{ClientBuilder, ClientConfig, auth::{self, Auth}},
     command::Command as ImapCommand,
 };
 use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
@@ -78,7 +78,7 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
         debug!("connecting to {}:{}", &acct.imap.server, acct.imap.port);
         let unauth = builder.open().await?;
 
-        let mut unauth = if matches!(acct.imap.tls, TlsMethod::Starttls) {
+        let unauth = if matches!(acct.imap.tls, TlsMethod::Starttls) {
             debug!("attempting to upgrade");
             let client = unauth.upgrade().await?;
             debug!("upgrade successful");
@@ -89,18 +89,21 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
 
         debug!("preparing to auth");
         // check if the authentication method is supported
-        let authed = match acct.imap.auth {
+        let mut authed = match acct.imap.auth {
             ImapAuth::Plain { username, password } => {
-                let ok = unauth.has_capability("AUTH=PLAIN").await?;
-                let res = unauth.execute(ImapCommand::Login { username, password }).await?;
-                debug!("res: {:?}", res);
+                let auth = auth::Plain {username, password};
+                auth.perform_auth(unauth).await?
             }
         };
+
+        debug!("authentication successful!");
 
         // debug!("sending CAPABILITY");
         // let result = unauth.capabilities().await?;
 
         loop {
+            debug!("listing all emails...");
+            authed.list().await?;
             tokio::time::sleep(std::time::Duration::from_secs(60)).await;
             debug!("heartbeat");
         }

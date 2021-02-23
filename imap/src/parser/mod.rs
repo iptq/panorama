@@ -104,9 +104,6 @@ fn build_resp_code(pair: Pair<Rule>) -> Option<ResponseCode> {
         unreachable!("{:#?}", pair);
     }
 
-    // panic!("pair: {:#?}", pair);
-    debug!("pair: {:#?}", pair);
-
     let mut pairs = pair.into_inner();
     let pair = pairs.next()?;
     Some(match pair.as_rule() {
@@ -155,7 +152,7 @@ fn build_status(pair: Pair<Rule>) -> Status {
     }
 }
 
-fn build_flag_list(pair: Pair<Rule>) -> Vec<Flag> {
+fn build_flag_list(pair: Pair<Rule>) -> Vec<MailboxFlag> {
     if !matches!(pair.as_rule(), Rule::flag_list) {
         unreachable!("{:#?}", pair);
     }
@@ -163,18 +160,18 @@ fn build_flag_list(pair: Pair<Rule>) -> Vec<Flag> {
     pair.into_inner().map(build_flag).collect()
 }
 
-fn build_flag(pair: Pair<Rule>) -> Flag {
+fn build_flag(pair: Pair<Rule>) -> MailboxFlag {
     if !matches!(pair.as_rule(), Rule::flag) {
         unreachable!("{:#?}", pair);
     }
 
     match pair.as_str() {
-        "\\Answered" => Flag::Answered,
-        "\\Flagged" => Flag::Flagged,
-        "\\Deleted" => Flag::Deleted,
-        "\\Seen" => Flag::Seen,
-        "\\Draft" => Flag::Draft,
-        s if s.starts_with("\\") => Flag::Ext(s.to_owned()),
+        "\\Answered" => MailboxFlag::Answered,
+        "\\Flagged" => MailboxFlag::Flagged,
+        "\\Deleted" => MailboxFlag::Deleted,
+        "\\Seen" => MailboxFlag::Seen,
+        "\\Draft" => MailboxFlag::Draft,
+        s if s.starts_with("\\") => MailboxFlag::Ext(s.to_owned()),
         _ => unreachable!("{:#?}", pair.as_str()),
     }
 }
@@ -195,8 +192,26 @@ fn build_mailbox_data(pair: Pair<Rule>) -> MailboxData {
             MailboxData::Flags(flags)
         }
         Rule::mailbox_data_recent => MailboxData::Recent(build_number(pair)),
+        Rule::mailbox_data_list => {
+            let mut pairs = pair.into_inner();
+            let pair = pairs.next().unwrap();
+            let (flags, delimiter, name) = build_mailbox_list(pair);
+            MailboxData::List { flags, delimiter, name }
+        },
         _ => unreachable!("{:#?}", pair),
     }
+}
+
+fn build_mailbox_list(pair: Pair<Rule>) -> (Vec<String>, Option<String>, String) {
+    todo!()
+}
+
+fn build_mbx_list_flags(pair: Pair<Rule>) -> Vec<String> {
+    if !matches!(pair.as_rule(), Rule::mbx_list_flags) {
+        unreachable!("{:#?}", pair);
+    }
+
+    todo!()
 }
 
 fn build_number<T>(pair: Pair<Rule>) -> T
@@ -266,11 +281,11 @@ mod tests {
         assert_eq!(
             parse_response("* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\r\n"),
             Ok(Response::MailboxData(MailboxData::Flags(vec![
-                Flag::Answered,
-                Flag::Flagged,
-                Flag::Deleted,
-                Flag::Seen,
-                Flag::Draft,
+                MailboxFlag::Answered,
+                MailboxFlag::Flagged,
+                MailboxFlag::Deleted,
+                MailboxFlag::Seen,
+                MailboxFlag::Draft,
             ])))
         );
 
