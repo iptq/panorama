@@ -34,7 +34,7 @@ body_type_mpart = { body{1,} ~ sp ~ media_subtype ~ (sp ~ body_ext_mpart)? }
 body_type_msg = { media_message ~ sp ~ body_fields ~ sp ~ envelope ~ sp ~ body ~ sp ~ body_fld_lines }
 body_type_text = { media_text ~ sp ~ body_fields ~ sp ~ body_fld_lines }
 capability = ${ ^"AUTH=" ~ auth_type | atom }
-capability_data = { ^"CAPABILITY" ~ (sp ~ capability)* ~ sp ~ "IMAP4rev1" ~ (sp ~ capability)* }
+capability_data = { ^"CAPABILITY" ~ (sp ~ ("IMAP4rev1" ~ capability))* ~ sp ~ "IMAP4rev1" ~ (sp ~ capability)* }
 char8 = @{ '\x01'..'\xff' }
 continue_req = { "+" ~ sp ~ (resp_text | base64) ~ crlf }
 date_day_fixed = { (sp ~ digit) | digit{2} }

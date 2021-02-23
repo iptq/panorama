@@ -43,6 +43,9 @@ use tokio_rustls::{
     client::TlsStream, rustls::ClientConfig as RustlsConfig, webpki::DNSNameRef, TlsConnector,
 };
 
+use crate::command::Command;
+use crate::response::Response;
+
 pub use self::inner::Client;
 
 /// Struct used to start building the config for a client.
@@ -118,12 +121,20 @@ impl ClientUnauthenticated {
         }
     }
 
-    pub async fn capabilities(&mut self) -> Result<()> {
+    /// TODO: Exposing low-level execute , shoudl remove later
+    pub async fn execute(&mut self, cmd: Command) -> Result<(Response, Vec<Response>)> {
         match self {
-            ClientUnauthenticated::Encrypted(e) => e.inner.capabilities().await?,
-            ClientUnauthenticated::Unencrypted(e) => e.inner.capabilities().await?,
+            ClientUnauthenticated::Encrypted(e) => e.inner.execute(cmd).await,
+            ClientUnauthenticated::Unencrypted(e) => e.inner.execute(cmd).await,
         }
-        Ok(())
+    }
+
+    /// Checks if the server that the client is talking to has support for the given capability.
+    pub async fn has_capability(&mut self, cap: impl AsRef<str>) -> Result<bool> {
+        match self {
+            ClientUnauthenticated::Encrypted(e) => e.inner.has_capability(cap).await,
+            ClientUnauthenticated::Unencrypted(e) => e.inner.has_capability(cap).await,
+        }
     }
 }
 

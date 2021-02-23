@@ -5,6 +5,7 @@ use std::fmt;
 pub enum Command {
     Capability,
     Starttls,
+    Login { username: String, password: String },
 }
 
 impl fmt::Display for Command {
@@ -12,6 +13,7 @@ impl fmt::Display for Command {
         match self {
             Command::Capability => write!(f, "CAPABILITY"),
             Command::Starttls => write!(f, "STARTTLS"),
+            Command::Login { username, password } => write!(f, "LOGIN {} {}", username, password),
         }
     }
 }

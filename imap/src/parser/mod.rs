@@ -16,22 +16,7 @@ struct Rfc3501;
 pub fn parse_capability(s: impl AsRef<str>) -> Result<Capability, Error<Rule>> {
     let mut pairs = Rfc3501::parse(Rule::capability, s.as_ref())?;
     let pair = pairs.next().unwrap();
-    let cap = match pair.as_rule() {
-        Rule::capability => {
-            let mut pairs = pair.into_inner();
-            let pair = pairs.next().unwrap();
-            match pair.as_rule() {
-                Rule::auth_type => Capability::Auth(pair.as_str().to_uppercase().to_owned()),
-                Rule::atom => match pair.as_str() {
-                    "IMAP4rev1" => Capability::Imap4rev1,
-                    s => Capability::Atom(s.to_uppercase().to_owned()),
-                },
-                _ => unreachable!("{:?}", pair),
-            }
-        }
-        _ => unreachable!("{:?}", pair),
-    };
-    Ok(cap)
+    Ok(build_capability(pair))
 }
 
 pub fn parse_response(s: impl AsRef<str>) -> Result<Response, Error<Rule>> {
@@ -82,6 +67,7 @@ fn build_response(pair: Pair<Rule>) -> Response {
                     }
                 }
                 Rule::mailbox_data => Response::MailboxData(build_mailbox_data(pair)),
+                Rule::capability_data => Response::Capabilities(build_capabilities(pair)),
                 _ => unreachable!("{:#?}", pair),
             }
         }
@@ -100,7 +86,6 @@ fn build_resp_cond_state(pair: Pair<Rule>) -> (Status, Option<ResponseCode>, Opt
     let mut code = None;
     let mut information = None;
 
-    println!("pairs: {:#?}", pairs);
     let pair = pairs.next().unwrap();
     let pairs = pair.into_inner();
     for pair in pairs {
@@ -119,14 +104,43 @@ fn build_resp_code(pair: Pair<Rule>) -> Option<ResponseCode> {
         unreachable!("{:#?}", pair);
     }
 
+    // panic!("pair: {:#?}", pair);
+    debug!("pair: {:#?}", pair);
+
     let mut pairs = pair.into_inner();
     let pair = pairs.next()?;
     Some(match pair.as_rule() {
+        Rule::capability_data => ResponseCode::Capabilities(build_capabilities(pair)),
         Rule::resp_text_code_readwrite => ResponseCode::ReadWrite,
         Rule::resp_text_code_uidvalidity => ResponseCode::UidValidity(build_number(pair)),
         Rule::resp_text_code_unseen => ResponseCode::Unseen(build_number(pair)),
         _ => unreachable!("{:#?}", pair),
     })
+}
+
+fn build_capability(pair: Pair<Rule>) -> Capability {
+    if !matches!(pair.as_rule(), Rule::capability) {
+        unreachable!("{:#?}", pair);
+    }
+
+    let mut pairs = pair.into_inner();
+    let pair = pairs.next().unwrap();
+    match pair.as_rule() {
+        Rule::auth_type => Capability::Auth(pair.as_str().to_uppercase().to_owned()),
+        Rule::atom => match pair.as_str() {
+            "IMAP4rev1" => Capability::Imap4rev1,
+            s => Capability::Atom(s.to_uppercase().to_owned()),
+        },
+        _ => unreachable!("{:?}", pair),
+    }
+}
+
+fn build_capabilities(pair: Pair<Rule>) -> Vec<Capability> {
+    if !matches!(pair.as_rule(), Rule::capability_data) {
+        unreachable!("{:#?}", pair);
+    }
+
+    pair.into_inner().map(build_capability).collect()
 }
 
 fn build_status(pair: Pair<Rule>) -> Status {
@@ -202,7 +216,7 @@ mod tests {
     use pest::Parser;
 
     #[test]
-#[rustfmt::skip]
+    #[rustfmt::skip]
     fn test_capability() {
         assert_eq!(parse_capability("IMAP4rev1"), Ok(Capability::Imap4rev1));
         assert_eq!(parse_capability("LOGINDISABLED"), Ok(Capability::Atom("LOGINDISABLED".to_owned())));
@@ -214,7 +228,7 @@ mod tests {
     }
 
     #[test]
-#[rustfmt::skip]
+    #[rustfmt::skip]
     fn test_nil() {
         assert!(Rfc3501::parse(Rule::nil, "NIL").is_ok());
         assert!(Rfc3501::parse(Rule::nil, "anything else").is_err());
@@ -292,5 +306,13 @@ mod tests {
                 information: Some("SELECT completed".to_owned()),
             })
         );
+
+        // assert_eq!(
+        //     parse_response(concat!(
+        //         r#"* 12 FETCH (FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700" RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" "IMAP4rev1 WG mtg summary and minutes" (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) ((NIL NIL "imap" "cac.washington.edu")) ((NIL NIL "minutes" "CNRI.Reston.VA.US") ("John Klensin" NIL "KLENSIN" "MIT.EDU")) NIL NIL "<B27397-0100000@cac.washington.edu>") BODY ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 3028 92))"#,
+        //         "\r\n",
+        //     )),
+        //     Ok(Response::Fetch(12, vec![]))
+        // );
     }
 }
