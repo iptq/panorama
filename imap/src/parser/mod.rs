@@ -1,3 +1,6 @@
+use std::fmt::Debug;
+use std::str::FromStr;
+
 use pest::{
     error::Error,
     iterators::{Pair, Pairs},
@@ -99,10 +102,10 @@ fn build_resp_cond_state(pair: Pair<Rule>) -> (Status, Option<ResponseCode>, Opt
 
     println!("pairs: {:#?}", pairs);
     let pair = pairs.next().unwrap();
-    let mut pairs = pair.into_inner();
+    let pairs = pair.into_inner();
     for pair in pairs {
         match pair.as_rule() {
-            Rule::resp_text_code => code = Some(build_resp_code(pair)),
+            Rule::resp_text_code => code = build_resp_code(pair),
             Rule::text => information = Some(pair.as_str().to_owned()),
             _ => unreachable!("{:#?}", pair),
         }
@@ -111,22 +114,19 @@ fn build_resp_cond_state(pair: Pair<Rule>) -> (Status, Option<ResponseCode>, Opt
     (status, code, information)
 }
 
-fn build_resp_code(pair: Pair<Rule>) -> ResponseCode {
+fn build_resp_code(pair: Pair<Rule>) -> Option<ResponseCode> {
     if !matches!(pair.as_rule(), Rule::resp_text_code) {
         unreachable!("{:#?}", pair);
     }
 
     let mut pairs = pair.into_inner();
-    let pair = pairs.next().unwrap();
-    match pair.as_rule() {
-        Rule::resp_text_code_unseen => {
-            let mut pairs = pair.into_inner();
-            let pair = pairs.next().unwrap();
-            let number = pair.as_str().parse::<u32>().unwrap();
-            ResponseCode::Unseen(number)
-        }
+    let pair = pairs.next()?;
+    Some(match pair.as_rule() {
+        Rule::resp_text_code_readwrite => ResponseCode::ReadWrite,
+        Rule::resp_text_code_uidvalidity => ResponseCode::UidValidity(build_number(pair)),
+        Rule::resp_text_code_unseen => ResponseCode::Unseen(build_number(pair)),
         _ => unreachable!("{:#?}", pair),
-    }
+    })
 }
 
 fn build_status(pair: Pair<Rule>) -> Status {
@@ -173,26 +173,26 @@ fn build_mailbox_data(pair: Pair<Rule>) -> MailboxData {
     let mut pairs = pair.into_inner();
     let pair = pairs.next().unwrap();
     match pair.as_rule() {
-        Rule::mailbox_data_exists => {
-            let mut pairs = pair.into_inner();
-            let pair = pairs.next().unwrap();
-            let number = pair.as_str().parse::<u32>().unwrap();
-            MailboxData::Exists(number)
-        }
+        Rule::mailbox_data_exists => MailboxData::Exists(build_number(pair)),
         Rule::mailbox_data_flags => {
             let mut pairs = pair.into_inner();
             let pair = pairs.next().unwrap();
             let flags = build_flag_list(pair);
             MailboxData::Flags(flags)
         }
-        Rule::mailbox_data_recent => {
-            let mut pairs = pair.into_inner();
-            let pair = pairs.next().unwrap();
-            let number = pair.as_str().parse::<u32>().unwrap();
-            MailboxData::Recent(number)
-        }
+        Rule::mailbox_data_recent => MailboxData::Recent(build_number(pair)),
         _ => unreachable!("{:#?}", pair),
     }
+}
+
+fn build_number<T>(pair: Pair<Rule>) -> T
+where
+    T: FromStr,
+    T::Err: Debug,
+{
+    let mut pairs = pair.into_inner();
+    let pair = pairs.next().unwrap();
+    pair.as_str().parse::<T>().unwrap()
 }
 
 #[cfg(test)]
@@ -271,6 +271,25 @@ mod tests {
                 status: Status::Ok,
                 code: Some(ResponseCode::Unseen(17)),
                 information: Some("Message 17 is the first unseen message".to_owned()),
+            })
+        );
+
+        assert_eq!(
+            parse_response("* OK [UIDVALIDITY 3857529045] UIDs valid\r\n"),
+            Ok(Response::Data {
+                status: Status::Ok,
+                code: Some(ResponseCode::UidValidity(3857529045)),
+                information: Some("UIDs valid".to_owned()),
+            })
+        );
+
+        assert_eq!(
+            parse_response("a002 OK [READ-WRITE] SELECT completed\r\n"),
+            Ok(Response::Done {
+                tag: "a002".to_owned(),
+                status: Status::Ok,
+                code: Some(ResponseCode::ReadWrite),
+                information: Some("SELECT completed".to_owned()),
             })
         );
     }

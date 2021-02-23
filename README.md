@@ -16,6 +16,7 @@ Goals:
 Stretch goals:
 - Unified "feed" that any app can submit to.
 - Submit notifications to gotify-shaped notification servers.
+- JMAP implementation.
 - RSS aggregator.
 - IRC client??
 
