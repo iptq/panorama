@@ -207,6 +207,20 @@ fn build_mailbox_data(pair: Pair<Rule>) -> MailboxData {
 }
 
 fn build_mailbox_list(pair: Pair<Rule>) -> (Vec<String>, Option<String>, String) {
+    if !matches!(pair.as_rule(), Rule::mailbox_list) {
+        unreachable!("{:#?}", pair);
+    }
+
+    let mut pairs = pair.into_inner();
+    let mut pair = pairs.next().unwrap();
+    
+    // let mut flags = Vec::new();
+    if let Rule::mailbox_list_flags = pair.as_rule() {
+        let pairs = pair.into_inner();
+        for pair in pairs {
+        }
+    }
+    // debug!("pair: {:#?}", pair);
     todo!()
 }
 
