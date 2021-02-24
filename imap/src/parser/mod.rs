@@ -117,7 +117,7 @@ fn build_msg_att_static(pair: Pair<Rule>) -> AttributeValue {
 
     match pair.as_rule() {
         Rule::msg_att_static_internaldate => {
-            AttributeValue::InternalDate(extract_string(unwrap1(pair)))
+            AttributeValue::InternalDate(build_string(unwrap1(pair)))
         }
         Rule::msg_att_static_rfc822_size => AttributeValue::Rfc822Size(build_number(unwrap1(pair))),
         Rule::msg_att_static_envelope => AttributeValue::Envelope(build_envelope(unwrap1(pair))),
@@ -285,25 +285,33 @@ fn build_mailbox_list(pair: Pair<Rule>) -> (Vec<String>, Option<String>, String)
     let mut pair = pairs.next().unwrap();
 
     // let mut flags = Vec::new();
-    if let Rule::mailbox_list_flags = pair.as_rule() {
-        let pairs = pair.into_inner();
-        for pair in pairs {
+    let flags = if let Rule::mailbox_list_flags = pair.as_rule() {
+        let pairs_ = pair.into_inner();
+        let mut flags = Vec::new();
+        for pair in pairs_ {
             debug!("pair: {:?}", pair);
-            let flags = build_mbx_list_flags(pair);
+            flags.extend(build_mbx_list_flags(pair));
             debug!("flags: {:?}", flags);
         }
-    }
+        pair = pairs.next().unwrap();
+        flags
+    } else {
+        Vec::new()
+    };
 
-    // debug!("pair: {:#?}", pair);
-    todo!()
+    assert!(matches!(pair.as_rule(), Rule::mailbox_list_string));
+    let s = build_nstring(pair);
+
+    pair = pairs.next().unwrap();
+    assert!(matches!(pair.as_rule(), Rule::mailbox));
+    let mailbox = build_string(pair);
+
+    (flags, s, mailbox)
 }
 
 fn build_mbx_list_flags(pair: Pair<Rule>) -> Vec<String> {
-    if !matches!(pair.as_rule(), Rule::mbx_list_flags) {
-        unreachable!("{:#?}", pair);
-    }
-
-    todo!()
+    assert!(matches!(pair.as_rule(), Rule::mbx_list_flags));
+    pair.into_inner().map(|pair| pair.as_str().to_owned()).collect()
 }
 
 fn unwrap1(pair: Pair<Rule>) -> Pair<Rule> {
@@ -322,7 +330,14 @@ where
     pair.as_str().parse::<T>().unwrap()
 }
 
-fn extract_string(pair: Pair<Rule>) -> String {
+fn build_nstring(pair: Pair<Rule>) -> Option<String> {
+    if matches!(pair.as_rule(), Rule::nil) {
+        return None;
+    }
+    Some(build_string(pair))
+}
+
+fn build_string(pair: Pair<Rule>) -> String {
     // TODO: actually get rid of the quotes and escaped chars
     pair.as_str().to_owned()
 }
