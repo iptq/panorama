@@ -12,7 +12,7 @@ use crossterm::{
     cursor,
     event::{self, Event, KeyCode, KeyEvent},
     style::{self, Color},
-    terminal,
+    terminal::{self, ClearType},
 };
 use tokio::time;
 
@@ -35,12 +35,14 @@ pub async fn run_ui(mut w: impl Write + Debug, exit: ExitSender) -> Result<()> {
     table.push_row(vec!["ur mom Lol!".to_owned()]);
     table.push_row(vec!["hek".to_owned()]);
 
+    let dirty = false;
+
     loop {
         queue!(
             w,
             style::SetBackgroundColor(Color::Reset),
             style::SetForegroundColor(Color::Reset),
-            // terminal::Clear(ClearType::All),
+            terminal::Clear(ClearType::All),
             cursor::MoveTo(0, 0),
         )?;
 

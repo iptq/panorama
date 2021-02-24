@@ -104,7 +104,8 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
 
         loop {
             debug!("listing all emails...");
-            authed.list().await?;
+            let folder_tree = authed.list().await?;
+
             tokio::time::sleep(std::time::Duration::from_secs(60)).await;
             debug!("heartbeat");
         }

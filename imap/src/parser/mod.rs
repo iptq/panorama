@@ -289,9 +289,7 @@ fn build_mailbox_list(pair: Pair<Rule>) -> (Vec<String>, Option<String>, String)
         let pairs_ = pair.into_inner();
         let mut flags = Vec::new();
         for pair in pairs_ {
-            debug!("pair: {:?}", pair);
             flags.extend(build_mbx_list_flags(pair));
-            debug!("flags: {:?}", flags);
         }
         pair = pairs.next().unwrap();
         flags
@@ -314,11 +312,14 @@ fn build_mbx_list_flags(pair: Pair<Rule>) -> Vec<String> {
     pair.into_inner().map(|pair| pair.as_str().to_owned()).collect()
 }
 
+/// Unwraps a singleton pair (a pair that only has one element in its `inner` list)
 fn unwrap1(pair: Pair<Rule>) -> Pair<Rule> {
     let mut pairs = pair.into_inner();
     pairs.next().unwrap()
 }
 
+/// Extracts a numerical type, generic over anything that could possibly be read as a number
+// TODO: should probably restrict this to a few cases
 fn build_number<T>(pair: Pair<Rule>) -> T
 where
     T: FromStr,
@@ -330,6 +331,9 @@ where
     pair.as_str().parse::<T>().unwrap()
 }
 
+/// Wrapper around [build_string][1], except return None for the `nil` case
+/// 
+/// [1]: self::build_string
 fn build_nstring(pair: Pair<Rule>) -> Option<String> {
     if matches!(pair.as_rule(), Rule::nil) {
         return None;
@@ -337,6 +341,7 @@ fn build_nstring(pair: Pair<Rule>) -> Option<String> {
     Some(build_string(pair))
 }
 
+/// Extracts a string-type, discarding the surrounding quotes and unescaping the escaped characters
 fn build_string(pair: Pair<Rule>) -> String {
     // TODO: actually get rid of the quotes and escaped chars
     pair.as_str().to_owned()

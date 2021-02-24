@@ -21,6 +21,11 @@ struct Opt {
     /// Run this application headlessly
     #[structopt(long = "headless")]
     headless: bool,
+
+    /// Don't watch the config file for changes. (NYI)
+    // TODO: implement this or decide if it's useless
+    #[structopt(long = "no-watch-config")]
+    _no_watch_config: bool,
 }
 
 fn main() -> Result<()> {
