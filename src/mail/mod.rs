@@ -102,6 +102,10 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
 
         debug!("authentication successful!");
 
+        // let's just select INBOX for now, maybe have a config for default mailbox later?
+        debug!("selecting the INBOX mailbox");
+        authed.select("INBOX").await?;
+
         loop {
             debug!("listing all emails...");
             let folder_tree = authed.list().await?;

@@ -24,6 +24,7 @@ inotify = { version = "0.9.2", features = ["stream"] }
 log = "0.4.14"
 panorama-imap = { path = "imap", version = "0" }
 parking_lot = "0.11.1"
+pgp = "0.7.1"
 pin-project = "1.0.5"
 rustls-connector = "0.13.1"
 serde = { version = "1.0.123", features = ["derive"] }

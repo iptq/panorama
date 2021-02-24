@@ -146,6 +146,7 @@ impl ClientAuthenticated {
         }
     }
 
+    /// Runs the LIST command
     pub async fn list(&mut self) -> Result<()> {
         let cmd = Command::List {
             reference: "".to_owned(),
@@ -153,6 +154,16 @@ impl ClientAuthenticated {
         };
         let resp = self.execute(cmd).await?;
         debug!("list response: {:?}", resp);
+        Ok(())
+    }
+
+    /// Runs the SELECT command
+    pub async fn select(&mut self, mailbox: impl AsRef<str>) -> Result<()> {
+        let cmd = Command::Select {
+            mailbox: mailbox.as_ref().to_owned(),
+        };
+        let resp = self.execute(cmd).await?;
+        debug!("select response: {:?}", resp);
         Ok(())
     }
 }

@@ -171,7 +171,22 @@ fn build_resp_code(pair: Pair<Rule>) -> Option<ResponseCode> {
         Rule::capability_data => ResponseCode::Capabilities(build_capabilities(pair)),
         Rule::resp_text_code_readwrite => ResponseCode::ReadWrite,
         Rule::resp_text_code_uidvalidity => ResponseCode::UidValidity(build_number(unwrap1(pair))),
+        Rule::resp_text_code_uidnext => ResponseCode::UidNext(build_number(unwrap1(pair))),
         Rule::resp_text_code_unseen => ResponseCode::Unseen(build_number(unwrap1(pair))),
+        // TODO: maybe have an actual type for these flags instead of just string
+        Rule::resp_text_code_permanentflags => {
+            ResponseCode::PermanentFlags(pair.into_inner().map(|p| p.as_str().to_owned()).collect())
+        }
+        Rule::resp_text_code_other => {
+            let mut pairs = pair.into_inner();
+            let pair = pairs.next().unwrap();
+            let a = pair.as_str().to_owned();
+            let mut b = None;
+            if let Some(pair) = pairs.next() {
+                b = Some(pair.as_str().to_owned());
+            }
+            ResponseCode::Other(a, b)
+        }
         _ => unreachable!("{:#?}", pair),
     })
 }
@@ -241,8 +256,9 @@ fn build_flag(mut pair: Pair<Rule>) -> MailboxFlag {
         "\\Deleted" => MailboxFlag::Deleted,
         "\\Seen" => MailboxFlag::Seen,
         "\\Draft" => MailboxFlag::Draft,
-        s if s.starts_with("\\") => MailboxFlag::Ext(s.to_owned()),
-        _ => unreachable!("{:#?}", pair.as_str()),
+        // s if s.starts_with("\\") => MailboxFlag::Ext(s.to_owned()),
+        // TODO: what??
+        s => MailboxFlag::Ext(s.to_owned()),
     }
 }
 
@@ -309,7 +325,9 @@ fn build_mailbox_list(pair: Pair<Rule>) -> (Vec<String>, Option<String>, String)
 
 fn build_mbx_list_flags(pair: Pair<Rule>) -> Vec<String> {
     assert!(matches!(pair.as_rule(), Rule::mbx_list_flags));
-    pair.into_inner().map(|pair| pair.as_str().to_owned()).collect()
+    pair.into_inner()
+        .map(|pair| pair.as_str().to_owned())
+        .collect()
 }
 
 /// Unwraps a singleton pair (a pair that only has one element in its `inner` list)
@@ -332,7 +350,7 @@ where
 }
 
 /// Wrapper around [build_string][1], except return None for the `nil` case
-/// 
+///
 /// [1]: self::build_string
 fn build_nstring(pair: Pair<Rule>) -> Option<String> {
     if matches!(pair.as_rule(), Rule::nil) {

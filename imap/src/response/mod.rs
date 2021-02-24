@@ -51,6 +51,7 @@ pub enum ResponseCode {
     AppendUid(u32, Vec<UidSetMember>),
     CopyUid(u32, Vec<UidSetMember>, Vec<UidSetMember>),
     UidNotSticky,
+    Other(String, Option<String>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
