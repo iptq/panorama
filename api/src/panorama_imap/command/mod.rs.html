@@ -25,6 +25,20 @@
 <span id="22">22</span>
 <span id="23">23</span>
 <span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>;
 
@@ -33,9 +47,20 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Command</span> {
     <span class="ident">Capability</span>,
     <span class="ident">Starttls</span>,
-    <span class="ident">Login</span> { <span class="ident">username</span>: <span class="ident">String</span>, <span class="ident">password</span>: <span class="ident">String</span> },
-    <span class="ident">Select</span> { <span class="ident">mailbox</span>: <span class="ident">String</span> },
-    <span class="ident">List</span> { <span class="ident">reference</span>: <span class="ident">String</span>, <span class="ident">mailbox</span>: <span class="ident">String</span> },
+    <span class="ident">Login</span> {
+        <span class="ident">username</span>: <span class="ident">String</span>,
+        <span class="ident">password</span>: <span class="ident">String</span>,
+    },
+    <span class="ident">Select</span> {
+        <span class="ident">mailbox</span>: <span class="ident">String</span>,
+    },
+    <span class="ident">List</span> {
+        <span class="ident">reference</span>: <span class="ident">String</span>,
+        <span class="ident">mailbox</span>: <span class="ident">String</span>,
+    },
+
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;rfc2177-idle&quot;</span>)]</span>
+    <span class="ident">Idle</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="kw">for</span> <span class="ident">Command</span> {
@@ -47,6 +72,9 @@
             <span class="ident">Login</span> { <span class="ident">username</span>, <span class="ident">password</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;LOGIN {} {}&quot;</span>, <span class="ident">username</span>, <span class="ident">password</span>),
             <span class="ident">Select</span> { <span class="ident">mailbox</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;SELECT {}&quot;</span>, <span class="ident">mailbox</span>),
             <span class="ident">List</span> { <span class="ident">reference</span>, <span class="ident">mailbox</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;LIST {:?} {:?}&quot;</span>, <span class="ident">reference</span>, <span class="ident">mailbox</span>),
+
+            <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;rfc2177-idle&quot;</span>)]</span>
+            <span class="ident">Idle</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;IDLE&quot;</span>),
         }
     }
 }

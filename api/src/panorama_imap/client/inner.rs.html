@@ -449,10 +449,10 @@
         }
 
         <span class="kw">let</span> <span class="ident">cmd_str</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}{} {}\r\n&quot;</span>, <span class="ident">TAG_PREFIX</span>, <span class="ident">id</span>, <span class="ident">cmd</span>);
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;[{}] writing to socket: {:?}&quot;</span>, <span class="ident">id</span>, <span class="ident">cmd_str</span>);
+        <span class="comment">// debug!(&quot;[{}] writing to socket: {:?}&quot;, id, cmd_str);</span>
         <span class="self">self</span>.<span class="ident">conn</span>.<span class="ident">write_all</span>(<span class="ident">cmd_str</span>.<span class="ident">as_bytes</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">conn</span>.<span class="ident">flush</span>().<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;[{}] written.&quot;</span>, <span class="ident">id</span>);
+        <span class="comment">// debug!(&quot;[{}] written.&quot;, id);</span>
 
         <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ExecWaiter</span>(<span class="self">self</span>, <span class="ident">id</span>, <span class="bool-val">false</span>).<span class="kw">await</span>;
         <span class="comment">// let resp = {</span>
@@ -601,7 +601,7 @@
 <span class="kw">where</span>
     <span class="ident">C</span>: <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Unpin</span>,
 {
-    <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;amogus&quot;</span>);
+    <span class="comment">// debug!(&quot;amogus&quot;);</span>
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">BufReader</span>::<span class="ident">new</span>(<span class="ident">conn</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">greeting</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">greeting</span>);
 
