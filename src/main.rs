@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use fern::colors::{Color, ColoredLevelConfig};
-use futures::future::{FutureExt, TryFutureExt};
+use futures::future::TryFutureExt;
 use panorama::{config::spawn_config_watcher_system, mail, report_err, ui};
 use structopt::StructOpt;
 use tokio::{runtime::Runtime, sync::mpsc};

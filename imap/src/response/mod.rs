@@ -1,3 +1,5 @@
+//! Structs and enums that have to do with responses.
+
 use std::ops::RangeInclusive;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
