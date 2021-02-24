@@ -352,6 +352,104 @@
 <span id="349">349</span>
 <span id="350">350</span>
 <span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
@@ -423,11 +521,72 @@
                 }
                 <span class="ident">Rule</span>::<span class="ident">mailbox_data</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Response</span>::<span class="ident">MailboxData</span>(<span class="ident">build_mailbox_data</span>(<span class="ident">pair</span>)),
                 <span class="ident">Rule</span>::<span class="ident">capability_data</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Response</span>::<span class="ident">Capabilities</span>(<span class="ident">build_capabilities</span>(<span class="ident">pair</span>)),
+                <span class="ident">Rule</span>::<span class="ident">message_data</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
+                    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+                    <span class="kw">let</span> <span class="ident">seq</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="ident">build_number</span>(<span class="ident">pair</span>);
+
+                    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+                    <span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
+                        <span class="ident">Rule</span>::<span class="ident">message_data_expunge</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Response</span>::<span class="ident">Expunge</span>(<span class="ident">seq</span>),
+                        <span class="ident">Rule</span>::<span class="ident">message_data_fetch</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
+                            <span class="kw">let</span> <span class="ident">msg_att</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+                            <span class="kw">let</span> <span class="ident">attrs</span> <span class="op">=</span> <span class="ident">msg_att</span>.<span class="ident">into_inner</span>().<span class="ident">map</span>(<span class="ident">build_msg_att</span>).<span class="ident">collect</span>();
+                            <span class="ident">Response</span>::<span class="ident">Fetch</span>(<span class="ident">seq</span>, <span class="ident">attrs</span>)
+                        }
+                        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
+                    }
+                }
                 <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
             }
         }
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
     }
+}
+
+<span class="kw">fn</span> <span class="ident">build_msg_att</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AttributeValue</span> {
+    <span class="kw">if</span> <span class="op">!</span><span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">msg_att_dyn_or_stat</span>) {
+        <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>);
+    }
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
+    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+
+    <span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
+        <span class="ident">Rule</span>::<span class="ident">msg_att_dynamic</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AttributeValue</span>::<span class="ident">Flags</span>(<span class="ident">pair</span>.<span class="ident">into_inner</span>().<span class="ident">map</span>(<span class="ident">build_flag</span>).<span class="ident">collect</span>()),
+        <span class="ident">Rule</span>::<span class="ident">msg_att_static</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">build_msg_att_static</span>(<span class="ident">pair</span>),
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">build_msg_att_static</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AttributeValue</span> {
+    <span class="kw">if</span> <span class="op">!</span><span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">msg_att_static</span>) {
+        <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>);
+    }
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
+    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+
+    <span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
+        <span class="ident">Rule</span>::<span class="ident">msg_att_static_internaldate</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">AttributeValue</span>::<span class="ident">InternalDate</span>(<span class="ident">extract_string</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>)))
+        }
+        <span class="ident">Rule</span>::<span class="ident">msg_att_static_rfc822_size</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AttributeValue</span>::<span class="ident">Rfc822Size</span>(<span class="ident">build_number</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>))),
+        <span class="ident">Rule</span>::<span class="ident">msg_att_static_envelope</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AttributeValue</span>::<span class="ident">Envelope</span>(<span class="ident">build_envelope</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>))),
+        <span class="comment">// TODO: do this</span>
+        <span class="ident">Rule</span>::<span class="ident">msg_att_static_body</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AttributeValue</span>::<span class="ident">BodySection</span> {
+            <span class="ident">section</span>: <span class="prelude-val">None</span>,
+            <span class="ident">index</span>: <span class="prelude-val">None</span>,
+            <span class="ident">data</span>: <span class="prelude-val">None</span>,
+        },
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">build_envelope</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Envelope</span> {
+    <span class="comment">// TODO: do this</span>
+    <span class="ident">Envelope</span>::<span class="ident">default</span>()
 }
 
 <span class="kw">fn</span> <span class="ident">build_resp_cond_state</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Status</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ResponseCode</span><span class="op">&gt;</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) {
@@ -464,8 +623,8 @@
     <span class="prelude-val">Some</span>(<span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
         <span class="ident">Rule</span>::<span class="ident">capability_data</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ResponseCode</span>::<span class="ident">Capabilities</span>(<span class="ident">build_capabilities</span>(<span class="ident">pair</span>)),
         <span class="ident">Rule</span>::<span class="ident">resp_text_code_readwrite</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ResponseCode</span>::<span class="ident">ReadWrite</span>,
-        <span class="ident">Rule</span>::<span class="ident">resp_text_code_uidvalidity</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ResponseCode</span>::<span class="ident">UidValidity</span>(<span class="ident">build_number</span>(<span class="ident">pair</span>)),
-        <span class="ident">Rule</span>::<span class="ident">resp_text_code_unseen</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ResponseCode</span>::<span class="ident">Unseen</span>(<span class="ident">build_number</span>(<span class="ident">pair</span>)),
+        <span class="ident">Rule</span>::<span class="ident">resp_text_code_uidvalidity</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ResponseCode</span>::<span class="ident">UidValidity</span>(<span class="ident">build_number</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>))),
+        <span class="ident">Rule</span>::<span class="ident">resp_text_code_unseen</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ResponseCode</span>::<span class="ident">Unseen</span>(<span class="ident">build_number</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>))),
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
     })
 }
@@ -515,7 +674,16 @@
     <span class="ident">pair</span>.<span class="ident">into_inner</span>().<span class="ident">map</span>(<span class="ident">build_flag</span>).<span class="ident">collect</span>()
 }
 
-<span class="kw">fn</span> <span class="ident">build_flag</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MailboxFlag</span> {
+<span class="kw">fn</span> <span class="ident">build_flag</span>(<span class="kw-2">mut</span> <span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MailboxFlag</span> {
+    <span class="kw">if</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">flag_fetch</span>) {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
+        <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+
+        <span class="kw">if</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">flag_fetch_recent</span>) {
+            <span class="kw">return</span> <span class="ident">MailboxFlag</span>::<span class="ident">Recent</span>;
+        }
+    }
+
     <span class="kw">if</span> <span class="op">!</span><span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">flag</span>) {
         <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>);
     }
@@ -539,14 +707,14 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
     <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
     <span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
-        <span class="ident">Rule</span>::<span class="ident">mailbox_data_exists</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MailboxData</span>::<span class="ident">Exists</span>(<span class="ident">build_number</span>(<span class="ident">pair</span>)),
+        <span class="ident">Rule</span>::<span class="ident">mailbox_data_exists</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MailboxData</span>::<span class="ident">Exists</span>(<span class="ident">build_number</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>))),
         <span class="ident">Rule</span>::<span class="ident">mailbox_data_flags</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
             <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
             <span class="kw">let</span> <span class="ident">flags</span> <span class="op">=</span> <span class="ident">build_flag_list</span>(<span class="ident">pair</span>);
             <span class="ident">MailboxData</span>::<span class="ident">Flags</span>(<span class="ident">flags</span>)
         }
-        <span class="ident">Rule</span>::<span class="ident">mailbox_data_recent</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MailboxData</span>::<span class="ident">Recent</span>(<span class="ident">build_number</span>(<span class="ident">pair</span>)),
+        <span class="ident">Rule</span>::<span class="ident">mailbox_data_recent</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MailboxData</span>::<span class="ident">Recent</span>(<span class="ident">build_number</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>))),
         <span class="ident">Rule</span>::<span class="ident">mailbox_data_list</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
             <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
@@ -568,13 +736,17 @@
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
-    
+
     <span class="comment">// let mut flags = Vec::new();</span>
     <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Rule</span>::<span class="ident">mailbox_list_flags</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
         <span class="kw">let</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
         <span class="kw">for</span> <span class="ident">pair</span> <span class="kw">in</span> <span class="ident">pairs</span> {
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;pair: {:?}&quot;</span>, <span class="ident">pair</span>);
+            <span class="kw">let</span> <span class="ident">flags</span> <span class="op">=</span> <span class="ident">build_mbx_list_flags</span>(<span class="ident">pair</span>);
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;flags: {:?}&quot;</span>, <span class="ident">flags</span>);
         }
     }
+
     <span class="comment">// debug!(&quot;pair: {:#?}&quot;, pair);</span>
     <span class="macro">todo</span><span class="macro">!</span>()
 }
@@ -587,14 +759,25 @@
     <span class="macro">todo</span><span class="macro">!</span>()
 }
 
+<span class="kw">fn</span> <span class="ident">unwrap1</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
+    <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>()
+}
+
 <span class="kw">fn</span> <span class="ident">build_number</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">FromStr</span>,
     <span class="ident">T</span>::<span class="prelude-val">Err</span>: <span class="ident">Debug</span>,
 {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
-    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+    <span class="kw">if</span> <span class="op">!</span><span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">nz_number</span> <span class="op">|</span> <span class="ident">Rule</span>::<span class="ident">number</span>) {
+        <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;not a number {:#?}&quot;</span>, <span class="ident">pair</span>);
+    }
     <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>()
+}
+
+<span class="kw">fn</span> <span class="ident">extract_string</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+    <span class="comment">// TODO: actually get rid of the quotes and escaped chars</span>
+    <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">to_owned</span>()
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
@@ -697,10 +880,23 @@
 
         <span class="macro">assert_eq</span><span class="macro">!</span>(
             <span class="ident">parse_response</span>(<span class="macro">concat</span><span class="macro">!</span>(
-                <span class="string">r#&quot;* 12 FETCH (FLAGS (\Seen) INTERNALDATE &quot;17-Jul-1996 02:44:25 -0700&quot; RFC822.SIZE 4286 ENVELOPE (&quot;Wed, 17 Jul 1996 02:23:25 -0700 (PDT)&quot; &quot;IMAP4rev1 WG mtg summary and minutes&quot; ((&quot;Terry Gray&quot; NIL &quot;gray&quot; &quot;cac.washington.edu&quot;)) ((&quot;Terry Gray&quot; NIL &quot;gray&quot; &quot;cac.washington.edu&quot;)) ((&quot;Terry Gray&quot; NIL &quot;gray&quot; &quot;cac.washington.edu&quot;)) ((NIL NIL &quot;imap&quot; &quot;cac.washington.edu&quot;)) ((NIL NIL &quot;minutes&quot; &quot;CNRI.Reston.VA.US&quot;) (&quot;John Klensin&quot; NIL &quot;KLENSIN&quot; &quot;MIT.EDU&quot;)) NIL NIL &quot;&lt;B27397-0100000@cac.washington.edu&gt;&quot;) BODY (&quot;TEXT&quot; &quot;PLAIN&quot; (&quot;CHARSET&quot; &quot;US-ASCII&quot;) NIL NIL &quot;7BIT&quot; 3028 92))&quot;#</span>,
+                <span class="string">r#&quot;* 12 FETCH (FLAGS (\Seen) INTERNALDATE &quot;17-Jul-1996 02:44:25 -0700&quot; RFC822.SIZE 4286 ENVELOPE (&quot;Wed, 17 Jul 1996 02:23:25 -0700 (PDT)&quot; &quot;IMAP4rev1 WG mtg summary and minutes&quot; ((&quot;Terry Gray&quot; NIL &quot;gray&quot; &quot;cac.washington.edu&quot;)) ((&quot;Terry Gray&quot; NIL &quot;gray&quot; &quot;cac.washington.edu&quot;)) ((&quot;Terry Gray&quot; NIL &quot;gray&quot; &quot;cac.washington.edu&quot;)) ((NIL NIL &quot;imap&quot; &quot;cac.washington.edu&quot;)) ((NIL NIL &quot;minutes&quot; &quot;CNRI.Reston.VA.US&quot;)(&quot;John Klensin&quot; NIL &quot;KLENSIN&quot; &quot;MIT.EDU&quot;)) NIL NIL &quot;&lt;B27397-0100000@cac.washington.edu&gt;&quot;) BODY (&quot;TEXT&quot; &quot;PLAIN&quot; (&quot;CHARSET&quot; &quot;US-ASCII&quot;) NIL NIL &quot;7BIT&quot; 302892))&quot;#</span>,
                 <span class="string">&quot;\r\n&quot;</span>,
             )),
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Fetch</span>(<span class="number">12</span>, <span class="macro">vec</span><span class="macro">!</span>[]))
+            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Fetch</span>(
+                <span class="number">12</span>,
+                <span class="macro">vec</span><span class="macro">!</span>[
+                    <span class="ident">AttributeValue</span>::<span class="ident">Flags</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">MailboxFlag</span>::<span class="ident">Seen</span>]),
+                    <span class="ident">AttributeValue</span>::<span class="ident">InternalDate</span>(<span class="string">&quot;\&quot;17-Jul-1996 02:44:25 -0700\&quot;&quot;</span>.<span class="ident">to_owned</span>()),
+                    <span class="ident">AttributeValue</span>::<span class="ident">Rfc822Size</span>(<span class="number">4286</span>),
+                    <span class="ident">AttributeValue</span>::<span class="ident">Envelope</span>(<span class="ident">Envelope</span>::<span class="ident">default</span>()),
+                    <span class="ident">AttributeValue</span>::<span class="ident">BodySection</span> {
+                        <span class="ident">section</span>: <span class="prelude-val">None</span>,
+                        <span class="ident">index</span>: <span class="prelude-val">None</span>,
+                        <span class="ident">data</span>: <span class="prelude-val">None</span>,
+                    },
+                ]
+            ))
         );
     }
 }

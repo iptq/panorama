@@ -267,6 +267,7 @@
 <span id="264">264</span>
 <span id="265">265</span>
 <span id="266">266</span>
+<span id="267">267</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ops</span>::<span class="ident">RangeInclusive</span>;
 
@@ -337,8 +338,8 @@
         <span class="ident">data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     },
     <span class="ident">BodyStructure</span>(<span class="ident">BodyStructure</span>),
-    <span class="ident">Envelope</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">Envelope</span><span class="op">&gt;</span>),
-    <span class="ident">Flags</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>),
+    <span class="ident">Envelope</span>(<span class="ident">Envelope</span>),
+    <span class="ident">Flags</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MailboxFlag</span><span class="op">&gt;</span>),
     <span class="ident">InternalDate</span>(<span class="ident">String</span>),
     <span class="ident">ModSeq</span>(<span class="ident">u64</span>), <span class="comment">// RFC 4551, section 3.3.2</span>
     <span class="ident">Rfc822</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>),
@@ -425,7 +426,7 @@
     <span class="ident">List</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">BodyExtension</span><span class="op">&gt;</span>),
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Envelope</span> {
     <span class="kw">pub</span> <span class="ident">date</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">subject</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -506,6 +507,7 @@
     <span class="ident">Deleted</span>,
     <span class="ident">Seen</span>,
     <span class="ident">Draft</span>,
+    <span class="ident">Recent</span>,
     <span class="ident">Ext</span>(<span class="ident">String</span>),
 }
 
