@@ -85,6 +85,8 @@
 <span id="82">82</span>
 <span id="83">83</span>
 <span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! UI</span>
 
@@ -100,7 +102,7 @@
     <span class="ident">cursor</span>,
     <span class="ident">event</span>::{<span class="self">self</span>, <span class="ident">Event</span>, <span class="ident">KeyCode</span>, <span class="ident">KeyEvent</span>},
     <span class="ident">style</span>::{<span class="self">self</span>, <span class="ident">Color</span>},
-    <span class="ident">terminal</span>,
+    <span class="ident">terminal</span>::{<span class="self">self</span>, <span class="ident">ClearType</span>},
 };
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">time</span>;
 
@@ -123,12 +125,14 @@
     <span class="ident">table</span>.<span class="ident">push_row</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;ur mom Lol!&quot;</span>.<span class="ident">to_owned</span>()]);
     <span class="ident">table</span>.<span class="ident">push_row</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;hek&quot;</span>.<span class="ident">to_owned</span>()]);
 
+    <span class="kw">let</span> <span class="ident">dirty</span> <span class="op">=</span> <span class="bool-val">false</span>;
+
     <span class="kw">loop</span> {
         <span class="macro">queue</span><span class="macro">!</span>(
             <span class="ident">w</span>,
             <span class="ident">style</span>::<span class="ident">SetBackgroundColor</span>(<span class="ident">Color</span>::<span class="ident">Reset</span>),
             <span class="ident">style</span>::<span class="ident">SetForegroundColor</span>(<span class="ident">Color</span>::<span class="ident">Reset</span>),
-            <span class="comment">// terminal::Clear(ClearType::All),</span>
+            <span class="ident">terminal</span>::<span class="ident">Clear</span>(<span class="ident">ClearType</span>::<span class="ident">All</span>),
             <span class="ident">cursor</span>::<span class="ident">MoveTo</span>(<span class="number">0</span>, <span class="number">0</span>),
         )<span class="question-mark">?</span>;
 

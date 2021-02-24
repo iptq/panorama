@@ -465,6 +465,11 @@
 <span id="462">462</span>
 <span id="463">463</span>
 <span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
@@ -757,9 +762,7 @@
         <span class="kw">let</span> <span class="ident">pairs_</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">flags</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
         <span class="kw">for</span> <span class="ident">pair</span> <span class="kw">in</span> <span class="ident">pairs_</span> {
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;pair: {:?}&quot;</span>, <span class="ident">pair</span>);
             <span class="ident">flags</span>.<span class="ident">extend</span>(<span class="ident">build_mbx_list_flags</span>(<span class="ident">pair</span>));
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;flags: {:?}&quot;</span>, <span class="ident">flags</span>);
         }
         <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
         <span class="ident">flags</span>
@@ -782,11 +785,14 @@
     <span class="ident">pair</span>.<span class="ident">into_inner</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">pair</span><span class="op">|</span> <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">to_owned</span>()).<span class="ident">collect</span>()
 }
 
+<span class="doccomment">/// Unwraps a singleton pair (a pair that only has one element in its `inner` list)</span>
 <span class="kw">fn</span> <span class="ident">unwrap1</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
     <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>()
 }
 
+<span class="doccomment">/// Extracts a numerical type, generic over anything that could possibly be read as a number</span>
+<span class="comment">// TODO: should probably restrict this to a few cases</span>
 <span class="kw">fn</span> <span class="ident">build_number</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">FromStr</span>,
@@ -798,6 +804,9 @@
     <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>()
 }
 
+<span class="doccomment">/// Wrapper around [build_string][1], except return None for the `nil` case</span>
+<span class="doccomment">/// </span>
+<span class="doccomment">/// [1]: self::build_string</span>
 <span class="kw">fn</span> <span class="ident">build_nstring</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">nil</span>) {
         <span class="kw">return</span> <span class="prelude-val">None</span>;
@@ -805,6 +814,7 @@
     <span class="prelude-val">Some</span>(<span class="ident">build_string</span>(<span class="ident">pair</span>))
 }
 
+<span class="doccomment">/// Extracts a string-type, discarding the surrounding quotes and unescaping the escaped characters</span>
 <span class="kw">fn</span> <span class="ident">build_string</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
     <span class="comment">// TODO: actually get rid of the quotes and escaped chars</span>
     <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">to_owned</span>()
