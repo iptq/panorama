@@ -97,7 +97,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Intro</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Intro</a></li><li class="chapter-item expanded "><a href="config.html"><strong aria-hidden="true">2.</strong> Config</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -167,7 +167,26 @@
                     <main>
                         <h1 id="intro"><a class="header" href="#intro">Intro</a></h1>
 <p>Panorama is a personal information manager.</p>
-<p><a href="https://iptq.github.io/panorama/api/panorama/">Click here for API docs</a></p>
+<p><a href="https://pim.mzhang.io/api/panorama/">Click here for API docs</a></p>
+<h1 id="config"><a class="header" href="#config">Config</a></h1>
+<p>Configuration is done by editing <code>$XDG_CONFIG_HOME/panorama/panorama.toml</code>. It
+follows the <a href="https://toml.io/en/">TOML</a> file format, and the data structures are defined in code
+at <code>src/config.rs</code>.</p>
+<p>Example configuration:</p>
+<pre><code class="language-toml">version = &quot;0.1&quot;
+
+[[mail]]
+imap.server = &quot;mail.example.com&quot;
+imap.port = 143
+imap.tls = &quot;starttls&quot;
+imap.auth = &quot;plain&quot;
+imap.username = &quot;foo&quot;
+imap.password = &quot;bar&quot;
+</code></pre>
+<p>As one of the primary goals of panorama, the application should automatically
+detect changes made to this file after it has started, and automatically
+re-establish the connections required. As a result, there's no UI for editing
+the configuration within the application itself.</p>
 
                     </main>
 
