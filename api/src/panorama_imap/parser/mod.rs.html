@@ -470,6 +470,24 @@
 <span id="467">467</span>
 <span id="468">468</span>
 <span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
@@ -644,7 +662,22 @@
         <span class="ident">Rule</span>::<span class="ident">capability_data</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ResponseCode</span>::<span class="ident">Capabilities</span>(<span class="ident">build_capabilities</span>(<span class="ident">pair</span>)),
         <span class="ident">Rule</span>::<span class="ident">resp_text_code_readwrite</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ResponseCode</span>::<span class="ident">ReadWrite</span>,
         <span class="ident">Rule</span>::<span class="ident">resp_text_code_uidvalidity</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ResponseCode</span>::<span class="ident">UidValidity</span>(<span class="ident">build_number</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>))),
+        <span class="ident">Rule</span>::<span class="ident">resp_text_code_uidnext</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ResponseCode</span>::<span class="ident">UidNext</span>(<span class="ident">build_number</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>))),
         <span class="ident">Rule</span>::<span class="ident">resp_text_code_unseen</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ResponseCode</span>::<span class="ident">Unseen</span>(<span class="ident">build_number</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>))),
+        <span class="comment">// TODO: maybe have an actual type for these flags instead of just string</span>
+        <span class="ident">Rule</span>::<span class="ident">resp_text_code_permanentflags</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">ResponseCode</span>::<span class="ident">PermanentFlags</span>(<span class="ident">pair</span>.<span class="ident">into_inner</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span>.<span class="ident">as_str</span>().<span class="ident">to_owned</span>()).<span class="ident">collect</span>())
+        }
+        <span class="ident">Rule</span>::<span class="ident">resp_text_code_other</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
+            <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">to_owned</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">b</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">pair</span>) <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>() {
+                <span class="ident">b</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">to_owned</span>());
+            }
+            <span class="ident">ResponseCode</span>::<span class="ident">Other</span>(<span class="ident">a</span>, <span class="ident">b</span>)
+        }
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
     })
 }
@@ -714,8 +747,9 @@
         <span class="string">&quot;\\Deleted&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MailboxFlag</span>::<span class="ident">Deleted</span>,
         <span class="string">&quot;\\Seen&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MailboxFlag</span>::<span class="ident">Seen</span>,
         <span class="string">&quot;\\Draft&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MailboxFlag</span>::<span class="ident">Draft</span>,
-        <span class="ident">s</span> <span class="kw">if</span> <span class="ident">s</span>.<span class="ident">starts_with</span>(<span class="string">&quot;\\&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MailboxFlag</span>::<span class="ident">Ext</span>(<span class="ident">s</span>.<span class="ident">to_owned</span>()),
-        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>.<span class="ident">as_str</span>()),
+        <span class="comment">// s if s.starts_with(&quot;\\&quot;) =&gt; MailboxFlag::Ext(s.to_owned()),</span>
+        <span class="comment">// TODO: what??</span>
+        <span class="ident">s</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MailboxFlag</span>::<span class="ident">Ext</span>(<span class="ident">s</span>.<span class="ident">to_owned</span>()),
     }
 }
 
@@ -782,7 +816,9 @@
 
 <span class="kw">fn</span> <span class="ident">build_mbx_list_flags</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
     <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">mbx_list_flags</span>));
-    <span class="ident">pair</span>.<span class="ident">into_inner</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">pair</span><span class="op">|</span> <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">to_owned</span>()).<span class="ident">collect</span>()
+    <span class="ident">pair</span>.<span class="ident">into_inner</span>()
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">pair</span><span class="op">|</span> <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">to_owned</span>())
+        .<span class="ident">collect</span>()
 }
 
 <span class="doccomment">/// Unwraps a singleton pair (a pair that only has one element in its `inner` list)</span>
@@ -805,7 +841,7 @@
 }
 
 <span class="doccomment">/// Wrapper around [build_string][1], except return None for the `nil` case</span>
-<span class="doccomment">/// </span>
+<span class="doccomment">///</span>
 <span class="doccomment">/// [1]: self::build_string</span>
 <span class="kw">fn</span> <span class="ident">build_nstring</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">nil</span>) {
