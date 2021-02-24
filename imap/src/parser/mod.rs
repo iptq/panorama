@@ -15,13 +15,15 @@ use crate::response::*;
 #[grammar = "parser/rfc3501.pest"]
 struct Rfc3501;
 
-pub fn parse_capability(s: impl AsRef<str>) -> Result<Capability, Error<Rule>> {
+pub type ParseResult<T, E = Error<Rule>> = Result<T, E>;
+
+pub fn parse_capability(s: impl AsRef<str>) -> ParseResult<Capability> {
     let mut pairs = Rfc3501::parse(Rule::capability, s.as_ref())?;
     let pair = pairs.next().unwrap();
     Ok(build_capability(pair))
 }
 
-pub fn parse_response(s: impl AsRef<str>) -> Result<Response, Error<Rule>> {
+pub fn parse_response(s: impl AsRef<str>) -> ParseResult<Response> {
     let mut pairs = Rfc3501::parse(Rule::response, s.as_ref())?;
     let pair = pairs.next().unwrap();
     Ok(build_response(pair))
@@ -90,8 +92,29 @@ fn build_response(pair: Pair<Rule>) -> Response {
                 _ => unreachable!("{:#?}", pair),
             }
         }
+        Rule::continue_req => {
+            let (code, s) = build_resp_text(unwrap1(pair));
+            Response::Continue {
+                code,
+                information: Some(s),
+            }
+        }
         _ => unreachable!("{:#?}", pair),
     }
+}
+
+fn build_resp_text(pair: Pair<Rule>) -> (Option<ResponseCode>, String) {
+    assert!(matches!(pair.as_rule(), Rule::resp_text));
+    let mut pairs = pair.into_inner();
+    let mut pair = pairs.next().unwrap();
+    let mut resp_code = None;
+    if let Rule::resp_text_code = pair.as_rule() {
+        resp_code = build_resp_text_code(pair);
+        pair = pairs.next().unwrap();
+    }
+    assert!(matches!(pair.as_rule(), Rule::text));
+    let s = pair.as_str().to_owned();
+    (resp_code, s)
 }
 
 fn build_msg_att(pair: Pair<Rule>) -> AttributeValue {
@@ -153,7 +176,7 @@ fn build_resp_cond_state(pair: Pair<Rule>) -> (Status, Option<ResponseCode>, Opt
     let pairs = pair.into_inner();
     for pair in pairs {
         match pair.as_rule() {
-            Rule::resp_text_code => code = build_resp_code(pair),
+            Rule::resp_text_code => code = build_resp_text_code(pair),
             Rule::text => information = Some(pair.as_str().to_owned()),
             _ => unreachable!("{:#?}", pair),
         }
@@ -162,7 +185,7 @@ fn build_resp_cond_state(pair: Pair<Rule>) -> (Status, Option<ResponseCode>, Opt
     (status, code, information)
 }
 
-fn build_resp_code(pair: Pair<Rule>) -> Option<ResponseCode> {
+fn build_resp_text_code(pair: Pair<Rule>) -> Option<ResponseCode> {
     if !matches!(pair.as_rule(), Rule::resp_text_code) {
         unreachable!("{:#?}", pair);
     }

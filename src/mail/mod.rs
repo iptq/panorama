@@ -110,7 +110,7 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
             debug!("listing all emails...");
             let folder_tree = authed.list().await?;
 
-            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+            let idle = authed.idle().await?;
             debug!("heartbeat");
         }
     }

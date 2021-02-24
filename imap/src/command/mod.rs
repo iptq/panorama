@@ -5,9 +5,20 @@ use std::fmt;
 pub enum Command {
     Capability,
     Starttls,
-    Login { username: String, password: String },
-    Select { mailbox: String },
-    List { reference: String, mailbox: String },
+    Login {
+        username: String,
+        password: String,
+    },
+    Select {
+        mailbox: String,
+    },
+    List {
+        reference: String,
+        mailbox: String,
+    },
+
+    #[cfg(feature = "rfc2177-idle")]
+    Idle,
 }
 
 impl fmt::Display for Command {
@@ -19,6 +30,9 @@ impl fmt::Display for Command {
             Login { username, password } => write!(f, "LOGIN {} {}", username, password),
             Select { mailbox } => write!(f, "SELECT {}", mailbox),
             List { reference, mailbox } => write!(f, "LIST {:?} {:?}", reference, mailbox),
+
+            #[cfg(feature = "rfc2177-idle")]
+            Idle => write!(f, "IDLE"),
         }
     }
 }

@@ -100,10 +100,10 @@ where
         }
 
         let cmd_str = format!("{}{} {}\r\n", TAG_PREFIX, id, cmd);
-        debug!("[{}] writing to socket: {:?}", id, cmd_str);
+        // debug!("[{}] writing to socket: {:?}", id, cmd_str);
         self.conn.write_all(cmd_str.as_bytes()).await?;
         self.conn.flush().await?;
-        debug!("[{}] written.", id);
+        // debug!("[{}] written.", id);
 
         let resp = ExecWaiter(self, id, false).await;
         // let resp = {
@@ -252,7 +252,7 @@ async fn listen<C>(
 where
     C: AsyncRead + Unpin,
 {
-    debug!("amogus");
+    // debug!("amogus");
     let mut reader = BufReader::new(conn);
     let mut greeting = Some(greeting);
 

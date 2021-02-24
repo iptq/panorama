@@ -166,4 +166,13 @@ impl ClientAuthenticated {
         debug!("select response: {:?}", resp);
         Ok(())
     }
+
+    /// Runs the SELECT command
+    #[cfg(feature = "rfc2177-idle")]
+    pub async fn idle(&mut self) -> Result<()> {
+        let cmd = Command::Idle;
+        let resp = self.execute(cmd).await?;
+        debug!("idle response: {:?}", resp);
+        Ok(())
+    }
 }
