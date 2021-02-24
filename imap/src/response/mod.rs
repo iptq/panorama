@@ -67,8 +67,8 @@ pub enum AttributeValue {
         data: Option<String>,
     },
     BodyStructure(BodyStructure),
-    Envelope(Box<Envelope>),
-    Flags(Vec<String>),
+    Envelope(Envelope),
+    Flags(Vec<MailboxFlag>),
     InternalDate(String),
     ModSeq(u64), // RFC 4551, section 3.3.2
     Rfc822(Option<String>),
@@ -155,7 +155,7 @@ pub enum BodyExtension {
     List(Vec<BodyExtension>),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct Envelope {
     pub date: Option<String>,
     pub subject: Option<String>,
@@ -236,6 +236,7 @@ pub enum MailboxFlag {
     Deleted,
     Seen,
     Draft,
+    Recent,
     Ext(String),
 }
 

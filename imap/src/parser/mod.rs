@@ -68,11 +68,72 @@ fn build_response(pair: Pair<Rule>) -> Response {
                 }
                 Rule::mailbox_data => Response::MailboxData(build_mailbox_data(pair)),
                 Rule::capability_data => Response::Capabilities(build_capabilities(pair)),
+                Rule::message_data => {
+                    let mut pairs = pair.into_inner();
+                    let pair = pairs.next().unwrap();
+                    let seq: u32 = build_number(pair);
+
+                    let pair = pairs.next().unwrap();
+                    match pair.as_rule() {
+                        Rule::message_data_expunge => Response::Expunge(seq),
+                        Rule::message_data_fetch => {
+                            let mut pairs = pair.into_inner();
+                            let msg_att = pairs.next().unwrap();
+                            let attrs = msg_att.into_inner().map(build_msg_att).collect();
+                            Response::Fetch(seq, attrs)
+                        }
+                        _ => unreachable!("{:#?}", pair),
+                    }
+                }
                 _ => unreachable!("{:#?}", pair),
             }
         }
         _ => unreachable!("{:#?}", pair),
     }
+}
+
+fn build_msg_att(pair: Pair<Rule>) -> AttributeValue {
+    if !matches!(pair.as_rule(), Rule::msg_att_dyn_or_stat) {
+        unreachable!("{:#?}", pair);
+    }
+
+    let mut pairs = pair.into_inner();
+    let pair = pairs.next().unwrap();
+
+    match pair.as_rule() {
+        Rule::msg_att_dynamic => AttributeValue::Flags(pair.into_inner().map(build_flag).collect()),
+        Rule::msg_att_static => build_msg_att_static(pair),
+        _ => unreachable!("{:#?}", pair),
+    }
+}
+
+fn build_msg_att_static(pair: Pair<Rule>) -> AttributeValue {
+    if !matches!(pair.as_rule(), Rule::msg_att_static) {
+        unreachable!("{:#?}", pair);
+    }
+
+    let mut pairs = pair.into_inner();
+    let pair = pairs.next().unwrap();
+
+    match pair.as_rule() {
+        Rule::msg_att_static_internaldate => {
+            AttributeValue::InternalDate(extract_string(unwrap1(pair)))
+        }
+        Rule::msg_att_static_rfc822_size => AttributeValue::Rfc822Size(build_number(unwrap1(pair))),
+        Rule::msg_att_static_envelope => AttributeValue::Envelope(build_envelope(unwrap1(pair))),
+        // TODO: do this
+        Rule::msg_att_static_body => AttributeValue::BodySection {
+            section: None,
+            index: None,
+            data: None,
+        },
+        _ => unreachable!("{:#?}", pair),
+    }
+}
+
+fn build_envelope(pair: Pair<Rule>) -> Envelope {
+    // TODO: do this
+    Envelope::default()
 }
 
 fn build_resp_cond_state(pair: Pair<Rule>) -> (Status, Option<ResponseCode>, Option<String>) {
@@ -109,8 +170,8 @@ fn build_resp_code(pair: Pair<Rule>) -> Option<ResponseCode> {
     Some(match pair.as_rule() {
         Rule::capability_data => ResponseCode::Capabilities(build_capabilities(pair)),
         Rule::resp_text_code_readwrite => ResponseCode::ReadWrite,
-        Rule::resp_text_code_uidvalidity => ResponseCode::UidValidity(build_number(pair)),
-        Rule::resp_text_code_unseen => ResponseCode::Unseen(build_number(pair)),
+        Rule::resp_text_code_uidvalidity => ResponseCode::UidValidity(build_number(unwrap1(pair))),
+        Rule::resp_text_code_unseen => ResponseCode::Unseen(build_number(unwrap1(pair))),
         _ => unreachable!("{:#?}", pair),
     })
 }
@@ -160,7 +221,16 @@ fn build_flag_list(pair: Pair<Rule>) -> Vec<MailboxFlag> {
     pair.into_inner().map(build_flag).collect()
 }
 
-fn build_flag(pair: Pair<Rule>) -> MailboxFlag {
+fn build_flag(mut pair: Pair<Rule>) -> MailboxFlag {
+    if matches!(pair.as_rule(), Rule::flag_fetch) {
+        let mut pairs = pair.into_inner();
+        pair = pairs.next().unwrap();
+
+        if matches!(pair.as_rule(), Rule::flag_fetch_recent) {
+            return MailboxFlag::Recent;
+        }
+    }
+
     if !matches!(pair.as_rule(), Rule::flag) {
         unreachable!("{:#?}", pair);
     }
@@ -184,14 +254,14 @@ fn build_mailbox_data(pair: Pair<Rule>) -> MailboxData {
     let mut pairs = pair.into_inner();
     let pair = pairs.next().unwrap();
     match pair.as_rule() {
-        Rule::mailbox_data_exists => MailboxData::Exists(build_number(pair)),
+        Rule::mailbox_data_exists => MailboxData::Exists(build_number(unwrap1(pair))),
         Rule::mailbox_data_flags => {
             let mut pairs = pair.into_inner();
             let pair = pairs.next().unwrap();
             let flags = build_flag_list(pair);
             MailboxData::Flags(flags)
         }
-        Rule::mailbox_data_recent => MailboxData::Recent(build_number(pair)),
+        Rule::mailbox_data_recent => MailboxData::Recent(build_number(unwrap1(pair))),
         Rule::mailbox_data_list => {
             let mut pairs = pair.into_inner();
             let pair = pairs.next().unwrap();
@@ -213,13 +283,17 @@ fn build_mailbox_list(pair: Pair<Rule>) -> (Vec<String>, Option<String>, String)
 
     let mut pairs = pair.into_inner();
     let mut pair = pairs.next().unwrap();
-    
+
     // let mut flags = Vec::new();
     if let Rule::mailbox_list_flags = pair.as_rule() {
         let pairs = pair.into_inner();
         for pair in pairs {
+            debug!("pair: {:?}", pair);
+            let flags = build_mbx_list_flags(pair);
+            debug!("flags: {:?}", flags);
         }
     }
+
     // debug!("pair: {:#?}", pair);
     todo!()
 }
@@ -232,14 +306,25 @@ fn build_mbx_list_flags(pair: Pair<Rule>) -> Vec<String> {
     todo!()
 }
 
+fn unwrap1(pair: Pair<Rule>) -> Pair<Rule> {
+    let mut pairs = pair.into_inner();
+    pairs.next().unwrap()
+}
+
 fn build_number<T>(pair: Pair<Rule>) -> T
 where
     T: FromStr,
     T::Err: Debug,
 {
-    let mut pairs = pair.into_inner();
-    let pair = pairs.next().unwrap();
+    if !matches!(pair.as_rule(), Rule::nz_number | Rule::number) {
+        unreachable!("not a number {:#?}", pair);
+    }
     pair.as_str().parse::<T>().unwrap()
+}
+
+fn extract_string(pair: Pair<Rule>) -> String {
+    // TODO: actually get rid of the quotes and escaped chars
+    pair.as_str().to_owned()
 }
 
 #[cfg(test)]
@@ -342,10 +427,23 @@ mod tests {
 
         assert_eq!(
             parse_response(concat!(
-                r#"* 12 FETCH (FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700" RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" "IMAP4rev1 WG mtg summary and minutes" (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) ((NIL NIL "imap" "cac.washington.edu")) ((NIL NIL "minutes" "CNRI.Reston.VA.US") ("John Klensin" NIL "KLENSIN" "MIT.EDU")) NIL NIL "<B27397-0100000@cac.washington.edu>") BODY ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 3028 92))"#,
+                r#"* 12 FETCH (FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700" RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" "IMAP4rev1 WG mtg summary and minutes" (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) ((NIL NIL "imap" "cac.washington.edu")) ((NIL NIL "minutes" "CNRI.Reston.VA.US")("John Klensin" NIL "KLENSIN" "MIT.EDU")) NIL NIL "<B27397-0100000@cac.washington.edu>") BODY ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 302892))"#,
                 "\r\n",
             )),
-            Ok(Response::Fetch(12, vec![]))
+            Ok(Response::Fetch(
+                12,
+                vec![
+                    AttributeValue::Flags(vec![MailboxFlag::Seen]),
+                    AttributeValue::InternalDate("\"17-Jul-1996 02:44:25 -0700\"".to_owned()),
+                    AttributeValue::Rfc822Size(4286),
+                    AttributeValue::Envelope(Envelope::default()),
+                    AttributeValue::BodySection {
+                        section: None,
+                        index: None,
+                        data: None,
+                    },
+                ]
+            ))
         );
     }
 }
