@@ -985,6 +985,7 @@ dependencies = [
  "inotify",
  "log",
  "panorama-imap",
+ "panorama-smtp",
  "parking_lot",
  "pgp",
  "pin-project",
@@ -1017,6 +1018,10 @@ dependencies = [
  "tokio-rustls",
  "webpki-roots",
 ]
+
+[[package]]
+name = "panorama-smtp"
+version = "0.1.0"
 
 [[package]]
 name = "parking_lot"

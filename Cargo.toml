@@ -9,7 +9,7 @@ readme = "README.md"
 license = "GPL-3.0-or-later"
 
 [workspace]
-members = ["imap"]
+members = ["imap", "smtp"]
 
 [dependencies]
 anyhow = "1.0.38"
@@ -40,6 +40,10 @@ xdg = "2.2.0"
 path = "imap"
 version = "0"
 features = ["rfc2177-idle"]
+
+[dependencies.panorama-smtp]
+path = "smtp"
+version = "0"
 
 [features]
 clippy = []
