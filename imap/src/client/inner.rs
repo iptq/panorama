@@ -4,39 +4,60 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
 
-use anyhow::{Context as AnyhowContext, Result};
-use futures::future::{self, Either, Future, FutureExt};
+use anyhow::{Context as AnyhowContext, Error, Result};
+use futures::{
+    future::{self, BoxFuture, Either, Future, FutureExt, TryFutureExt},
+    stream::{BoxStream, Stream, StreamExt, TryStream},
+};
+use genawaiter::{
+    sync::{gen, Gen},
+    yield_,
+};
 use parking_lot::{RwLock, RwLockWriteGuard};
 use tokio::{
     io::{
         self, AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader, ReadHalf, WriteHalf,
     },
-    sync::mpsc,
+    sync::{mpsc, oneshot},
     task::JoinHandle,
 };
 use tokio_rustls::{
     client::TlsStream, rustls::ClientConfig as RustlsConfig, webpki::DNSNameRef, TlsConnector,
 };
+use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::command::Command;
 use crate::parser::{parse_capability, parse_response};
 use crate::response::{Capability, Response, ResponseCode, Status};
-// use crate::types::{Capability as Capability_, Status};
 
 use super::ClientConfig;
 
 pub type CapsLock = Arc<RwLock<Option<HashSet<Capability>>>>;
-pub type ResultMap = Arc<RwLock<VecDeque<(usize, Option<Response>, Vec<Response>, Option<Waker>)>>>;
+pub type ResponseFuture = Box<dyn Future<Output = Result<Response>> + Send + Unpin>;
+pub type ResponseSender = mpsc::UnboundedSender<Response>;
+pub type ResponseStream = mpsc::UnboundedReceiver<Response>;
+type ResultQueue = Arc<RwLock<VecDeque<HandlerResult>>>;
 pub type GreetingState = Arc<RwLock<(Option<Response>, Option<Waker>)>>;
 pub const TAG_PREFIX: &str = "panorama";
+
+struct HandlerResult {
+    id: usize,
+    end: Option<oneshot::Sender<Response>>,
+    sender: ResponseSender,
+    waker: Option<Waker>,
+}
 
 /// The lower-level Client struct, that is shared by all of the exported structs in the state machine.
 pub struct Client<C> {
     config: ClientConfig,
+
+    /// write half of the connection
     conn: WriteHalf<C>,
 
+    /// counter for monotonically incrementing unique ids
     id: usize,
-    results: ResultMap,
+
+    results: ResultQueue,
 
     /// cached set of capabilities
     caps: CapsLock,
@@ -90,13 +111,26 @@ where
     }
 
     /// Sends a command to the server and returns a handle to retrieve the result
-    pub async fn execute(&mut self, cmd: Command) -> Result<(Response, Vec<Response>)> {
-        debug!("executing command {:?}", cmd);
+    pub async fn execute(&mut self, cmd: Command) -> Result<(ResponseFuture, ResponseStream)> {
+        // debug!("executing command {:?}", cmd);
         let id = self.id;
         self.id += 1;
+
+        // create a channel for sending the final response
+        let (end_tx, end_rx) = oneshot::channel();
+
+        // create a channel for sending responses for this particular client call
+        // this should queue up responses
+        let (tx, rx) = mpsc::unbounded_channel();
+
         {
             let mut handlers = self.results.write();
-            handlers.push_back((id, None, vec![], None));
+            handlers.push_back(HandlerResult {
+                id,
+                end: Some(end_tx),
+                sender: tx,
+                waker: None,
+            });
         }
 
         let cmd_str = format!("{}{} {}\r\n", TAG_PREFIX, id, cmd);
@@ -104,13 +138,24 @@ where
         self.conn.write_all(cmd_str.as_bytes()).await?;
         self.conn.flush().await?;
         // debug!("[{}] written.", id);
-
-        let resp = ExecWaiter(self, id, false).await;
+        // let resp = ExecWaiter(self, id, false).await;
         // let resp = {
         //     let mut handlers = self.results.write();
         //     handlers.remove(&id).unwrap().0.unwrap()
         // };
-        Ok(resp)
+
+        // let resp = end_rx.await?;
+
+        let q = self.results.clone();
+        // let end = Box::new(end_rx.map_err(|err| Error::from).map(move |resp| resp));
+        let end = Box::new(end_rx.map_err(Error::from).map(move | resp | {
+            // pop the first entry from the list
+            let mut results = q.write();
+            results.pop_front();
+            resp
+        }));
+
+        Ok((end, rx))
     }
 
     /// Executes the CAPABILITY command
@@ -123,16 +168,18 @@ where
         }
 
         let cmd = Command::Capability;
-        debug!("sending: {:?} {:?}", cmd, cmd.to_string());
+        // debug!("sending: {:?} {:?}", cmd, cmd.to_string());
         let (result, intermediate) = self
             .execute(cmd)
             .await
             .context("error executing CAPABILITY command")?;
+        let result = result.await?;
         debug!("cap resp: {:?}", result);
 
-        if let Some(Response::Capabilities(new_caps)) = intermediate
-            .iter()
-            .find(|resp| matches!(resp, Response::Capabilities(_)))
+        if let Some(Response::Capabilities(new_caps)) = UnboundedReceiverStream::new(intermediate)
+            .filter(|resp| future::ready(matches!(resp, Response::Capabilities(_))))
+            .next()
+            .await
         {
             let mut caps = self.caps.write();
             *caps = Some(new_caps.iter().cloned().collect());
@@ -149,7 +196,8 @@ where
         }
 
         // first, send the STARTTLS command
-        let resp = self.execute(Command::Starttls).await?;
+        let (resp, _) = self.execute(Command::Starttls).await?;
+        let resp = resp.await?;
         debug!("server response to starttls: {:?}", resp);
 
         debug!("sending exit for upgrade");
@@ -208,44 +256,55 @@ impl Future for GreetingWaiter {
     }
 }
 
-pub struct ExecWaiter<'a, C>(&'a Client<C>, usize, bool);
-
-impl<'a, C> Future for ExecWaiter<'a, C> {
-    type Output = (Response, Vec<Response>);
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        // add the waker
-        let mut results = self.0.results.write();
-        if !self.2 {
-            if let Some((_, _, _, waker_ref)) =
-                results.iter_mut().find(|(id, _, _, _)| *id == self.1)
-            {
-                let waker = cx.waker().clone();
-                *waker_ref = Some(waker);
-                self.2 = true;
-            }
-        }
-
-        // if this struct exists then there's definitely at least one entry
-        let (id, last_response, _, _) = &results[0];
-        if *id != self.1 || last_response.is_none() {
-            return Poll::Pending;
-        }
-
-        let (_, last_response, intermediate_responses, _) = results.pop_front().unwrap();
-        mem::drop(results);
-
-        Poll::Ready((
-            last_response.expect("already checked"),
-            intermediate_responses,
-        ))
-    }
-}
+// pub struct ExecWaiter<'a, C>(&'a Client<C>, usize, bool);
+//
+// impl<'a, C> Future for ExecWaiter<'a, C> {
+//     type Output = (Response, ResponseStream);
+//     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+//         // add the waker
+//         let mut results = self.0.results.write();
+//         if !self.2 {
+//             if let Some(HandlerResult {
+//                 waker: waker_ref, ..
+//             }) = results
+//                 .iter_mut()
+//                 .find(|HandlerResult { id, .. }| *id == self.1)
+//             {
+//                 let waker = cx.waker().clone();
+//                 *waker_ref = Some(waker);
+//                 self.2 = true;
+//             }
+//         }
+//
+//         // if this struct exists then there's definitely at least one entry
+//         let HandlerResult {
+//             id,
+//             end: last_response,
+//             ..
+//         } = &results[0];
+//         if *id != self.1 || last_response.is_none() {
+//             return Poll::Pending;
+//         }
+//
+//         let HandlerResult {
+//             end: last_response,
+//             stream: intermediate_responses,
+//             ..
+//         } = results.pop_front().unwrap();
+//         mem::drop(results);
+//
+//         Poll::Ready((
+//             last_response.expect("already checked"),
+//             intermediate_responses,
+//         ))
+//     }
+// }
 
 /// Main listen loop for the application
 async fn listen<C>(
     conn: C,
     caps: CapsLock,
-    results: ResultMap,
+    results: ResultQueue,
     mut exit: mpsc::Receiver<()>,
     greeting: GreetingState,
 ) -> Result<C>
@@ -302,9 +361,9 @@ where
                         status: Status::Ok, ..
                     } => {
                         let mut results = results.write();
-                        if let Some((_, _, intermediate, _)) = results.iter_mut().next() {
-                            debug!("pushed to intermediate: {:?}", resp);
-                            intermediate.push(resp);
+                        if let Some(HandlerResult { id, sender, .. }) = results.iter_mut().next() {
+                            debug!("pushed to intermediate for id {}: {:?}", id, resp);
+                            sender.send(resp)?;
                         }
                     }
 
@@ -320,8 +379,16 @@ where
                         if tag.starts_with(TAG_PREFIX) {
                             // let id = tag.trim_start_matches(TAG_PREFIX).parse::<usize>()?;
                             let mut results = results.write();
-                            if let Some((_, opt, _, waker)) = results.iter_mut().next() {
-                                *opt = Some(resp);
+                            if let Some(HandlerResult {
+                                end: ref mut opt,
+                                waker,
+                                ..
+                            }) = results.iter_mut().next()
+                            {
+                                if let Some(opt) = opt.take() {
+                                    opt.send(resp).unwrap();
+                                }
+                                // *opt = Some(resp);
                                 if let Some(waker) = waker.take() {
                                     waker.wake();
                                 }

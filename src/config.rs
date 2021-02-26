@@ -130,7 +130,7 @@ async fn start_inotify_stream(
 
             debug!("reading config from {:?}", path_c);
             let config = read_config(path_c).await.context("read")?;
-            debug!("sending config {:?}", config);
+            // debug!("sending config {:?}", config);
             config_tx.send(config)?;
         }
     }

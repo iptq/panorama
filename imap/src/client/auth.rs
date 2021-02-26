@@ -31,7 +31,9 @@ impl Auth for Plain {
             username: self.username,
             password: self.password,
         };
+
         let (result, _) = client.execute(command).await?;
+        let result = result.await?;
 
         if !matches!(
             result,

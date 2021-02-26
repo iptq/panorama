@@ -1,3 +1,1 @@
-pub trait Drawable {
-
-}
+pub trait Drawable {}

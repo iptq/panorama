@@ -39,17 +39,16 @@ mod inner;
 use std::sync::Arc;
 
 use anyhow::Result;
-use genawaiter::{sync::gen, yield_};
 use tokio::net::TcpStream;
-use futures::stream::Stream;
 use tokio_rustls::{
     client::TlsStream, rustls::ClientConfig as RustlsConfig, webpki::DNSNameRef, TlsConnector,
 };
+use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::command::Command;
 use crate::response::Response;
 
-pub use self::inner::Client;
+pub use self::inner::{Client, ResponseFuture, ResponseStream};
 
 /// Struct used to start building the config for a client.
 ///
@@ -118,7 +117,7 @@ impl ClientUnauthenticated {
     }
 
     /// Exposing low-level execute
-    async fn execute(&mut self, cmd: Command) -> Result<(Response, Vec<Response>)> {
+    async fn execute(&mut self, cmd: Command) -> Result<(ResponseFuture, ResponseStream)> {
         match self {
             ClientUnauthenticated::Encrypted(e) => e.execute(cmd).await,
             ClientUnauthenticated::Unencrypted(e) => e.execute(cmd).await,
@@ -141,7 +140,7 @@ pub enum ClientAuthenticated {
 
 impl ClientAuthenticated {
     /// Exposing low-level execute
-    async fn execute(&mut self, cmd: Command) -> Result<(Response, Vec<Response>)> {
+    async fn execute(&mut self, cmd: Command) -> Result<(ResponseFuture, ResponseStream)> {
         match self {
             ClientAuthenticated::Encrypted(e) => e.execute(cmd).await,
             ClientAuthenticated::Unencrypted(e) => e.execute(cmd).await,
@@ -154,7 +153,8 @@ impl ClientAuthenticated {
             reference: "".to_owned(),
             mailbox: "*".to_owned(),
         };
-        let resp = self.execute(cmd).await?;
+        let (resp, stream) = self.execute(cmd).await?;
+        let resp = resp.await?;
         debug!("list response: {:?}", resp);
         Ok(())
     }
@@ -164,23 +164,17 @@ impl ClientAuthenticated {
         let cmd = Command::Select {
             mailbox: mailbox.as_ref().to_owned(),
         };
-        let resp = self.execute(cmd).await?;
+        let (resp, stream) = self.execute(cmd).await?;
+        let resp = resp.await?;
         debug!("select response: {:?}", resp);
         Ok(())
     }
 
     /// Runs the SELECT command
     #[cfg(feature = "rfc2177-idle")]
-    pub fn idle(&mut self) -> impl Stream<Item = ()> {
-        gen!({
-            loop {
-                tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-                yield_!(());
-            }
-        })
-        // let cmd = Command::Idle;
-        // let resp = self.execute(cmd).await?;
-        // debug!("idle response: {:?}", resp);
-        // Ok(())
+    pub async fn idle(&mut self) -> Result<UnboundedReceiverStream<Response>> {
+        let cmd = Command::Idle;
+        let (_, stream) = self.execute(cmd).await?;
+        Ok(UnboundedReceiverStream::new(stream))
     }
 }

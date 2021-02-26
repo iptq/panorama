@@ -1,7 +1,10 @@
 //! Mail
 
 use anyhow::Result;
-use futures::{future::FutureExt, stream::StreamExt};
+use futures::{
+    future::FutureExt,
+    stream::{Stream, StreamExt},
+};
 use panorama_imap::{
     client::{
         auth::{self, Auth},
@@ -49,7 +52,7 @@ pub async fn run_mail(
 
         for acct in config.mail_accounts.into_iter() {
             let handle = tokio::spawn(async move {
-                debug!("opening imap connection for {:?}", acct);
+                // debug!("opening imap connection for {:?}", acct);
                 loop {
                     match imap_main(acct.clone()).await {
                         Ok(_) => {}
@@ -110,7 +113,7 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
             debug!("listing all emails...");
             let folder_tree = authed.list().await?;
 
-            let mut idle_stream = authed.idle();
+            let mut idle_stream = authed.idle().await?;
 
             loop {
                 idle_stream.next().await;

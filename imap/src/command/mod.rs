@@ -1,7 +1,7 @@
 use std::fmt;
 
 /// Commands, without the tag part.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum Command {
     Capability,
     Starttls,
