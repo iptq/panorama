@@ -39,7 +39,9 @@ mod inner;
 use std::sync::Arc;
 
 use anyhow::Result;
+use genawaiter::{sync::gen, yield_};
 use tokio::net::TcpStream;
+use futures::stream::Stream;
 use tokio_rustls::{
     client::TlsStream, rustls::ClientConfig as RustlsConfig, webpki::DNSNameRef, TlsConnector,
 };
@@ -169,10 +171,16 @@ impl ClientAuthenticated {
 
     /// Runs the SELECT command
     #[cfg(feature = "rfc2177-idle")]
-    pub async fn idle(&mut self) -> Result<()> {
-        let cmd = Command::Idle;
-        let resp = self.execute(cmd).await?;
-        debug!("idle response: {:?}", resp);
-        Ok(())
+    pub fn idle(&mut self) -> impl Stream<Item = ()> {
+        gen!({
+            loop {
+                tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+                yield_!(());
+            }
+        })
+        // let cmd = Command::Idle;
+        // let resp = self.execute(cmd).await?;
+        // debug!("idle response: {:?}", resp);
+        // Ok(())
     }
 }

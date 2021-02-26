@@ -1,6 +1,7 @@
 //! Panorama
 //! ===
 
+#![deny(unsafe_code)]
 #![deny(missing_docs)]
 // TODO: get rid of this before any kind of public release
 #![allow(unused_imports, unused_variables)]

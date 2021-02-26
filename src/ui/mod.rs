@@ -1,5 +1,7 @@
 //! UI
 
+mod drawable;
+mod tabs;
 mod table;
 
 use std::fmt::Debug;

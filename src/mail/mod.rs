@@ -110,8 +110,12 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
             debug!("listing all emails...");
             let folder_tree = authed.list().await?;
 
-            let idle = authed.idle().await?;
-            debug!("heartbeat");
+            let mut idle_stream = authed.idle();
+
+            loop {
+                idle_stream.next().await;
+                debug!("got an event");
+            }
         }
     }
 }
