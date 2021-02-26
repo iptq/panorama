@@ -2,13 +2,18 @@
 extern crate log;
 
 use std::path::{Path, PathBuf};
+use std::thread;
 
 use anyhow::Result;
 use fern::colors::{Color, ColoredLevelConfig};
 use futures::future::TryFutureExt;
 use panorama::{config::spawn_config_watcher_system, mail, report_err, ui};
 use structopt::StructOpt;
-use tokio::{runtime::Runtime, sync::mpsc};
+use tokio::{
+    runtime::{Builder as RuntimeBuilder, Runtime},
+    sync::mpsc,
+    task::LocalSet,
+};
 use xdg::BaseDirectories;
 
 #[derive(Debug, StructOpt)]
@@ -58,8 +63,7 @@ async fn run(opt: Opt) -> Result<()> {
     });
 
     if !opt.headless {
-        let stdout = std::io::stdout();
-        tokio::spawn(ui::run_ui(stdout, exit_tx).unwrap_or_else(report_err));
+        run_ui(exit_tx);
     }
 
     exit_rx.recv().await;
@@ -69,6 +73,26 @@ async fn run(opt: Opt) -> Result<()> {
     // shutdown
     std::process::exit(0);
     // Ok(())
+}
+
+// Spawns the entire UI in a different thread, since it must be thread-local
+fn run_ui(exit_tx: mpsc::Sender<()>) {
+    let stdout = std::io::stdout();
+
+    let rt = RuntimeBuilder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+
+    thread::spawn(move || {
+        let localset = LocalSet::new();
+
+        localset.spawn_local(async {
+            ui::run_ui(stdout, exit_tx).unwrap_or_else(report_err).await;
+        });
+
+        rt.block_on(localset);
+    });
 }
 
 fn setup_logger(log_file: Option<impl AsRef<Path>>) -> Result<()> {

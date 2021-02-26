@@ -7,7 +7,7 @@ use crossterm::{
     style::{self, Color},
 };
 
-use super::Rect;
+use super::{Drawable, Rect, Screen};
 
 #[derive(Default)]
 pub struct Table {
@@ -36,10 +36,16 @@ impl Table {
         }
     }
 
-    pub fn draw<W>(&self, w: &mut W, rect: Rect) -> Result<()>
-    where
-        W: Write,
-    {
+    pub fn push_row(&mut self, row: Vec<String>) {
+        self.rows.push(row);
+        if self.selected_row.is_none() {
+            self.selected_row = Some(0);
+        }
+    }
+}
+
+impl Drawable for Table {
+    fn draw(&self, w: &mut Screen, rect: Rect) -> Result<()> {
         if !self.rows.is_empty() {
             let mut columns = Vec::new();
             for row in self.rows.iter() {
@@ -102,10 +108,7 @@ impl Table {
         Ok(())
     }
 
-    pub fn push_row(&mut self, row: Vec<String>) {
-        self.rows.push(row);
-        if self.selected_row.is_none() {
-            self.selected_row = Some(0);
-        }
+    fn invalidate(&mut self) {
+        // TODO: do something
     }
 }

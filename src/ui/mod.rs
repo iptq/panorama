@@ -5,7 +5,7 @@ mod table;
 mod tabs;
 
 use std::fmt::Debug;
-use std::io::Write;
+use std::io::{Stdout, Write};
 use std::time::Duration;
 
 use anyhow::Result;
@@ -20,24 +20,29 @@ use tokio::time;
 
 use crate::ExitSender;
 
+use self::drawable::Drawable;
 use self::table::Table;
+use self::tabs::Tabs;
 
 const FRAME_DURATION: Duration = Duration::from_millis(20);
+
+/// Type alias for the screen object we're drawing to
+pub type Screen = Stdout;
 
 /// X Y W H
 #[derive(Copy, Clone)]
 pub struct Rect(u16, u16, u16, u16);
 
 /// UI entrypoint.
-pub async fn run_ui(mut w: impl Write + Debug, exit: ExitSender) -> Result<()> {
+pub async fn run_ui(mut w: Stdout, exit: ExitSender) -> Result<()> {
     execute!(w, cursor::Hide, terminal::EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
+
+    let mut tabs = Tabs::new();
 
     let mut table = Table::default();
     table.push_row(vec!["ur mom Lol!".to_owned()]);
     table.push_row(vec!["hek".to_owned()]);
-
-    let dirty = false;
 
     loop {
         queue!(

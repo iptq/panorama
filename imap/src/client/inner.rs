@@ -148,7 +148,7 @@ where
 
         let q = self.results.clone();
         // let end = Box::new(end_rx.map_err(|err| Error::from).map(move |resp| resp));
-        let end = Box::new(end_rx.map_err(Error::from).map(move | resp | {
+        let end = Box::new(end_rx.map_err(Error::from).map(move |resp| {
             // pop the first entry from the list
             let mut results = q.write();
             results.pop_front();
