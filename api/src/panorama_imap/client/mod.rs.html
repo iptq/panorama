@@ -179,6 +179,8 @@
 <span id="176">176</span>
 <span id="177">177</span>
 <span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! IMAP Client</span>
 <span class="doccomment">//! ===</span>
@@ -225,11 +227,12 @@
 <span class="kw">use</span> <span class="ident">tokio_rustls</span>::{
     <span class="ident">client</span>::<span class="ident">TlsStream</span>, <span class="ident">rustls</span>::<span class="ident">ClientConfig</span> <span class="kw">as</span> <span class="ident">RustlsConfig</span>, <span class="ident">webpki</span>::<span class="ident">DNSNameRef</span>, <span class="ident">TlsConnector</span>,
 };
+<span class="kw">use</span> <span class="ident">tokio_stream</span>::<span class="ident">wrappers</span>::<span class="ident">UnboundedReceiverStream</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">command</span>::<span class="ident">Command</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">response</span>::<span class="ident">Response</span>;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">inner</span>::<span class="ident">Client</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">inner</span>::{<span class="ident">Client</span>, <span class="ident">ResponseFuture</span>, <span class="ident">ResponseStream</span>};
 
 <span class="doccomment">/// Struct used to start building the config for a client.</span>
 <span class="doccomment">///</span>
@@ -298,7 +301,7 @@
     }
 
     <span class="doccomment">/// Exposing low-level execute</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">execute</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">cmd</span>: <span class="ident">Command</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Response</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">execute</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">cmd</span>: <span class="ident">Command</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">ResponseFuture</span>, <span class="ident">ResponseStream</span>)<span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">ClientUnauthenticated</span>::<span class="ident">Encrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span>,
             <span class="ident">ClientUnauthenticated</span>::<span class="ident">Unencrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span>,
@@ -321,7 +324,7 @@
 
 <span class="kw">impl</span> <span class="ident">ClientAuthenticated</span> {
     <span class="doccomment">/// Exposing low-level execute</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">execute</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">cmd</span>: <span class="ident">Command</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Response</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">execute</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">cmd</span>: <span class="ident">Command</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">ResponseFuture</span>, <span class="ident">ResponseStream</span>)<span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">ClientAuthenticated</span>::<span class="ident">Encrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span>,
             <span class="ident">ClientAuthenticated</span>::<span class="ident">Unencrypted</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span>,
@@ -334,7 +337,8 @@
             <span class="ident">reference</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_owned</span>(),
             <span class="ident">mailbox</span>: <span class="string">&quot;*&quot;</span>.<span class="ident">to_owned</span>(),
         };
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> (<span class="ident">resp</span>, <span class="ident">stream</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">resp</span>.<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;list response: {:?}&quot;</span>, <span class="ident">resp</span>);
         <span class="prelude-val">Ok</span>(())
     }
@@ -344,18 +348,18 @@
         <span class="kw">let</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="ident">Command</span>::<span class="ident">Select</span> {
             <span class="ident">mailbox</span>: <span class="ident">mailbox</span>.<span class="ident">as_ref</span>().<span class="ident">to_owned</span>(),
         };
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> (<span class="ident">resp</span>, <span class="ident">stream</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">resp</span>.<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;select response: {:?}&quot;</span>, <span class="ident">resp</span>);
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Runs the SELECT command</span>
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;rfc2177-idle&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">idle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">idle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">UnboundedReceiverStream</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="ident">Command</span>::<span class="ident">Idle</span>;
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;idle response: {:?}&quot;</span>, <span class="ident">resp</span>);
-        <span class="prelude-val">Ok</span>(())
+        <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">stream</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="ident">UnboundedReceiverStream</span>::<span class="ident">new</span>(<span class="ident">stream</span>))
     }
 }
 </pre></div>

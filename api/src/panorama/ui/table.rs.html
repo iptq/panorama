@@ -112,6 +112,9 @@
 <span id="109">109</span>
 <span id="110">110</span>
 <span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Write</span>;
 
@@ -122,7 +125,7 @@
     <span class="ident">style</span>::{<span class="self">self</span>, <span class="ident">Color</span>},
 };
 
-<span class="kw">use</span> <span class="kw">super</span>::<span class="ident">Rect</span>;
+<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Drawable</span>, <span class="ident">Rect</span>, <span class="ident">Screen</span>};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Table</span> {
@@ -151,10 +154,16 @@
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">draw</span><span class="op">&lt;</span><span class="ident">W</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">W</span>, <span class="ident">rect</span>: <span class="ident">Rect</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">W</span>: <span class="ident">Write</span>,
-    {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">push_row</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">row</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) {
+        <span class="self">self</span>.<span class="ident">rows</span>.<span class="ident">push</span>(<span class="ident">row</span>);
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">selected_row</span>.<span class="ident">is_none</span>() {
+            <span class="self">self</span>.<span class="ident">selected_row</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="number">0</span>);
+        }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">Drawable</span> <span class="kw">for</span> <span class="ident">Table</span> {
+    <span class="kw">fn</span> <span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Screen</span>, <span class="ident">rect</span>: <span class="ident">Rect</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">rows</span>.<span class="ident">is_empty</span>() {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">columns</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
             <span class="kw">for</span> <span class="ident">row</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">rows</span>.<span class="ident">iter</span>() {
@@ -217,11 +226,8 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">push_row</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">row</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) {
-        <span class="self">self</span>.<span class="ident">rows</span>.<span class="ident">push</span>(<span class="ident">row</span>);
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">selected_row</span>.<span class="ident">is_none</span>() {
-            <span class="self">self</span>.<span class="ident">selected_row</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="number">0</span>);
-        }
+    <span class="kw">fn</span> <span class="ident">invalidate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="comment">// TODO: do something</span>
     }
 }
 </pre></div>
