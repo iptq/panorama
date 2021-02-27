@@ -7,7 +7,7 @@ use crossterm::{
     style::{self, Color},
 };
 
-use super::{Drawable, Rect, Screen};
+use super::{Rect, Screen, Widget};
 
 #[derive(Default)]
 pub struct Table {
@@ -16,8 +16,17 @@ pub struct Table {
 }
 
 impl Table {
-    pub fn update(&mut self, event: &Event) {
-        if let Event::Key(KeyEvent { code, .. }) = event {
+    pub fn push_row(&mut self, row: Vec<String>) {
+        self.rows.push(row);
+        if self.selected_row.is_none() {
+            self.selected_row = Some(0);
+        }
+    }
+}
+
+impl Widget for Table {
+    fn update(&mut self, event: Option<Event>) {
+        if let Some(Event::Key(KeyEvent { code, .. })) = event {
             match code {
                 KeyCode::Char('j') => {
                     if let Some(selected_row) = &mut self.selected_row {
@@ -36,15 +45,6 @@ impl Table {
         }
     }
 
-    pub fn push_row(&mut self, row: Vec<String>) {
-        self.rows.push(row);
-        if self.selected_row.is_none() {
-            self.selected_row = Some(0);
-        }
-    }
-}
-
-impl Drawable for Table {
     fn draw(&self, w: &mut Screen, rect: Rect) -> Result<()> {
         if !self.rows.is_empty() {
             let mut columns = Vec::new();

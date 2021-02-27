@@ -1,8 +1,8 @@
-//! UI
+//! UI module
 
-mod drawable;
 mod table;
 mod tabs;
+mod widget;
 
 use std::fmt::Debug;
 use std::io::{Stdout, Write};
@@ -20,9 +20,9 @@ use tokio::time;
 
 use crate::ExitSender;
 
-use self::drawable::Drawable;
 use self::table::Table;
 use self::tabs::Tabs;
+use self::widget::Widget;
 
 const FRAME_DURATION: Duration = Duration::from_millis(20);
 
@@ -38,11 +38,12 @@ pub async fn run_ui(mut w: Stdout, exit: ExitSender) -> Result<()> {
     execute!(w, cursor::Hide, terminal::EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
 
-    let mut tabs = Tabs::new();
-
     let mut table = Table::default();
     table.push_row(vec!["ur mom Lol!".to_owned()]);
     table.push_row(vec!["hek".to_owned()]);
+
+    let mut tabs = Tabs::new();
+    tabs.add_tab("Mail", table);
 
     loop {
         queue!(
@@ -58,16 +59,17 @@ pub async fn run_ui(mut w: Stdout, exit: ExitSender) -> Result<()> {
 
         let (term_width, term_height) = terminal::size()?;
         let bounds = Rect(5, 5, term_width - 10, term_height - 10);
-        table.draw(&mut w, bounds)?;
+        // table.draw(&mut w, bounds)?;
+        tabs.draw(&mut w, bounds)?;
         w.flush()?;
 
         // approx 60fps
         time::sleep(FRAME_DURATION).await;
 
         // check to see if there's even an event this frame. otherwise, just keep going
-        if event::poll(FRAME_DURATION)? {
+        let event = if event::poll(FRAME_DURATION)? {
             let event = event::read()?;
-            table.update(&event);
+            // table.update(&event);
 
             if let Event::Key(KeyEvent {
                 code: KeyCode::Char('q'),
@@ -76,7 +78,13 @@ pub async fn run_ui(mut w: Stdout, exit: ExitSender) -> Result<()> {
             {
                 break;
             }
-        }
+
+            Some(event)
+        } else {
+            None
+        };
+
+        tabs.update(event);
     }
 
     execute!(
