@@ -59,7 +59,7 @@ impl Widget for Table {
             }
 
             for (i, row) in self.rows.iter().enumerate() {
-                queue!(w, cursor::MoveTo(rect.0, rect.1 + i as u16))?;
+                queue!(w, cursor::MoveTo(rect.x, rect.y + i as u16))?;
                 if let Some(v) = self.selected_row {
                     if v == i as u16 {
                         queue!(
@@ -75,33 +75,33 @@ impl Widget for Table {
                         )?;
                     }
                 }
-                let mut s = String::with_capacity(rect.2 as usize);
+                let mut s = String::with_capacity(rect.w as usize);
                 for (j, cell) in row.iter().enumerate() {
                     s += &cell;
                     for _ in 0..columns[j] + 1 {
                         s += " ";
                     }
                 }
-                for _ in 0..(rect.2 - s.len() as u16) {
+                for _ in 0..(rect.w - s.len() as u16) {
                     s += " ";
                 }
                 println!("{}", s);
             }
 
-            let d = "\u{b7}".repeat(rect.2 as usize);
+            let d = "\u{b7}".repeat(rect.w as usize);
             queue!(
                 w,
                 style::SetBackgroundColor(Color::Black),
                 style::SetForegroundColor(Color::White)
             )?;
-            for j in self.rows.len() as u16..rect.3 {
-                queue!(w, cursor::MoveTo(rect.0, rect.1 + j))?;
+            for j in self.rows.len() as u16..rect.h {
+                queue!(w, cursor::MoveTo(rect.x, rect.y + j))?;
                 println!("{}", d);
             }
         } else {
             let msg = "Nothing in this table!";
-            let x = rect.0 + (rect.2 - msg.len() as u16) / 2;
-            let y = rect.1 + rect.3 / 2;
+            let x = rect.x + (rect.w - msg.len() as u16) / 2;
+            let y = rect.y + rect.h / 2;
             queue!(w, cursor::MoveTo(x, y))?;
             println!("{}", msg);
         }

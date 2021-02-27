@@ -31,7 +31,19 @@ pub type Screen = Stdout;
 
 /// X Y W H
 #[derive(Copy, Clone)]
-pub struct Rect(u16, u16, u16, u16);
+pub struct Rect {
+    x: u16, 
+    y: u16, 
+    w: u16, 
+    h: u16
+}
+
+impl Rect {
+    /// Construct a new rectangle from (x, y) and (w, h)
+    pub fn new(x: u16, y: u16, w: u16, h: u16) -> Self {
+        Rect { x, y, w, h }
+    }
+}
 
 /// UI entrypoint.
 pub async fn run_ui(mut w: Stdout, exit: ExitSender) -> Result<()> {
@@ -58,7 +70,7 @@ pub async fn run_ui(mut w: Stdout, exit: ExitSender) -> Result<()> {
         println!("time {}", now);
 
         let (term_width, term_height) = terminal::size()?;
-        let bounds = Rect(5, 5, term_width - 10, term_height - 10);
+        let bounds = Rect::new(5, 5, term_width - 10, term_height - 10);
         // table.draw(&mut w, bounds)?;
         tabs.draw(&mut w, bounds)?;
         w.flush()?;
