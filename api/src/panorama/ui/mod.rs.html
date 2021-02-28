@@ -102,9 +102,30 @@
 <span id="99"> 99</span>
 <span id="100">100</span>
 <span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! UI module</span>
 
+<span class="kw">mod</span> <span class="ident">drawbuf</span>;
 <span class="kw">mod</span> <span class="ident">table</span>;
 <span class="kw">mod</span> <span class="ident">tabs</span>;
 <span class="kw">mod</span> <span class="ident">widget</span>;
@@ -116,15 +137,16 @@
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">chrono</span>::<span class="ident">Local</span>;
 <span class="kw">use</span> <span class="ident">crossterm</span>::{
-    <span class="ident">cursor</span>,
+    <span class="ident">cursor</span>::{<span class="self">self</span>, <span class="ident">MoveTo</span>},
     <span class="ident">event</span>::{<span class="self">self</span>, <span class="ident">Event</span>, <span class="ident">KeyCode</span>, <span class="ident">KeyEvent</span>},
-    <span class="ident">style</span>::{<span class="self">self</span>, <span class="ident">Color</span>},
-    <span class="ident">terminal</span>::{<span class="self">self</span>, <span class="ident">ClearType</span>},
+    <span class="ident">style</span>::{<span class="self">self</span>, <span class="ident">Color</span>, <span class="ident">SetBackgroundColor</span>, <span class="ident">SetForegroundColor</span>},
+    <span class="ident">terminal</span>::{<span class="self">self</span>, <span class="ident">Clear</span>, <span class="ident">ClearType</span>},
 };
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">time</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">ExitSender</span>;
 
+<span class="kw">use</span> <span class="self">self</span>::<span class="ident">drawbuf</span>::<span class="ident">DrawBuf</span>;
 <span class="kw">use</span> <span class="self">self</span>::<span class="ident">table</span>::<span class="ident">Table</span>;
 <span class="kw">use</span> <span class="self">self</span>::<span class="ident">tabs</span>::<span class="ident">Tabs</span>;
 <span class="kw">use</span> <span class="self">self</span>::<span class="ident">widget</span>::<span class="ident">Widget</span>;
@@ -134,14 +156,31 @@
 <span class="doccomment">/// Type alias for the screen object we&#39;re drawing to</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Screen</span> <span class="op">=</span> <span class="ident">Stdout</span>;
 
-<span class="doccomment">/// X Y W H</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Rect</span>(<span class="ident">u16</span>, <span class="ident">u16</span>, <span class="ident">u16</span>, <span class="ident">u16</span>);
+<span class="doccomment">/// Rectangle</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Rect</span> {
+    <span class="kw">pub</span> <span class="ident">x</span>: <span class="ident">u16</span>,
+    <span class="kw">pub</span> <span class="ident">y</span>: <span class="ident">u16</span>,
+    <span class="kw">pub</span> <span class="ident">w</span>: <span class="ident">u16</span>,
+    <span class="kw">pub</span> <span class="ident">h</span>: <span class="ident">u16</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Rect</span> {
+    <span class="doccomment">/// Construct a new rectangle from (x, y) and (w, h)</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">x</span>: <span class="ident">u16</span>, <span class="ident">y</span>: <span class="ident">u16</span>, <span class="ident">w</span>: <span class="ident">u16</span>, <span class="ident">h</span>: <span class="ident">u16</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">Rect</span> { <span class="ident">x</span>, <span class="ident">y</span>, <span class="ident">w</span>, <span class="ident">h</span> }
+    }
+}
 
 <span class="doccomment">/// UI entrypoint.</span>
 <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run_ui</span>(<span class="kw-2">mut</span> <span class="ident">w</span>: <span class="ident">Stdout</span>, <span class="ident">exit</span>: <span class="ident">ExitSender</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="macro">execute</span><span class="macro">!</span>(<span class="ident">w</span>, <span class="ident">cursor</span>::<span class="ident">Hide</span>, <span class="ident">terminal</span>::<span class="ident">EnterAlternateScreen</span>)<span class="question-mark">?</span>;
     <span class="ident">terminal</span>::<span class="ident">enable_raw_mode</span>()<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> (<span class="ident">term_width</span>, <span class="ident">term_height</span>) <span class="op">=</span> <span class="ident">terminal</span>::<span class="ident">size</span>()<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">bounds</span> <span class="op">=</span> <span class="ident">Rect</span>::<span class="ident">new</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="ident">term_width</span>, <span class="ident">term_height</span>);
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">drawbuf</span> <span class="op">=</span> <span class="ident">DrawBuf</span>::<span class="ident">new</span>(<span class="ident">bounds</span>);
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">table</span> <span class="op">=</span> <span class="ident">Table</span>::<span class="ident">default</span>();
     <span class="ident">table</span>.<span class="ident">push_row</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;ur mom Lol!&quot;</span>.<span class="ident">to_owned</span>()]);
@@ -153,19 +192,20 @@
     <span class="kw">loop</span> {
         <span class="macro">queue</span><span class="macro">!</span>(
             <span class="ident">w</span>,
-            <span class="ident">style</span>::<span class="ident">SetBackgroundColor</span>(<span class="ident">Color</span>::<span class="ident">Reset</span>),
-            <span class="ident">style</span>::<span class="ident">SetForegroundColor</span>(<span class="ident">Color</span>::<span class="ident">Reset</span>),
-            <span class="ident">terminal</span>::<span class="ident">Clear</span>(<span class="ident">ClearType</span>::<span class="ident">All</span>),
-            <span class="ident">cursor</span>::<span class="ident">MoveTo</span>(<span class="number">0</span>, <span class="number">0</span>),
+            <span class="ident">SetBackgroundColor</span>(<span class="ident">Color</span>::<span class="ident">Reset</span>),
+            <span class="ident">SetForegroundColor</span>(<span class="ident">Color</span>::<span class="ident">Reset</span>),
+            <span class="ident">Clear</span>(<span class="ident">ClearType</span>::<span class="ident">All</span>),
+            <span class="ident">MoveTo</span>(<span class="number">0</span>, <span class="number">0</span>),
         )<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">now</span> <span class="op">=</span> <span class="ident">Local</span>::<span class="ident">now</span>();
-        <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;time {}&quot;</span>, <span class="ident">now</span>);
+        <span class="comment">// let now = Local::now();</span>
+        <span class="comment">// println!(&quot;time {}&quot;, now);</span>
 
         <span class="kw">let</span> (<span class="ident">term_width</span>, <span class="ident">term_height</span>) <span class="op">=</span> <span class="ident">terminal</span>::<span class="ident">size</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">bounds</span> <span class="op">=</span> <span class="ident">Rect</span>(<span class="number">5</span>, <span class="number">5</span>, <span class="ident">term_width</span> <span class="op">-</span> <span class="number">10</span>, <span class="ident">term_height</span> <span class="op">-</span> <span class="number">10</span>);
+        <span class="kw">let</span> <span class="ident">bounds</span> <span class="op">=</span> <span class="ident">Rect</span>::<span class="ident">new</span>(<span class="number">5</span>, <span class="number">5</span>, <span class="ident">term_width</span> <span class="op">-</span> <span class="number">10</span>, <span class="ident">term_height</span> <span class="op">-</span> <span class="number">10</span>);
         <span class="comment">// table.draw(&amp;mut w, bounds)?;</span>
-        <span class="ident">tabs</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">w</span>, <span class="ident">bounds</span>)<span class="question-mark">?</span>;
+        <span class="comment">// tabs.draw(&amp;mut w, bounds)?;</span>
+        <span class="ident">drawbuf</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">w</span>)<span class="question-mark">?</span>;
         <span class="ident">w</span>.<span class="ident">flush</span>()<span class="question-mark">?</span>;
 
         <span class="comment">// approx 60fps</span>
