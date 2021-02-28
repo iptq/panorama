@@ -4,7 +4,7 @@ use std::io::Write;
 use anyhow::Result;
 use crossterm::{cursor::MoveTo, event::Event};
 
-use super::{Rect, Screen, Widget};
+use super::{DrawBuf, Rect, Screen, Widget};
 
 pub struct Tabs {
     id_incr: usize,
@@ -35,15 +35,15 @@ impl Tabs {
 impl Widget for Tabs {
     fn update(&mut self, event: Option<Event>) {}
 
-    fn draw(&self, w: &mut Screen, rect: Rect) -> Result<()> {
-        queue!(w, MoveTo(rect.x, rect.y))?;
+    fn draw(&self, buf: &mut DrawBuf, rect: Rect) -> Result<()> {
+        // queue!(w, MoveTo(rect.x, rect.y))?;
         for (id, name) in self.names.iter() {
             println!(" {} ", name);
         }
 
         let new_rect = Rect::new(rect.x, rect.y + 1, rect.w, rect.h - 1);
         if let Some(widget) = self.contents.get(&self.active_id) {
-            widget.draw(w, new_rect)?;
+            widget.draw(buf, new_rect)?;
         }
 
         Ok(())

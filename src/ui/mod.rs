@@ -1,5 +1,6 @@
 //! UI module
 
+mod drawbuf;
 mod table;
 mod tabs;
 mod widget;
@@ -11,15 +12,16 @@ use std::time::Duration;
 use anyhow::Result;
 use chrono::Local;
 use crossterm::{
-    cursor,
+    cursor::{self, MoveTo},
     event::{self, Event, KeyCode, KeyEvent},
-    style::{self, Color},
-    terminal::{self, ClearType},
+    style::{self, Color, SetBackgroundColor, SetForegroundColor},
+    terminal::{self, Clear, ClearType},
 };
 use tokio::time;
 
 use crate::ExitSender;
 
+use self::drawbuf::DrawBuf;
 use self::table::Table;
 use self::tabs::Tabs;
 use self::widget::Widget;
@@ -29,13 +31,14 @@ const FRAME_DURATION: Duration = Duration::from_millis(20);
 /// Type alias for the screen object we're drawing to
 pub type Screen = Stdout;
 
-/// X Y W H
-#[derive(Copy, Clone)]
+/// Rectangle
+#[derive(Copy, Clone, Debug)]
+#[allow(missing_docs)]
 pub struct Rect {
-    x: u16, 
-    y: u16, 
-    w: u16, 
-    h: u16
+    pub x: u16,
+    pub y: u16,
+    pub w: u16,
+    pub h: u16,
 }
 
 impl Rect {
@@ -50,6 +53,10 @@ pub async fn run_ui(mut w: Stdout, exit: ExitSender) -> Result<()> {
     execute!(w, cursor::Hide, terminal::EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
 
+    let (term_width, term_height) = terminal::size()?;
+    let bounds = Rect::new(0, 0, term_width, term_height);
+    let mut drawbuf = DrawBuf::new(bounds);
+
     let mut table = Table::default();
     table.push_row(vec!["ur mom Lol!".to_owned()]);
     table.push_row(vec!["hek".to_owned()]);
@@ -60,19 +67,20 @@ pub async fn run_ui(mut w: Stdout, exit: ExitSender) -> Result<()> {
     loop {
         queue!(
             w,
-            style::SetBackgroundColor(Color::Reset),
-            style::SetForegroundColor(Color::Reset),
-            terminal::Clear(ClearType::All),
-            cursor::MoveTo(0, 0),
+            SetBackgroundColor(Color::Reset),
+            SetForegroundColor(Color::Reset),
+            Clear(ClearType::All),
+            MoveTo(0, 0),
         )?;
 
-        let now = Local::now();
-        println!("time {}", now);
+        // let now = Local::now();
+        // println!("time {}", now);
 
         let (term_width, term_height) = terminal::size()?;
         let bounds = Rect::new(5, 5, term_width - 10, term_height - 10);
         // table.draw(&mut w, bounds)?;
-        tabs.draw(&mut w, bounds)?;
+        // tabs.draw(&mut w, bounds)?;
+        drawbuf.draw(&mut w)?;
         w.flush()?;
 
         // approx 60fps

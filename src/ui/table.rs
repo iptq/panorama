@@ -7,7 +7,7 @@ use crossterm::{
     style::{self, Color},
 };
 
-use super::{Rect, Screen, Widget};
+use super::{DrawBuf, Rect, Screen, Widget};
 
 #[derive(Default)]
 pub struct Table {
@@ -45,7 +45,7 @@ impl Widget for Table {
         }
     }
 
-    fn draw(&self, w: &mut Screen, rect: Rect) -> Result<()> {
+    fn draw(&self, buf: &mut DrawBuf, rect: Rect) -> Result<()> {
         if !self.rows.is_empty() {
             let mut columns = Vec::new();
             for row in self.rows.iter() {
@@ -59,20 +59,20 @@ impl Widget for Table {
             }
 
             for (i, row) in self.rows.iter().enumerate() {
-                queue!(w, cursor::MoveTo(rect.x, rect.y + i as u16))?;
+                // queue!(w, cursor::MoveTo(rect.x, rect.y + i as u16))?;
                 if let Some(v) = self.selected_row {
                     if v == i as u16 {
-                        queue!(
-                            w,
-                            style::SetBackgroundColor(Color::White),
-                            style::SetForegroundColor(Color::Black)
-                        )?;
+                        // queue!(
+                        //     w,
+                        //     style::SetBackgroundColor(Color::White),
+                        //     style::SetForegroundColor(Color::Black)
+                        // )?;
                     } else {
-                        queue!(
-                            w,
-                            style::SetForegroundColor(Color::White),
-                            style::SetBackgroundColor(Color::Black)
-                        )?;
+                        // queue!(
+                        //     w,
+                        //     style::SetForegroundColor(Color::White),
+                        //     style::SetBackgroundColor(Color::Black)
+                        // )?;
                     }
                 }
                 let mut s = String::with_capacity(rect.w as usize);
@@ -89,20 +89,20 @@ impl Widget for Table {
             }
 
             let d = "\u{b7}".repeat(rect.w as usize);
-            queue!(
-                w,
-                style::SetBackgroundColor(Color::Black),
-                style::SetForegroundColor(Color::White)
-            )?;
+            // queue!(
+            //     w,
+            //     style::SetBackgroundColor(Color::Black),
+            //     style::SetForegroundColor(Color::White)
+            // )?;
             for j in self.rows.len() as u16..rect.h {
-                queue!(w, cursor::MoveTo(rect.x, rect.y + j))?;
+                // queue!(w, cursor::MoveTo(rect.x, rect.y + j))?;
                 println!("{}", d);
             }
         } else {
             let msg = "Nothing in this table!";
             let x = rect.x + (rect.w - msg.len() as u16) / 2;
             let y = rect.y + rect.h / 2;
-            queue!(w, cursor::MoveTo(x, y))?;
+            // queue!(w, cursor::MoveTo(x, y))?;
             println!("{}", msg);
         }
         Ok(())
