@@ -62,37 +62,31 @@
 <span id="59">59</span>
 <span id="60">60</span>
 <span id="61">61</span>
-<span id="62">62</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! UI library</span>
-
-<span class="kw">mod</span> <span class="ident">events</span>;
 
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Stdout</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
 
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
-<span class="kw">use</span> <span class="ident">termion</span>::{<span class="ident">event</span>::<span class="ident">Key</span>, <span class="ident">screen</span>::<span class="ident">AlternateScreen</span>};
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">mpsc</span>;
 <span class="kw">use</span> <span class="ident">tui</span>::{
-    <span class="ident">backend</span>::<span class="ident">TermionBackend</span>,
+    <span class="ident">text</span>::<span class="ident">Spans</span>,
+    <span class="ident">backend</span>::<span class="ident">CrosstermBackend</span>,
     <span class="ident">layout</span>::{<span class="ident">Constraint</span>, <span class="ident">Direction</span>, <span class="ident">Layout</span>},
-    <span class="ident">widgets</span>::{<span class="ident">Block</span>, <span class="ident">Borders</span>, <span class="ident">Widget</span>},
+    <span class="ident">widgets</span>::<span class="kw-2">*</span>,
     <span class="ident">Terminal</span>,
 };
 
-<span class="kw">use</span> <span class="self">self</span>::<span class="ident">events</span>::{<span class="ident">Config</span>, <span class="ident">Event</span>, <span class="ident">Events</span>};
-
 <span class="doccomment">/// Main entrypoint for the UI</span>
 <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run_ui</span>(<span class="ident">stdout</span>: <span class="ident">Stdout</span>, <span class="ident">exit_tx</span>: <span class="ident">mpsc</span>::<span class="ident">Sender</span><span class="op">&lt;</span>()<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">stdout</span> <span class="op">=</span> <span class="ident">AlternateScreen</span>::<span class="ident">from</span>(<span class="ident">stdout</span>);
-    <span class="kw">let</span> <span class="ident">backend</span> <span class="op">=</span> <span class="ident">TermionBackend</span>::<span class="ident">new</span>(<span class="ident">stdout</span>);
+    <span class="kw">let</span> <span class="ident">backend</span> <span class="op">=</span> <span class="ident">CrosstermBackend</span>::<span class="ident">new</span>(<span class="ident">stdout</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">terminal</span> <span class="op">=</span> <span class="ident">Terminal</span>::<span class="ident">new</span>(<span class="ident">backend</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">events</span> <span class="op">=</span> <span class="ident">Events</span>::<span class="ident">with_config</span>(<span class="ident">Config</span> {
-        <span class="ident">tick_rate</span>: <span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">17</span>),
-        ..<span class="ident">Config</span>::<span class="ident">default</span>()
-    });
+    <span class="comment">// let events = Events::with_config(Config {</span>
+    <span class="comment">//     tick_rate: Duration::from_millis(17),</span>
+    <span class="comment">//     ..Config::default()</span>
+    <span class="comment">// });</span>
 
     <span class="kw">loop</span> {
         <span class="ident">terminal</span>.<span class="ident">draw</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> {
@@ -112,16 +106,20 @@
             <span class="ident">f</span>.<span class="ident">render_widget</span>(<span class="ident">block</span>, <span class="ident">chunks</span>[<span class="number">0</span>]);
             <span class="kw">let</span> <span class="ident">block</span> <span class="op">=</span> <span class="ident">Block</span>::<span class="ident">default</span>().<span class="ident">title</span>(<span class="string">&quot;Block 2&quot;</span>).<span class="ident">borders</span>(<span class="ident">Borders</span>::<span class="ident">ALL</span>);
             <span class="ident">f</span>.<span class="ident">render_widget</span>(<span class="ident">block</span>, <span class="ident">chunks</span>[<span class="number">1</span>]);
+
+            <span class="kw">let</span> <span class="ident">titles</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;hellosu&quot;</span>].<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="ident">Spans</span>::<span class="ident">from</span>).<span class="ident">collect</span>();
+            <span class="kw">let</span> <span class="ident">tabs</span> <span class="op">=</span> <span class="ident">Tabs</span>::<span class="ident">new</span>(<span class="ident">titles</span>);
+            <span class="ident">f</span>.<span class="ident">render_widget</span>(<span class="ident">tabs</span>, <span class="ident">chunks</span>[<span class="number">2</span>]);
         })<span class="question-mark">?</span>;
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Event</span>::<span class="ident">Input</span>(<span class="ident">input</span>) <span class="op">=</span> <span class="ident">events</span>.<span class="ident">next</span>()<span class="question-mark">?</span> {
-            <span class="kw">match</span> <span class="ident">input</span> {
-                <span class="ident">Key</span>::<span class="ident">Char</span>(<span class="string">&#39;q&#39;</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">break</span>;
-                }
-                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {}
-            }
-        }
+        <span class="comment">// if let Event::Input(input) = events.next()? {</span>
+        <span class="comment">//     match input {</span>
+        <span class="comment">//         Key::Char(&#39;q&#39;) =&gt; {</span>
+        <span class="comment">//             break;</span>
+        <span class="comment">//         }</span>
+        <span class="comment">//         _ =&gt; {}</span>
+        <span class="comment">//     }</span>
+        <span class="comment">// }</span>
     }
 
     <span class="prelude-val">Ok</span>(())

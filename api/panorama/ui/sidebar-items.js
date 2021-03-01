@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["run_ui","Main entrypoint for the UI"]],"mod":[["events",""]]});
+initSidebarItems({"fn":[["run_ui","Main entrypoint for the UI"]]});

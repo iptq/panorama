@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["Event",""]],"struct":[["Config",""],["Events","A small event handler that wrap termion input and tick events. Each event type is handled in its own thread and returned to a common `Receiver`"]]});
