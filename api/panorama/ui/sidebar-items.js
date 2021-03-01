@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["FRAME_DURATION",""]],"fn":[["run_ui","UI entrypoint."]],"mod":[["drawbuf",""],["table",""],["tabs",""],["widget",""]],"struct":[["Rect","Rectangle"]],"type":[["Screen","Type alias for the screen object we're drawing to"]]});
+initSidebarItems({"fn":[["run_ui","Main entrypoint for the UI"]],"mod":[["events",""]]});
