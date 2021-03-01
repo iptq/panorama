@@ -49,12 +49,15 @@ async fn run(opt: Opt) -> Result<()> {
     // used to notify the runtime that the process should exit
     let (exit_tx, mut exit_rx) = mpsc::channel::<()>(1);
 
-    // used to send commands to the mail service
-    let (_mail_tx, mail_rx) = mpsc::unbounded_channel();
+    // send messages from the UI thread to the mail thread
+    let (ui2mail_tx, ui2mail_rx) = mpsc::unbounded_channel();
+
+    // send messages from the mail thread to the UI thread
+    let (mail2ui_tx, mail2ui_rx) = mpsc::unbounded_channel();
 
     tokio::spawn(async move {
         let config_update = config_update.clone();
-        mail::run_mail(config_update, mail_rx)
+        mail::run_mail(config_update, ui2mail_rx, mail2ui_tx)
             .unwrap_or_else(report_err)
             .await;
     });

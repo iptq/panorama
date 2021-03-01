@@ -12,7 +12,10 @@ use panorama_imap::{
     },
     command::Command as ImapCommand,
 };
-use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
+use tokio::{
+    sync::mpsc::{UnboundedReceiver, UnboundedSender},
+    task::JoinHandle,
+};
 use tokio_stream::wrappers::WatchStream;
 
 use crate::config::{Config, ConfigWatcher, ImapAuth, MailAccountConfig, TlsMethod};
@@ -26,10 +29,14 @@ pub enum MailCommand {
     Raw(ImapCommand),
 }
 
+/// Possible events returned from the server that should be sent to the UI
+pub enum MailEvent {}
+
 /// Main entrypoint for the mail listener.
 pub async fn run_mail(
     mut config_watcher: ConfigWatcher,
-    _cmd_in: UnboundedReceiver<MailCommand>,
+    ui2mail_rx: UnboundedReceiver<MailCommand>,
+    mail2ui_tx: UnboundedSender<MailEvent>,
 ) -> Result<()> {
     let mut curr_conn: Vec<JoinHandle<_>> = Vec::new();
 
@@ -53,6 +60,8 @@ pub async fn run_mail(
         for acct in config.mail_accounts.into_iter() {
             let handle = tokio::spawn(async move {
                 // debug!("opening imap connection for {:?}", acct);
+
+                // this loop is to make sure accounts are restarted on error
                 loop {
                     match imap_main(acct.clone()).await {
                         Ok(_) => {}
@@ -62,6 +71,13 @@ pub async fn run_mail(
                     }
 
                     warn!("connection dropped, retrying");
+
+                    // wait a bit so we're not hitting the server really fast if the fail happens
+                    // early on
+                    //
+                    // TODO: some kind of smart exponential backoff that considers some time
+                    // threshold to be a failing case?
+                    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
                 }
             });
             curr_conn.push(handle);
@@ -96,9 +112,12 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
 
         debug!("preparing to auth");
         // check if the authentication method is supported
-        let mut authed = match acct.imap.auth {
+        let mut authed = match &acct.imap.auth {
             ImapAuth::Plain { username, password } => {
-                let auth = auth::Plain { username, password };
+                let auth = auth::Plain {
+                    username: username.clone(),
+                    password: password.clone(),
+                };
                 auth.perform_auth(unauth).await?
             }
         };
@@ -118,7 +137,22 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
             loop {
                 idle_stream.next().await;
                 debug!("got an event");
+
+                if false {
+                    break;
+                }
+            }
+
+            if false {
+                break;
             }
         }
+
+        // wait a bit so we're not hitting the server really fast if the fail happens
+        // early on
+        //
+        // TODO: some kind of smart exponential backoff that considers some time
+        // threshold to be a failing case?
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
     }
 }
