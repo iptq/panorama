@@ -509,21 +509,13 @@
 <span id="506">506</span>
 <span id="507">507</span>
 <span id="508">508</span>
-<span id="509">509</span>
-<span id="510">510</span>
-<span id="511">511</span>
-<span id="512">512</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Module that implements parsers for all of the IMAP types.</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
 
-<span class="kw">use</span> <span class="ident">pest</span>::{
-    <span class="ident">error</span>::<span class="ident">Error</span>,
-    <span class="ident">iterators</span>::{<span class="ident">Pair</span>, <span class="ident">Pairs</span>},
-    <span class="ident">Parser</span>,
-};
+<span class="kw">use</span> <span class="ident">pest</span>::{<span class="ident">error</span>::<span class="ident">Error</span>, <span class="ident">iterators</span>::<span class="ident">Pair</span>, <span class="ident">Parser</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">response</span>::<span class="kw-2">*</span>;
 
@@ -672,7 +664,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">build_envelope</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Envelope</span> {
+<span class="kw">fn</span> <span class="ident">build_envelope</span>(<span class="ident">_pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Envelope</span> {
     <span class="comment">// TODO: do this</span>
     <span class="ident">Envelope</span>::<span class="ident">default</span>()
 }
