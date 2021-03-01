@@ -3,11 +3,7 @@
 use std::fmt::Debug;
 use std::str::FromStr;
 
-use pest::{
-    error::Error,
-    iterators::{Pair, Pairs},
-    Parser,
-};
+use pest::{error::Error, iterators::Pair, Parser};
 
 use crate::response::*;
 
@@ -156,7 +152,7 @@ fn build_msg_att_static(pair: Pair<Rule>) -> AttributeValue {
     }
 }
 
-fn build_envelope(pair: Pair<Rule>) -> Envelope {
+fn build_envelope(_pair: Pair<Rule>) -> Envelope {
     // TODO: do this
     Envelope::default()
 }

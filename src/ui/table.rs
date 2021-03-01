@@ -60,21 +60,21 @@ impl Widget for Table {
 
             for (i, row) in self.rows.iter().enumerate() {
                 // queue!(w, cursor::MoveTo(rect.x, rect.y + i as u16))?;
-                if let Some(v) = self.selected_row {
-                    if v == i as u16 {
-                        // queue!(
-                        //     w,
-                        //     style::SetBackgroundColor(Color::White),
-                        //     style::SetForegroundColor(Color::Black)
-                        // )?;
-                    } else {
-                        // queue!(
-                        //     w,
-                        //     style::SetForegroundColor(Color::White),
-                        //     style::SetBackgroundColor(Color::Black)
-                        // )?;
-                    }
-                }
+                // if let Some(v) = self.selected_row {
+                //     if v == i as u16 {
+                //         // queue!(
+                //         //     w,
+                //         //     style::SetBackgroundColor(Color::White),
+                //         //     style::SetForegroundColor(Color::Black)
+                //         // )?;
+                //     } else {
+                //         // queue!(
+                //         //     w,
+                //         //     style::SetForegroundColor(Color::White),
+                //         //     style::SetBackgroundColor(Color::Black)
+                //         // )?;
+                //     }
+                // }
                 let mut s = String::with_capacity(rect.w as usize);
                 for (j, cell) in row.iter().enumerate() {
                     s += &cell;

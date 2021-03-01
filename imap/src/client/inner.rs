@@ -1,19 +1,14 @@
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::mem;
+use std::collections::{HashSet, VecDeque};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
 
 use anyhow::{Context as AnyhowContext, Error, Result};
 use futures::{
-    future::{self, BoxFuture, Either, Future, FutureExt, TryFutureExt},
-    stream::{BoxStream, Stream, StreamExt, TryStream},
+    future::{self, Either, Future, FutureExt, TryFutureExt},
+    stream::StreamExt,
 };
-use genawaiter::{
-    sync::{gen, Gen},
-    yield_,
-};
-use parking_lot::{RwLock, RwLockWriteGuard};
+use parking_lot::RwLock;
 use tokio::{
     io::{
         self, AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader, ReadHalf, WriteHalf,
@@ -38,7 +33,7 @@ pub type ResponseSender = mpsc::UnboundedSender<Response>;
 pub type ResponseStream = mpsc::UnboundedReceiver<Response>;
 type ResultQueue = Arc<RwLock<VecDeque<HandlerResult>>>;
 pub type GreetingState = Arc<RwLock<(Option<Response>, Option<Waker>)>>;
-pub const TAG_PREFIX: &str = "panorama";
+pub const TAG_PREFIX: &str = "ptag";
 
 struct HandlerResult {
     id: usize,

@@ -153,7 +153,7 @@ impl ClientAuthenticated {
             reference: "".to_owned(),
             mailbox: "*".to_owned(),
         };
-        let (resp, stream) = self.execute(cmd).await?;
+        let (resp, _) = self.execute(cmd).await?;
         let resp = resp.await?;
         debug!("list response: {:?}", resp);
         Ok(())
@@ -164,7 +164,7 @@ impl ClientAuthenticated {
         let cmd = Command::Select {
             mailbox: mailbox.as_ref().to_owned(),
         };
-        let (resp, stream) = self.execute(cmd).await?;
+        let (resp, _) = self.execute(cmd).await?;
         let resp = resp.await?;
         debug!("select response: {:?}", resp);
         Ok(())
