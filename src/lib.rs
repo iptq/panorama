@@ -8,8 +8,8 @@
 
 #[macro_use]
 extern crate anyhow;
-// #[macro_use]
-// extern crate crossterm;
+#[macro_use]
+extern crate crossterm;
 #[macro_use]
 extern crate format_bytes;
 #[macro_use]

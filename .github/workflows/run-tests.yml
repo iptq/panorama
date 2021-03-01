@@ -17,3 +17,4 @@ jobs:
       - name: run tests
         run: |
           cargo test --all
+

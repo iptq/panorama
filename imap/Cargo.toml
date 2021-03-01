@@ -5,7 +5,7 @@ authors = ["Dirkjan Ochtman <dirkjan@ochtman.nl>", "Michael Zhang <mail@mzhang.i
 description = "IMAP protocol parser and data structures"
 keywords = ["imap", "email"]
 categories = ["email", "network-programming", "parser-implementations"]
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 edition = "2018"
 
 [badges]
@@ -18,7 +18,6 @@ anyhow = "1.0.38"
 async-trait = "0.1.42"
 derive_builder = "0.9.0"
 futures = "0.3.12"
-genawaiter = { version = "0.99.1", features = ["futures03"] }
 log = "0.4.14"
 parking_lot = "0.11.1"
 pest = "2.1.3"
