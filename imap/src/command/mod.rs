@@ -27,7 +27,7 @@ impl fmt::Display for Command {
         match self {
             Capability => write!(f, "CAPABILITY"),
             Starttls => write!(f, "STARTTLS"),
-            Login { username, password } => write!(f, "LOGIN {} {}", username, password),
+            Login { username, password } => write!(f, "LOGIN {:?} {:?}", username, password),
             Select { mailbox } => write!(f, "SELECT {}", mailbox),
             List { reference, mailbox } => write!(f, "LIST {:?} {:?}", reference, mailbox),
 
