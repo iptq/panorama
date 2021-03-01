@@ -19,15 +19,16 @@ use tui::{
     style::{Color, Modifier, Style},
     text::Spans,
     widgets::*,
-    Frame,
-    Terminal,
+    Frame, Terminal,
 };
 
-use self::mail_tab::{MailTabState, MailTab};
+use self::mail_tab::MailTab;
 
-// pub(crate) type FrameType<'a> = Frame<'a, CrosstermBackend<Stdout>>;
+pub(crate) type FrameType<'a, 'b> = Frame<'a, CrosstermBackend<&'b mut Stdout>>;
 
 const FRAME_DURATION: Duration = Duration::from_millis(17);
+
+fn foo(f: &mut FrameType) {}
 
 /// Main entrypoint for the UI
 pub async fn run_ui(mut stdout: Stdout, exit_tx: mpsc::Sender<()>) -> Result<()> {
@@ -37,56 +38,22 @@ pub async fn run_ui(mut stdout: Stdout, exit_tx: mpsc::Sender<()>) -> Result<()>
     let backend = CrosstermBackend::new(&mut stdout);
     let mut term = Terminal::new(backend)?;
 
-    let mut mail_state = MailTabState::new();
+    let mut mail_tab = MailTab::new();
 
     loop {
         term.draw(|f| {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .margin(0)
-                .constraints([
-                    Constraint::Length(1),
-                    Constraint::Max(5000),
-                    // Constraint::Percentage(10),
-                    // Constraint::Percentage(80),
-                    // Constraint::Percentage(10),
-                ])
+                .constraints([Constraint::Length(1), Constraint::Max(5000)])
                 .split(f.size());
-
-            // let chunks2 = Layout::default()
-            //     .direction(Direction::Horizontal)
-            //     .margin(0)
-            //     .constraints([
-            //         Constraint::Length(20),
-            //         Constraint::Max(5000),
-            //         //
-            //     ])
-            //     .split(chunks[1]);
 
             // this is the title bar
             let titles = vec!["hellosu"].into_iter().map(Spans::from).collect();
             let tabs = Tabs::new(titles);
             f.render_widget(tabs, chunks[0]);
 
-            let mail_tab = MailTab;
-            f.render_stateful_widget(mail_tab, chunks[1], &mut mail_state);
-            // TODO: check active tab
-            // let items = [
-            //     ListItem::new("Osu"),
-            //     ListItem::new("Game").style(Style::default().add_modifier(Modifier::BOLD)),
-            // ];
-            // let dirlist = List::new(items)
-            //     .block(Block::default().title("List").borders(Borders::ALL))
-            //     .style(Style::default().fg(Color::White))
-            //     .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-            //     .highlight_symbol(">>");
-            // f.render_widget(dirlist, chunks2[0]);
-
-            // let block = Block::default().title("Block").borders(Borders::ALL);
-            // f.render_widget(block, chunks2[1]);
-
-            // let block = Block::default().title("Block 2").borders(Borders::ALL);
-            // f.render_widget(block, chunks[1]);
+            mail_tab.draw(f, chunks[1]);
         })?;
 
         let event = if event::poll(FRAME_DURATION)? {

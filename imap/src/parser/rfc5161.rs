@@ -13,8 +13,8 @@ use nom::{
     IResult,
 };
 
-use crate::oldparser::core::atom;
-use crate::types::*;
+use super::core::atom;
+use super::types::*;
 
 // The ENABLED response lists capabilities that were enabled in response
 // to a ENABLE command.
@@ -32,5 +32,5 @@ pub fn enabled_data(i: &[u8]) -> IResult<&[u8], Vec<Capability>> {
 }
 
 pub fn capability(i: &[u8]) -> IResult<&[u8], Capability> {
-    map(atom, Capability::Atom)(i)
+    map(atom, |s| Capability::Atom(s.to_owned()))(i)
 }

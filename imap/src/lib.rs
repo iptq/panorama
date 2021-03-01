@@ -22,7 +22,7 @@ extern crate pest_derive;
 pub mod client;
 pub mod command;
 pub mod parser;
-pub mod response;
+// pub mod response;
 
 // pub mod builders;
 // pub mod oldparser;

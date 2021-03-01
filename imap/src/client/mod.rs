@@ -46,7 +46,7 @@ use tokio_rustls::{
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::command::Command;
-use crate::response::Response;
+use crate::parser::types::Response;
 
 pub use self::inner::{Client, ResponseFuture, ResponseStream};
 

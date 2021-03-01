@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use crate::command::Command;
-use crate::response::{Response, Status};
+use crate::parser::types::{Response, Status};
 
 use super::{ClientAuthenticated, ClientUnauthenticated};
 

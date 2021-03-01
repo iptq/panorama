@@ -1,6 +1,7 @@
-use super::{bodystructure::BodyStructParser, parse_response};
-use crate::types::*;
 use std::num::NonZeroUsize;
+
+use super::types::*;
+use super::{bodystructure::BodyStructParser, parse_response};
 
 #[test]
 fn test_mailbox_data_response() {

@@ -22,8 +22,11 @@ use tokio_rustls::{
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::command::Command;
-use crate::parser::{parse_capability, parse_response};
-use crate::response::{Capability, Response, ResponseCode, Status};
+use crate::parser::{
+    parse_capability, parse_response,
+    types::{Capability, Response, ResponseCode, Status},
+};
+// use crate::response::{Capability, Response, ResponseCode, Status};
 
 use super::ClientConfig;
 
@@ -218,11 +221,11 @@ where
 
     /// Check if this client has a particular capability
     pub async fn has_capability(&mut self, cap: impl AsRef<str>) -> Result<bool> {
-        let cap = cap.as_ref().to_owned();
+        let cap = cap.as_ref();
         debug!("checking for the capability: {:?}", cap);
-        let cap = parse_capability(cap)?;
+        let cap = parse_capability(cap.as_bytes()).context("parsing capabilities")?;
 
-        self.capabilities(false).await?;
+        self.capabilities(false).await.context("fetching capabilities")?;
         let caps = self.caps.read();
         // TODO: refresh caps
 
@@ -325,7 +328,7 @@ where
                 }
 
                 debug!("got a new line {:?}", next_line);
-                let resp = parse_response(next_line)?;
+                let resp = parse_response(next_line.as_bytes())?;
 
                 // if this is the very first message, treat it as a greeting
                 if let Some(greeting) = greeting.take() {
@@ -371,7 +374,7 @@ where
                     }
 
                     Response::Done { tag, .. } => {
-                        if tag.starts_with(TAG_PREFIX) {
+                        if tag.0.starts_with(TAG_PREFIX) {
                             // let id = tag.trim_start_matches(TAG_PREFIX).parse::<usize>()?;
                             let mut results = results.write();
                             if let Some(HandlerResult {

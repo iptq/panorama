@@ -13,7 +13,7 @@ use nom::{
     IResult,
 };
 
-use crate::{oldparser::core::*, types::*};
+use super::{core::*, types::*};
 
 fn is_entry_component_char(c: u8) -> bool {
     c < 0x80 && c > 0x19 && c != b'*' && c != b'%' && c != b'/'
@@ -161,7 +161,7 @@ pub(crate) fn metadata_solicited(i: &[u8]) -> IResult<&[u8], Response> {
     Ok((
         i,
         Response::MailboxData(MailboxDatum::MetadataSolicited {
-            mailbox: slice_to_str(mailbox),
+            mailbox: slice_to_str(mailbox).to_owned(),
             values,
         }),
     ))
@@ -173,8 +173,8 @@ pub(crate) fn metadata_unsolicited(i: &[u8]) -> IResult<&[u8], Response> {
     Ok((
         i,
         Response::MailboxData(MailboxDatum::MetadataUnsolicited {
-            mailbox: slice_to_str(mailbox),
-            values,
+            mailbox: slice_to_str(mailbox).to_owned(),
+            values: values.into_iter().map(str::to_owned).collect(),
         }),
     ))
 }
@@ -182,7 +182,7 @@ pub(crate) fn metadata_unsolicited(i: &[u8]) -> IResult<&[u8], Response> {
 #[cfg(test)]
 mod tests {
     use super::{metadata_solicited, metadata_unsolicited};
-    use crate::types::*;
+    use crate::parser::types::*;
 
     #[test]
     fn test_solicited_fail_1() {

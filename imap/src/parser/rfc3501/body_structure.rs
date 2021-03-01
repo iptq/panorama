@@ -8,10 +8,7 @@ use nom::{
     IResult,
 };
 
-use crate::{
-    oldparser::{core::*, rfc3501::envelope},
-    types::*,
-};
+use crate::parser::{core::*, rfc3501::envelope, types::*};
 
 // body-fields     = body-fld-param SP body-fld-id SP body-fld-desc SP
 //                   body-fld-enc SP body-fld-octets
@@ -109,14 +106,14 @@ fn body_encoding(i: &[u8]) -> IResult<&[u8], ContentEncoding> {
             )),
             char('"'),
         ),
-        map(string_utf8, |enc| ContentEncoding::Other(enc)),
+        map(string_utf8, |enc| ContentEncoding::Other(enc.to_owned())),
     ))(i)
 }
 
-fn body_lang(i: &[u8]) -> IResult<&[u8], Option<Vec<&str>>> {
+fn body_lang(i: &[u8]) -> IResult<&[u8], Option<Vec<String>>> {
     alt((
         // body language seems to refer to RFC 3066 language tags, which should be ASCII-only
-        map(nstring_utf8, |v| v.map(|s| vec![s])),
+        map(nstring_utf8, |v| v.map(|s| vec![s.to_owned()])),
         map(parenthesized_nonempty_list(string_utf8), Option::from),
     ))(i)
 }
@@ -127,7 +124,7 @@ fn body_param(i: &[u8]) -> IResult<&[u8], BodyParams> {
         map(
             parenthesized_nonempty_list(map(
                 tuple((string_utf8, tag(" "), string_utf8)),
-                |(key, _, val)| (key, val),
+                |(key, _, val)| (key.to_owned(), val.to_owned()),
             )),
             Option::from,
         ),
@@ -152,7 +149,12 @@ fn body_disposition(i: &[u8]) -> IResult<&[u8], Option<ContentDisposition>> {
         map(nil, |_| None),
         paren_delimited(map(
             tuple((string_utf8, tag(" "), body_param)),
-            |(ty, _, params)| Some(ContentDisposition { ty, params }),
+            |(ty, _, params)| {
+                Some(ContentDisposition {
+                    ty: ty.to_owned(),
+                    params,
+                })
+            },
         )),
     ))(i)
 }
@@ -170,8 +172,8 @@ fn body_type_basic(i: &[u8]) -> IResult<&[u8], BodyStructure> {
         |(ty, _, subtype, _, fields, ext)| BodyStructure::Basic {
             common: BodyContentCommon {
                 ty: ContentType {
-                    ty,
-                    subtype,
+                    ty: ty.to_owned(),
+                    subtype: subtype.to_owned(),
                     params: fields.param,
                 },
                 disposition: ext.disposition,
@@ -205,8 +207,8 @@ fn body_type_text(i: &[u8]) -> IResult<&[u8], BodyStructure> {
         |(_, _, subtype, _, fields, _, lines, ext)| BodyStructure::Text {
             common: BodyContentCommon {
                 ty: ContentType {
-                    ty: "TEXT",
-                    subtype,
+                    ty: "TEXT".to_owned(),
+                    subtype: subtype.to_owned(),
                     params: fields.param,
                 },
                 disposition: ext.disposition,
@@ -243,8 +245,8 @@ fn body_type_message(i: &[u8]) -> IResult<&[u8], BodyStructure> {
         |(_, _, fields, _, envelope, _, body, _, lines, ext)| BodyStructure::Message {
             common: BodyContentCommon {
                 ty: ContentType {
-                    ty: "MESSAGE",
-                    subtype: "RFC822",
+                    ty: "MESSAGE".to_owned(),
+                    subtype: "RFC822".to_owned(),
                     params: fields.param,
                 },
                 disposition: ext.disposition,
@@ -272,8 +274,8 @@ fn body_type_multipart(i: &[u8]) -> IResult<&[u8], BodyStructure> {
         |(bodies, _, subtype, ext)| BodyStructure::Multipart {
             common: BodyContentCommon {
                 ty: ContentType {
-                    ty: "MULTIPART",
-                    subtype,
+                    ty: "MULTIPART".to_owned(),
+                    subtype: subtype.to_owned(),
                     params: ext.param,
                 },
                 disposition: ext.disposition,
@@ -316,7 +318,7 @@ mod tests {
     const BODY_FIELD_ENC: ContentEncoding = ContentEncoding::SevenBit;
     const BODY_FIELD_OCTETS: u32 = 1337;
 
-    fn mock_body_text() -> (String, BodyStructure<'static>) {
+    fn mock_body_text() -> (String, BodyStructure) {
         (
             format!(r#"("TEXT" "PLAIN" {} 42)"#, BODY_FIELDS),
             BodyStructure::Text {

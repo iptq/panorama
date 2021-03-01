@@ -16,12 +16,9 @@ use nom::{
     IResult,
 };
 
-use crate::{
-    oldparser::{
-        core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4315, rfc4551, rfc5161, rfc5464,
-        rfc7162,
-    },
-    types::*,
+use super::{
+    core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4315, rfc4551, rfc5161, rfc5464,
+    rfc7162, types::*,
 };
 
 pub mod body;
@@ -51,28 +48,27 @@ fn status(i: &[u8]) -> IResult<&[u8], Status> {
     alt((status_ok, status_no, status_bad, status_preauth, status_bye))(i)
 }
 
-fn mailbox(i: &[u8]) -> IResult<&[u8], &str> {
+fn mailbox(i: &[u8]) -> IResult<&[u8], String> {
     map(astring_utf8, |s| {
         if s.eq_ignore_ascii_case("INBOX") {
-            "INBOX"
+            "INBOX".to_owned()
         } else {
-            s
+            s.to_owned()
         }
     })(i)
 }
 
-fn flag_extension(i: &[u8]) -> IResult<&[u8], &str> {
-    map_res(
-        recognize(pair(tag(b"\\"), take_while(is_atom_char))),
-        from_utf8,
-    )(i)
+fn flag_extension(i: &[u8]) -> IResult<&[u8], String> {
+    map_res(recognize(pair(tag(b"\\"), take_while(is_atom_char))), |s| {
+        from_utf8(s).map(str::to_owned)
+    })(i)
 }
 
-fn flag(i: &[u8]) -> IResult<&[u8], &str> {
+fn flag(i: &[u8]) -> IResult<&[u8], String> {
     alt((flag_extension, atom))(i)
 }
 
-fn flag_list(i: &[u8]) -> IResult<&[u8], Vec<&str>> {
+fn flag_list(i: &[u8]) -> IResult<&[u8], Vec<String>> {
     // Correct code is
     //   parenthesized_list(flag)(i)
     //
@@ -83,8 +79,11 @@ fn flag_list(i: &[u8]) -> IResult<&[u8], Vec<&str>> {
     parenthesized_list(flag_perm)(i)
 }
 
-fn flag_perm(i: &[u8]) -> IResult<&[u8], &str> {
-    alt((map_res(tag(b"\\*"), from_utf8), flag))(i)
+fn flag_perm(i: &[u8]) -> IResult<&[u8], String> {
+    alt((
+        map_res(tag(b"\\*"), |s| from_utf8(s).map(str::to_owned)),
+        flag,
+    ))(i)
 }
 
 fn resp_text_code_alert(i: &[u8]) -> IResult<&[u8], ResponseCode> {
@@ -182,6 +181,7 @@ fn resp_text_code(i: &[u8]) -> IResult<&[u8], ResponseCode> {
 }
 
 pub fn capability(i: &[u8]) -> IResult<&[u8], Capability> {
+    debug!("PARSING {:?}", i);
     alt((
         map(tag_no_case(b"IMAP4rev1"), |_| Capability::Imap4rev1),
         map(preceded(tag_no_case(b"AUTH="), atom), Capability::Auth),
@@ -190,8 +190,8 @@ pub fn capability(i: &[u8]) -> IResult<&[u8], Capability> {
 }
 
 fn ensure_capabilities_contains_imap4rev(
-    capabilities: Vec<Capability<'_>>,
-) -> Result<Vec<Capability<'_>>, ()> {
+    capabilities: Vec<Capability>,
+) -> Result<Vec<Capability>, ()> {
     if capabilities.contains(&Capability::Imap4rev1) {
         Ok(capabilities)
     } else {
@@ -236,7 +236,7 @@ fn mailbox_data_exists(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
 }
 
 #[allow(clippy::type_complexity)]
-fn mailbox_list(i: &[u8]) -> IResult<&[u8], (Vec<&str>, Option<&str>, &str)> {
+fn mailbox_list(i: &[u8]) -> IResult<&[u8], (Vec<String>, Option<String>, String)> {
     map(
         tuple((
             flag_list,
@@ -550,14 +550,14 @@ fn imap_tag(i: &[u8]) -> IResult<&[u8], RequestId> {
 //     ["[" resp-text-code "]" SP] text
 // However, examples in RFC 4551 (Conditional STORE) counteract this by giving
 // examples of `resp-text` that do not include the trailing space and text.
-fn resp_text(i: &[u8]) -> IResult<&[u8], (Option<ResponseCode>, Option<&str>)> {
+fn resp_text(i: &[u8]) -> IResult<&[u8], (Option<ResponseCode>, Option<String>)> {
     map(tuple((opt(resp_text_code), text)), |(code, text)| {
         let res = if text.is_empty() {
             None
         } else if code.is_some() {
-            Some(&text[1..])
+            Some(text[1..].to_owned())
         } else {
-            Some(text)
+            Some(text.to_owned())
         };
         (code, res)
     })(i)
@@ -639,7 +639,7 @@ pub(crate) fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::*;
+    use crate::parser::types::*;
     use assert_matches::assert_matches;
 
     #[test]

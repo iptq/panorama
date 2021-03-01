@@ -62,8 +62,8 @@ pub fn string(i: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 // string bytes as utf8
-pub fn string_utf8(i: &[u8]) -> IResult<&[u8], &str> {
-    map_res(string, from_utf8)(i)
+pub fn string_utf8(i: &[u8]) -> IResult<&[u8], String> {
+    map_res(string, |s| from_utf8(s).map(str::to_owned))(i)
 }
 
 // quoted = DQUOTE *QUOTED-CHAR DQUOTE
@@ -80,8 +80,8 @@ pub fn quoted(i: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 // quoted bytes as utf8
-pub fn quoted_utf8(i: &[u8]) -> IResult<&[u8], &str> {
-    map_res(quoted, from_utf8)(i)
+pub fn quoted_utf8(i: &[u8]) -> IResult<&[u8], String> {
+    map_res(quoted, |s| from_utf8(s).map(str::to_owned))(i)
 }
 
 // quoted-specials = DQUOTE / "\"
@@ -122,8 +122,8 @@ pub fn astring(i: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 // astring bytes as utf8
-pub fn astring_utf8(i: &[u8]) -> IResult<&[u8], &str> {
-    map_res(astring, from_utf8)(i)
+pub fn astring_utf8(i: &[u8]) -> IResult<&[u8], String> {
+    map_res(astring, |s| from_utf8(s).map(str::to_owned))(i)
 }
 
 // ASTRING-CHAR = ATOM-CHAR / resp-specials
@@ -154,19 +154,21 @@ pub fn is_resp_specials(c: u8) -> bool {
 }
 
 // atom = 1*ATOM-CHAR
-pub fn atom(i: &[u8]) -> IResult<&[u8], &str> {
-    map_res(take_while1(is_atom_char), from_utf8)(i)
+pub fn atom(i: &[u8]) -> IResult<&[u8], String> {
+    map_res(take_while1(is_atom_char), |s| {
+        from_utf8(s).map(str::to_owned)
+    })(i)
 }
 
 // ----- nstring ----- nil or string
 
 // nstring = string / nil
-pub fn nstring(i: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
-    alt((map(nil, |_| None), map(string, Some)))(i)
+pub fn nstring(i: &[u8]) -> IResult<&[u8], Option<Vec<u8>>> {
+    alt((map(nil, |_| None), map(string, |s| Some(s.to_vec()))))(i)
 }
 
 // nstring bytes as utf8
-pub fn nstring_utf8(i: &[u8]) -> IResult<&[u8], Option<&str>> {
+pub fn nstring_utf8(i: &[u8]) -> IResult<&[u8], Option<String>> {
     alt((map(nil, |_| None), map(string_utf8, Some)))(i)
 }
 

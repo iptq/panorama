@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 
-use crate::types::BodyStructure;
+use super::types::BodyStructure;
+
 /// An utility parser helping to find the appropriate
 /// section part from a FETCH response.
 pub struct BodyStructParser<'a> {
-    root: &'a BodyStructure<'a>,
+    root: &'a BodyStructure,
     prefix: Vec<u32>,
     iter: u32,
-    map: HashMap<Vec<u32>, &'a BodyStructure<'a>>,
+    map: HashMap<Vec<u32>, &'a BodyStructure>,
 }
 
 impl<'a> BodyStructParser<'a> {
@@ -16,7 +17,7 @@ impl<'a> BodyStructParser<'a> {
     /// # Arguments
     ///
     /// * `root` - The root of the `BodyStructure response.
-    pub fn new(root: &'a BodyStructure<'a>) -> Self {
+    pub fn new(root: &'a BodyStructure) -> Self {
         let mut parser = BodyStructParser {
             root,
             prefix: vec![],
@@ -35,7 +36,7 @@ impl<'a> BodyStructParser<'a> {
     /// * `func` - The filter used to search elements within the bodystructure.
     pub fn search<F>(&self, func: F) -> Option<Vec<u32>>
     where
-        F: Fn(&'a BodyStructure<'a>) -> bool,
+        F: Fn(&'a BodyStructure) -> bool,
     {
         let elem: Vec<_> = self
             .map
