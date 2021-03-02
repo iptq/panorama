@@ -381,33 +381,6 @@
 <span id="378">378</span>
 <span id="379">379</span>
 <span id="380">380</span>
-<span id="381">381</span>
-<span id="382">382</span>
-<span id="383">383</span>
-<span id="384">384</span>
-<span id="385">385</span>
-<span id="386">386</span>
-<span id="387">387</span>
-<span id="388">388</span>
-<span id="389">389</span>
-<span id="390">390</span>
-<span id="391">391</span>
-<span id="392">392</span>
-<span id="393">393</span>
-<span id="394">394</span>
-<span id="395">395</span>
-<span id="396">396</span>
-<span id="397">397</span>
-<span id="398">398</span>
-<span id="399">399</span>
-<span id="400">400</span>
-<span id="401">401</span>
-<span id="402">402</span>
-<span id="403">403</span>
-<span id="404">404</span>
-<span id="405">405</span>
-<span id="406">406</span>
-<span id="407">407</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">HashSet</span>, <span class="ident">VecDeque</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">pin</span>::<span class="ident">Pin</span>;
@@ -490,13 +463,19 @@
         <span class="kw">let</span> <span class="ident">greeting</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">RwLock</span>::<span class="ident">new</span>((<span class="prelude-val">None</span>, <span class="prelude-val">None</span>)));
         <span class="kw">let</span> <span class="ident">caps</span>: <span class="ident">CapsLock</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">RwLock</span>::<span class="ident">new</span>(<span class="prelude-val">None</span>));
 
-        <span class="kw">let</span> <span class="ident">listener_handle</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">spawn</span>(<span class="ident">listen</span>(
-            <span class="ident">read_half</span>,
-            <span class="ident">caps</span>.<span class="ident">clone</span>(),
-            <span class="ident">results</span>.<span class="ident">clone</span>(),
-            <span class="ident">exit_rx</span>,
-            <span class="ident">greeting</span>.<span class="ident">clone</span>(),
-        ));
+        <span class="kw">let</span> <span class="ident">listener_handle</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">spawn</span>(
+            <span class="ident">listen</span>(
+                <span class="ident">read_half</span>,
+                <span class="ident">caps</span>.<span class="ident">clone</span>(),
+                <span class="ident">results</span>.<span class="ident">clone</span>(),
+                <span class="ident">exit_rx</span>,
+                <span class="ident">greeting</span>.<span class="ident">clone</span>(),
+            )
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Help, the listener loop died: {}&quot;</span>, <span class="ident">err</span>);
+                <span class="ident">err</span>
+            }),
+        );
 
         <span class="ident">Client</span> {
             <span class="ident">config</span>,
@@ -529,6 +508,7 @@
         <span class="comment">// this should queue up responses</span>
         <span class="kw">let</span> (<span class="ident">tx</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">mpsc</span>::<span class="ident">unbounded_channel</span>();
 
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;EX[{}]: adding handler result to the handlers queue&quot;</span>, <span class="ident">id</span>);
         {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">handlers</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">results</span>.<span class="ident">write</span>();
             <span class="ident">handlers</span>.<span class="ident">push_back</span>(<span class="ident">HandlerResult</span> {
@@ -539,6 +519,7 @@
             });
         }
 
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;EX[{}]: send the command to the server&quot;</span>, <span class="ident">id</span>);
         <span class="kw">let</span> <span class="ident">cmd_str</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}{} {}\r\n&quot;</span>, <span class="ident">TAG_PREFIX</span>, <span class="ident">id</span>, <span class="ident">cmd</span>);
         <span class="comment">// debug!(&quot;[{}] writing to socket: {:?}&quot;, id, cmd_str);</span>
         <span class="self">self</span>.<span class="ident">conn</span>.<span class="ident">write_all</span>(<span class="ident">cmd_str</span>.<span class="ident">as_bytes</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
@@ -552,9 +533,11 @@
 
         <span class="comment">// let resp = end_rx.await?;</span>
 
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;EX[{}]: hellosu&quot;</span>, <span class="ident">id</span>);
         <span class="kw">let</span> <span class="ident">q</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">results</span>.<span class="ident">clone</span>();
         <span class="comment">// let end = Box::new(end_rx.map_err(|err| Error::from).map(move |resp| resp));</span>
         <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">end_rx</span>.<span class="ident">map_err</span>(<span class="ident">Error</span>::<span class="ident">from</span>).<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">resp</span><span class="op">|</span> {
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;EX[{}]: -end result- {:?}&quot;</span>, <span class="ident">id</span>, <span class="ident">resp</span>);
             <span class="comment">// pop the first entry from the list</span>
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">results</span> <span class="op">=</span> <span class="ident">q</span>.<span class="ident">write</span>();
             <span class="ident">results</span>.<span class="ident">pop_front</span>();
@@ -662,50 +645,6 @@
     }
 }
 
-<span class="comment">// pub struct ExecWaiter&lt;&#39;a, C&gt;(&amp;&#39;a Client&lt;C&gt;, usize, bool);</span>
-<span class="comment">//</span>
-<span class="comment">// impl&lt;&#39;a, C&gt; Future for ExecWaiter&lt;&#39;a, C&gt; {</span>
-<span class="comment">//     type Output = (Response, ResponseStream);</span>
-<span class="comment">//     fn poll(mut self: Pin&lt;&amp;mut Self&gt;, cx: &amp;mut Context) -&gt; Poll&lt;Self::Output&gt; {</span>
-<span class="comment">//         // add the waker</span>
-<span class="comment">//         let mut results = self.0.results.write();</span>
-<span class="comment">//         if !self.2 {</span>
-<span class="comment">//             if let Some(HandlerResult {</span>
-<span class="comment">//                 waker: waker_ref, ..</span>
-<span class="comment">//             }) = results</span>
-<span class="comment">//                 .iter_mut()</span>
-<span class="comment">//                 .find(|HandlerResult { id, .. }| *id == self.1)</span>
-<span class="comment">//             {</span>
-<span class="comment">//                 let waker = cx.waker().clone();</span>
-<span class="comment">//                 *waker_ref = Some(waker);</span>
-<span class="comment">//                 self.2 = true;</span>
-<span class="comment">//             }</span>
-<span class="comment">//         }</span>
-<span class="comment">//</span>
-<span class="comment">//         // if this struct exists then there&#39;s definitely at least one entry</span>
-<span class="comment">//         let HandlerResult {</span>
-<span class="comment">//             id,</span>
-<span class="comment">//             end: last_response,</span>
-<span class="comment">//             ..</span>
-<span class="comment">//         } = &amp;results[0];</span>
-<span class="comment">//         if *id != self.1 || last_response.is_none() {</span>
-<span class="comment">//             return Poll::Pending;</span>
-<span class="comment">//         }</span>
-<span class="comment">//</span>
-<span class="comment">//         let HandlerResult {</span>
-<span class="comment">//             end: last_response,</span>
-<span class="comment">//             stream: intermediate_responses,</span>
-<span class="comment">//             ..</span>
-<span class="comment">//         } = results.pop_front().unwrap();</span>
-<span class="comment">//         mem::drop(results);</span>
-<span class="comment">//</span>
-<span class="comment">//         Poll::Ready((</span>
-<span class="comment">//             last_response.expect(&quot;already checked&quot;),</span>
-<span class="comment">//             intermediate_responses,</span>
-<span class="comment">//         ))</span>
-<span class="comment">//     }</span>
-<span class="comment">// }</span>
-
 <span class="doccomment">/// Main listen loop for the application</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">listen</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>(
     <span class="ident">conn</span>: <span class="ident">C</span>,
@@ -735,13 +674,13 @@
                     <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;connection probably died&quot;</span>);
                 }
 
-                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;got a new line {:?}&quot;</span>, <span class="ident">next_line</span>);
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;[LISTEN] got a new line {:?}&quot;</span>, <span class="ident">next_line</span>);
                 <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">parse_response</span>(<span class="ident">next_line</span>)<span class="question-mark">?</span>;
 
                 <span class="comment">// if this is the very first message, treat it as a greeting</span>
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">greeting</span>) <span class="op">=</span> <span class="ident">greeting</span>.<span class="ident">take</span>() {
                     <span class="kw">let</span> (<span class="ident">greeting</span>, <span class="ident">waker</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">greeting</span>.<span class="ident">write</span>();
-                    <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;received greeting!&quot;</span>);
+                    <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;[LISTEN] received greeting!&quot;</span>);
                     <span class="kw-2">*</span><span class="ident">greeting</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">resp</span>.<span class="ident">clone</span>());
                     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">waker</span>) <span class="op">=</span> <span class="ident">waker</span>.<span class="ident">take</span>() {
                         <span class="ident">waker</span>.<span class="ident">wake</span>();
@@ -768,9 +707,16 @@
                     } <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">results</span> <span class="op">=</span> <span class="ident">results</span>.<span class="ident">write</span>();
                         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">HandlerResult</span> { <span class="ident">id</span>, <span class="ident">sender</span>, .. }) <span class="op">=</span> <span class="ident">results</span>.<span class="ident">iter_mut</span>().<span class="ident">next</span>() {
-                            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;pushed to intermediate for id {}: {:?}&quot;</span>, <span class="ident">id</span>, <span class="ident">resp</span>);
-                            <span class="ident">sender</span>.<span class="ident">send</span>(<span class="ident">resp</span>)<span class="question-mark">?</span>;
+                            <span class="comment">// we don&#39;t really care if it fails to send</span>
+                            <span class="comment">// this just means that the other side has dropped the channel</span>
+                            <span class="comment">//</span>
+                            <span class="comment">// which is fine since that just means they don&#39;t care about</span>
+                            <span class="comment">// intermediate messages</span>
+                            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">send</span>(<span class="ident">resp</span>);
+                            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;[LISTEN] pushed to intermediate for id {}&quot;</span>, <span class="ident">id</span>);
                         }
+                        <span class="ident">std</span>::<span class="ident">mem</span>::<span class="ident">drop</span>(<span class="ident">results</span>);
+                        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;[LISTEN] &lt;&lt; unlocked self.results&quot;</span>);
                     }
 
                     <span class="comment">// bye</span>

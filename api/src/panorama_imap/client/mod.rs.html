@@ -181,6 +181,26 @@
 <span id="178">178</span>
 <span id="179">179</span>
 <span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! IMAP Client</span>
 <span class="doccomment">//! ===</span>
@@ -236,11 +256,11 @@
 
 <span class="doccomment">/// Struct used to start building the config for a client.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// Call [`.build`][1] to _build_ the config, then run [`.connect`][2] to actually start opening</span>
+<span class="doccomment">/// Call [`.build`][1] to _build_ the config, then run [`.open`][2] to actually start opening</span>
 <span class="doccomment">/// the connection to the server.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// [1]: self::ClientConfigBuilder::build</span>
-<span class="doccomment">/// [2]: self::ClientConfig::connect</span>
+<span class="doccomment">/// [2]: self::ClientConfig::open</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">ClientBuilder</span> <span class="op">=</span> <span class="ident">ClientConfigBuilder</span>;
 
 <span class="doccomment">/// An IMAP client that hasn&#39;t been connected yet.</span>
@@ -332,15 +352,33 @@
     }
 
     <span class="doccomment">/// Runs the LIST command</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">list</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">list</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="ident">Command</span>::<span class="ident">List</span> {
             <span class="ident">reference</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_owned</span>(),
             <span class="ident">mailbox</span>: <span class="string">&quot;*&quot;</span>.<span class="ident">to_owned</span>(),
         };
-        <span class="kw">let</span> (<span class="ident">resp</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">resp</span>.<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;list response: {:?}&quot;</span>, <span class="ident">resp</span>);
-        <span class="prelude-val">Ok</span>(())
+        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">resp</span>, <span class="kw-2">mut</span> <span class="ident">st</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="macro">todo</span><span class="macro">!</span>()
+
+        <span class="comment">// let mut folders = Vec::new();</span>
+        <span class="comment">// loop {</span>
+        <span class="comment">//     let st_next = st.recv();</span>
+        <span class="comment">//     pin_mut!(st_next);</span>
+
+        <span class="comment">//     match future::select(resp, st_next).await {</span>
+        <span class="comment">//         Either::Left((v, _)) =&gt; {</span>
+        <span class="comment">//             break;</span>
+        <span class="comment">//         }</span>
+
+        <span class="comment">//         Either::Right((v, _) ) =&gt; {</span>
+        <span class="comment">//             debug!(&quot;RESP: {:?}&quot;, v);</span>
+        <span class="comment">//            //  folders.push(v);</span>
+        <span class="comment">//         }</span>
+        <span class="comment">//     }</span>
+        <span class="comment">// }</span>
+
+        <span class="comment">// let resp = resp.await?;</span>
+        <span class="comment">// debug!(&quot;list response: {:?}&quot;, resp);</span>
     }
 
     <span class="doccomment">/// Runs the SELECT command</span>
@@ -348,7 +386,9 @@
         <span class="kw">let</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="ident">Command</span>::<span class="ident">Select</span> {
             <span class="ident">mailbox</span>: <span class="ident">mailbox</span>.<span class="ident">as_ref</span>().<span class="ident">to_owned</span>(),
         };
-        <span class="kw">let</span> (<span class="ident">resp</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> (<span class="ident">resp</span>, <span class="kw-2">mut</span> <span class="ident">st</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;execute called returned...&quot;</span>);
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;ST: {:?}&quot;</span>, <span class="ident">st</span>.<span class="ident">recv</span>().<span class="kw">await</span>);
         <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">resp</span>.<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;select response: {:?}&quot;</span>, <span class="ident">resp</span>);
         <span class="prelude-val">Ok</span>(())
