@@ -63,9 +63,6 @@ flag_perm = { flag | "\\*" }
 header_fld_name = { astring }
 header_list = { "(" ~ header_fld_name ~ (sp ~ header_fld_name)* ~ ")" }
 list_wildcards = @{ "%" | "*" }
-// literal = @{ "{" ~ number ~ "}" ~ crlf ~ literal_str }
-literal = { #crate::parser::literal_internal }
-literal_str = { #crate::parser::literal::noop }
 mailbox = { ^"INBOX" | astring }
 mailbox_data = { mailbox_data_flags | mailbox_data_list | (^"LSUB" ~ sp ~ mailbox_list) | (^"SEARCH" ~ (sp ~ nz_number)*) | (^"STATUS" ~ sp ~ mailbox ~ sp ~ ^"(" ~ status_att_list? ~ ^")") | mailbox_data_exists | mailbox_data_recent }
 mailbox_data_exists = { number ~ sp ~ ^"EXISTS" }
@@ -133,6 +130,10 @@ text_char = @{ !cr ~ !lf ~ char }
 time = @{ digit{2} ~ ":" ~ digit{2} ~ ":" ~ digit{2} }
 uniqueid = { nz_number }
 zone = @{ ("+" | "-") ~ digit{4} }
+
+// custom-implemented functions
+literal = { #crate::parser::literal_internal }
+literal_str = { #crate::parser::literal::noop }
 
 // core rules from https://tools.ietf.org/html/rfc2234#section-6.1
 alpha = @{ '\x41'..'\x5a' | '\x61'..'\x7a' }
