@@ -1,9 +1,10 @@
 use pest::{ParseResult as PestResult, ParserState};
 
-use super::old::Rule;
+use super::Rule;
 
 type PSR<'a> = Box<ParserState<'a, Rule>>;
 
+/// This is a hack around the literal syntax to allow us to parse characters statefully.
 pub(crate) fn literal_internal(state: PSR) -> PestResult<PSR> {
     use pest::Atomicity;
 

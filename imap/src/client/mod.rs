@@ -52,11 +52,11 @@ pub use self::inner::{Client, ResponseFuture, ResponseStream};
 
 /// Struct used to start building the config for a client.
 ///
-/// Call [`.build`][1] to _build_ the config, then run [`.connect`][2] to actually start opening
+/// Call [`.build`][1] to _build_ the config, then run [`.open`][2] to actually start opening
 /// the connection to the server.
 ///
 /// [1]: self::ClientConfigBuilder::build
-/// [2]: self::ClientConfig::connect
+/// [2]: self::ClientConfig::open
 pub type ClientBuilder = ClientConfigBuilder;
 
 /// An IMAP client that hasn't been connected yet.
@@ -148,15 +148,33 @@ impl ClientAuthenticated {
     }
 
     /// Runs the LIST command
-    pub async fn list(&mut self) -> Result<()> {
+    pub async fn list(&mut self) -> Result<Vec<String>> {
         let cmd = Command::List {
             reference: "".to_owned(),
             mailbox: "*".to_owned(),
         };
-        let (resp, _) = self.execute(cmd).await?;
-        let resp = resp.await?;
-        debug!("list response: {:?}", resp);
-        Ok(())
+        let (mut resp, mut st) = self.execute(cmd).await?;
+        todo!()
+
+        // let mut folders = Vec::new();
+        // loop {
+        //     let st_next = st.recv();
+        //     pin_mut!(st_next);
+
+        //     match future::select(resp, st_next).await {
+        //         Either::Left((v, _)) => {
+        //             break;
+        //         }
+
+        //         Either::Right((v, _) ) => {
+        //             debug!("RESP: {:?}", v);
+        //            //  folders.push(v);
+        //         }
+        //     }
+        // }
+
+        // let resp = resp.await?;
+        // debug!("list response: {:?}", resp);
     }
 
     /// Runs the SELECT command
@@ -164,7 +182,9 @@ impl ClientAuthenticated {
         let cmd = Command::Select {
             mailbox: mailbox.as_ref().to_owned(),
         };
-        let (resp, _) = self.execute(cmd).await?;
+        let (resp, mut st) = self.execute(cmd).await?;
+        debug!("execute called returned...");
+        debug!("ST: {:?}", st.recv().await);
         let resp = resp.await?;
         debug!("select response: {:?}", resp);
         Ok(())

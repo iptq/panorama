@@ -30,7 +30,10 @@ pub enum MailCommand {
 }
 
 /// Possible events returned from the server that should be sent to the UI
-pub enum MailEvent {}
+pub enum MailEvent {
+    /// Got the list of folders
+    FolderList(Vec<String>),
+}
 
 /// Main entrypoint for the mail listener.
 pub async fn run_mail(
@@ -63,7 +66,7 @@ pub async fn run_mail(
 
                 // this loop is to make sure accounts are restarted on error
                 loop {
-                    match imap_main(acct.clone()).await {
+                    match imap_main(acct.clone(), mail2ui_tx.clone()).await {
                         Ok(_) => {}
                         Err(err) => {
                             error!("IMAP Error: {}", err);
@@ -88,7 +91,7 @@ pub async fn run_mail(
 }
 
 /// The main sequence of steps for the IMAP thread to follow
-async fn imap_main(acct: MailAccountConfig) -> Result<()> {
+async fn imap_main(acct: MailAccountConfig, mail2ui_tx: UnboundedSender<MailEvent>) -> Result<()> {
     // loop ensures that the connection is retried after it dies
     loop {
         let builder: ClientConfig = ClientBuilder::default()
@@ -129,8 +132,10 @@ async fn imap_main(acct: MailAccountConfig) -> Result<()> {
         authed.select("INBOX").await?;
 
         loop {
-            debug!("listing all emails...");
-            let folder_tree = authed.list().await?;
+            debug!("listing all mailboxes...");
+            let folder_list = authed.list().await?;
+            debug!("mailbox list: {:?}", folder_list);
+            mail2ui_tx.send(MailEvent::FolderList(folder_list));
 
             let mut idle_stream = authed.idle().await?;
 

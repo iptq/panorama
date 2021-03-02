@@ -112,7 +112,7 @@ fn setup_logger(log_file: Option<impl AsRef<Path>>) -> Result<()> {
                 message
             ))
         })
-        .level(log::LevelFilter::Debug);
+        .level(log::LevelFilter::Trace);
     if let Some(log_file) = log_file {
         logger = logger.chain(fern::log_file(log_file)?);
     }

@@ -1,5 +1,8 @@
 //! Module that implements parsers for all of the IMAP types.
 
+mod literal;
+mod old;
+
 use std::fmt::Debug;
 use std::mem;
 use std::str::FromStr;

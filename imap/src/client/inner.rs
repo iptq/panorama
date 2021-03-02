@@ -79,13 +79,19 @@ where
         let greeting = Arc::new(RwLock::new((None, None)));
         let caps: CapsLock = Arc::new(RwLock::new(None));
 
-        let listener_handle = tokio::spawn(listen(
-            read_half,
-            caps.clone(),
-            results.clone(),
-            exit_rx,
-            greeting.clone(),
-        ));
+        let listener_handle = tokio::spawn(
+            listen(
+                read_half,
+                caps.clone(),
+                results.clone(),
+                exit_rx,
+                greeting.clone(),
+            )
+            .map_err(|err| {
+                error!("Help, the listener loop died: {}", err);
+                err
+            }),
+        );
 
         Client {
             config,
@@ -118,6 +124,7 @@ where
         // this should queue up responses
         let (tx, rx) = mpsc::unbounded_channel();
 
+        debug!("EX[{}]: adding handler result to the handlers queue", id);
         {
             let mut handlers = self.results.write();
             handlers.push_back(HandlerResult {
@@ -128,6 +135,7 @@ where
             });
         }
 
+        debug!("EX[{}]: send the command to the server", id);
         let cmd_str = format!("{}{} {}\r\n", TAG_PREFIX, id, cmd);
         // debug!("[{}] writing to socket: {:?}", id, cmd_str);
         self.conn.write_all(cmd_str.as_bytes()).await?;
@@ -141,9 +149,11 @@ where
 
         // let resp = end_rx.await?;
 
+        debug!("EX[{}]: hellosu", id);
         let q = self.results.clone();
         // let end = Box::new(end_rx.map_err(|err| Error::from).map(move |resp| resp));
         let end = Box::new(end_rx.map_err(Error::from).map(move |resp| {
+            debug!("EX[{}]: -end result- {:?}", id, resp);
             // pop the first entry from the list
             let mut results = q.write();
             results.pop_front();
@@ -251,50 +261,6 @@ impl Future for GreetingWaiter {
     }
 }
 
-// pub struct ExecWaiter<'a, C>(&'a Client<C>, usize, bool);
-//
-// impl<'a, C> Future for ExecWaiter<'a, C> {
-//     type Output = (Response, ResponseStream);
-//     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-//         // add the waker
-//         let mut results = self.0.results.write();
-//         if !self.2 {
-//             if let Some(HandlerResult {
-//                 waker: waker_ref, ..
-//             }) = results
-//                 .iter_mut()
-//                 .find(|HandlerResult { id, .. }| *id == self.1)
-//             {
-//                 let waker = cx.waker().clone();
-//                 *waker_ref = Some(waker);
-//                 self.2 = true;
-//             }
-//         }
-//
-//         // if this struct exists then there's definitely at least one entry
-//         let HandlerResult {
-//             id,
-//             end: last_response,
-//             ..
-//         } = &results[0];
-//         if *id != self.1 || last_response.is_none() {
-//             return Poll::Pending;
-//         }
-//
-//         let HandlerResult {
-//             end: last_response,
-//             stream: intermediate_responses,
-//             ..
-//         } = results.pop_front().unwrap();
-//         mem::drop(results);
-//
-//         Poll::Ready((
-//             last_response.expect("already checked"),
-//             intermediate_responses,
-//         ))
-//     }
-// }
-
 /// Main listen loop for the application
 async fn listen<C>(
     conn: C,
@@ -324,13 +290,13 @@ where
                     bail!("connection probably died");
                 }
 
-                debug!("got a new line {:?}", next_line);
+                debug!("[LISTEN] got a new line {:?}", next_line);
                 let resp = parse_response(next_line)?;
 
                 // if this is the very first message, treat it as a greeting
                 if let Some(greeting) = greeting.take() {
                     let (greeting, waker) = &mut *greeting.write();
-                    debug!("received greeting!");
+                    debug!("[LISTEN] received greeting!");
                     *greeting = Some(resp.clone());
                     if let Some(waker) = waker.take() {
                         waker.wake();
@@ -357,9 +323,16 @@ where
                     } => {
                         let mut results = results.write();
                         if let Some(HandlerResult { id, sender, .. }) = results.iter_mut().next() {
-                            debug!("pushed to intermediate for id {}: {:?}", id, resp);
-                            sender.send(resp)?;
+                            // we don't really care if it fails to send
+                            // this just means that the other side has dropped the channel
+                            //
+                            // which is fine since that just means they don't care about
+                            // intermediate messages
+                            let _ = sender.send(resp);
+                            debug!("[LISTEN] pushed to intermediate for id {}", id);
                         }
+                        std::mem::drop(results);
+                        debug!("[LISTEN] << unlocked self.results");
                     }
 
                     // bye
