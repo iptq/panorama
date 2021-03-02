@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["run_ui","Main entrypoint for the UI"]]});
+initSidebarItems({"constant":[["FRAME_DURATION",""]],"fn":[["run_ui","Main entrypoint for the UI"]],"mod":[["mail_tab",""]]});
