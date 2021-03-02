@@ -19,11 +19,10 @@ use tui::{
     style::{Color, Modifier, Style},
     text::Spans,
     widgets::*,
-    Frame,
-    Terminal,
+    Frame, Terminal,
 };
 
-use self::mail_tab::{MailTabState, MailTab};
+use self::mail_tab::{MailTab, MailTabState};
 
 // pub(crate) type FrameType<'a> = Frame<'a, CrosstermBackend<Stdout>>;
 

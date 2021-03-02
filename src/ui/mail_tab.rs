@@ -1,11 +1,14 @@
-use tui::{widgets::{Widget, StatefulWidget}, buffer::Buffer, layout::Rect};
+use tui::{
+    buffer::Buffer,
+    layout::Rect,
+    widgets::{StatefulWidget, Widget},
+};
 
-pub struct MailTabState {
-}
+pub struct MailTabState {}
 
 impl MailTabState {
     pub fn new() -> Self {
-        MailTabState{}
+        MailTabState {}
     }
 }
 
@@ -14,6 +17,5 @@ pub struct MailTab;
 impl StatefulWidget for MailTab {
     type State = MailTabState;
 
-    fn render(self, rect: Rect, buffer: &mut Buffer, state: &mut Self::State) {
-    }
+    fn render(self, rect: Rect, buffer: &mut Buffer, state: &mut Self::State) {}
 }
