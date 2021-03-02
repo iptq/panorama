@@ -61,6 +61,7 @@ pub async fn run_mail(
         }
 
         for acct in config.mail_accounts.into_iter() {
+            let mail2ui_tx = mail2ui_tx.clone();
             let handle = tokio::spawn(async move {
                 // debug!("opening imap connection for {:?}", acct);
 
