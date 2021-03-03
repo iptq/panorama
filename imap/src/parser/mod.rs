@@ -48,12 +48,12 @@ fn build_response(pair: Pair<Rule>) -> Response {
 
                     let pair = pairs.next().unwrap();
                     let (status, code, information) = build_resp_cond_state(pair);
-                    Response::Done {
+                    Response::Done(ResponseDone {
                         tag,
                         status,
                         code,
                         information,
-                    }
+                    })
                 }
                 _ => unreachable!("{:#?}", pair),
             }
@@ -64,11 +64,11 @@ fn build_response(pair: Pair<Rule>) -> Response {
             match pair.as_rule() {
                 Rule::resp_cond_state => {
                     let (status, code, information) = build_resp_cond_state(pair);
-                    Response::Data {
+                    Response::Data(ResponseData {
                         status,
                         code,
                         information,
-                    }
+                    })
                 }
                 Rule::mailbox_data => Response::MailboxData(build_mailbox_data(pair)),
                 Rule::capability_data => Response::Capabilities(build_capabilities(pair)),

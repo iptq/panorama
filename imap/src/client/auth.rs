@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use crate::command::Command;
-use crate::response::{Response, Status};
+use crate::response::{Response, ResponseDone, Status};
 
 use super::{ClientAuthenticated, ClientUnauthenticated};
 
@@ -37,10 +37,10 @@ impl Auth for Plain {
 
         if !matches!(
             result,
-            Response::Done {
+            Response::Done(ResponseDone {
                 status: Status::Ok,
                 ..
-            }
+            })
         ) {
             bail!("unable to login: {:?}", result);
         }

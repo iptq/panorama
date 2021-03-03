@@ -39,6 +39,10 @@ mod inner;
 use std::sync::Arc;
 
 use anyhow::Result;
+use futures::{
+    future::{self, Either, FutureExt},
+    stream::StreamExt,
+};
 use tokio::net::TcpStream;
 use tokio_rustls::{
     client::TlsStream, rustls::ClientConfig as RustlsConfig, webpki::DNSNameRef, TlsConnector,
@@ -46,7 +50,7 @@ use tokio_rustls::{
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::command::Command;
-use crate::response::Response;
+use crate::response::{Response, ResponseData, ResponseDone};
 
 pub use self::inner::{Client, ResponseFuture, ResponseStream};
 
@@ -56,7 +60,7 @@ pub use self::inner::{Client, ResponseFuture, ResponseStream};
 /// the connection to the server.
 ///
 /// [1]: self::ClientConfigBuilder::build
-/// [2]: self::ClientConfig::open
+/// [2]: self::ClientConfig::connect
 pub type ClientBuilder = ClientConfigBuilder;
 
 /// An IMAP client that hasn't been connected yet.
@@ -133,6 +137,12 @@ impl ClientUnauthenticated {
     }
 }
 
+#[derive(Debug)]
+pub struct ResponseCombined {
+    pub data: Vec<Response>,
+    pub done: ResponseDone,
+}
+
 pub enum ClientAuthenticated {
     Encrypted(Client<TlsStream<TcpStream>>),
     Unencrypted(Client<TcpStream>),
@@ -147,13 +157,47 @@ impl ClientAuthenticated {
         }
     }
 
+    /// A wrapper around `execute` that waits for the response and returns a combined data
+    /// structure containing the intermediate results as well as the final status
+    async fn execute_combined(&mut self, cmd: Command) -> Result<ResponseCombined> {
+        let (resp, mut stream) = self.execute(cmd).await?;
+        let mut resp = resp.into_stream(); // turn into stream to avoid mess with returning futures from select
+
+        let mut data = Vec::new();
+        debug!("[COMBI] loop");
+        let done = loop {
+            let fut1 = resp.next().fuse();
+            let fut2 = stream.recv().fuse();
+            pin_mut!(fut1);
+            pin_mut!(fut2);
+
+            match future::select(fut1, fut2).await {
+                Either::Left((Some(Ok(Response::Done(done))), _)) => {
+                    debug!("[COMBI] left: {:?}", done);
+                    break done;
+                }
+                Either::Left(_) => unreachable!("got non-Response::Done from listen!"),
+
+                Either::Right((Some(resp), _)) => {
+                    debug!("[COMBI] right: {:?}", resp);
+                    data.push(resp);
+                }
+                Either::Right(_) => unreachable!(),
+            }
+        };
+
+        Ok(ResponseCombined { data, done })
+    }
+
     /// Runs the LIST command
     pub async fn list(&mut self) -> Result<Vec<String>> {
         let cmd = Command::List {
             reference: "".to_owned(),
             mailbox: "*".to_owned(),
         };
-        let (mut resp, mut st) = self.execute(cmd).await?;
+
+        let res = self.execute_combined(cmd).await?;
+        debug!("res: {:?}", res);
         todo!()
 
         // let mut folders = Vec::new();
@@ -187,14 +231,22 @@ impl ClientAuthenticated {
         debug!("ST: {:?}", st.recv().await);
         let resp = resp.await?;
         debug!("select response: {:?}", resp);
+
+        // nuke the capabilities cache
+        self.nuke_capabilities();
+
         Ok(())
     }
 
-    /// Runs the SELECT command
+    /// Runs the IDLE command
     #[cfg(feature = "rfc2177-idle")]
     pub async fn idle(&mut self) -> Result<UnboundedReceiverStream<Response>> {
         let cmd = Command::Idle;
         let (_, stream) = self.execute(cmd).await?;
         Ok(UnboundedReceiverStream::new(stream))
+    }
+
+    fn nuke_capabilities(&mut self) {
+        // TODO: do something here
     }
 }

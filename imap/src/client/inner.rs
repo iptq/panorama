@@ -23,7 +23,7 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::command::Command;
 use crate::parser::{parse_capability, parse_response};
-use crate::response::{Capability, Response, ResponseCode, Status};
+use crate::response::{Capability, Response, ResponseCode, ResponseData, ResponseDone, Status};
 
 use super::ClientConfig;
 
@@ -35,6 +35,7 @@ type ResultQueue = Arc<RwLock<VecDeque<HandlerResult>>>;
 pub type GreetingState = Arc<RwLock<(Option<Response>, Option<Waker>)>>;
 pub const TAG_PREFIX: &str = "ptag";
 
+#[derive(Debug)]
 struct HandlerResult {
     id: usize,
     end: Option<oneshot::Sender<Response>>,
@@ -137,17 +138,8 @@ where
 
         debug!("EX[{}]: send the command to the server", id);
         let cmd_str = format!("{}{} {}\r\n", TAG_PREFIX, id, cmd);
-        // debug!("[{}] writing to socket: {:?}", id, cmd_str);
         self.conn.write_all(cmd_str.as_bytes()).await?;
         self.conn.flush().await?;
-        // debug!("[{}] written.", id);
-        // let resp = ExecWaiter(self, id, false).await;
-        // let resp = {
-        //     let mut handlers = self.results.write();
-        //     handlers.remove(&id).unwrap().0.unwrap()
-        // };
-
-        // let resp = end_rx.await?;
 
         debug!("EX[{}]: hellosu", id);
         let q = self.results.clone();
@@ -178,14 +170,14 @@ where
             .execute(cmd)
             .await
             .context("error executing CAPABILITY command")?;
-        let result = result.await?;
-        debug!("cap resp: {:?}", result);
+        let _ = result.await?;
 
         if let Some(Response::Capabilities(new_caps)) = UnboundedReceiverStream::new(intermediate)
             .filter(|resp| future::ready(matches!(resp, Response::Capabilities(_))))
             .next()
             .await
         {
+            debug!("FOUND NEW CAPABILITIES: {:?}", new_caps);
             let mut caps = self.caps.write();
             *caps = Some(new_caps.iter().cloned().collect());
         }
@@ -292,6 +284,7 @@ where
 
                 debug!("[LISTEN] got a new line {:?}", next_line);
                 let resp = parse_response(next_line)?;
+                debug!("[LISTEN] parsed as {:?}", resp);
 
                 // if this is the very first message, treat it as a greeting
                 if let Some(greeting) = greeting.take() {
@@ -306,11 +299,11 @@ where
                 // update capabilities list
                 // TODO: probably not really necessary here (done somewhere else)?
                 if let Response::Capabilities(new_caps)
-                | Response::Data {
+                | Response::Data(ResponseData {
                     status: Status::Ok,
                     code: Some(ResponseCode::Capabilities(new_caps)),
                     ..
-                } = &resp
+                }) = &resp
                 {
                     let caps = &mut *caps.write();
                     *caps = Some(new_caps.iter().cloned().collect());
@@ -318,43 +311,24 @@ where
                 }
 
                 match &resp {
-                    Response::Data {
-                        status: Status::Ok, ..
-                    } => {
-                        let mut results = results.write();
-                        if let Some(HandlerResult { id, sender, .. }) = results.iter_mut().next() {
-                            // we don't really care if it fails to send
-                            // this just means that the other side has dropped the channel
-                            //
-                            // which is fine since that just means they don't care about
-                            // intermediate messages
-                            let _ = sender.send(resp);
-                            debug!("[LISTEN] pushed to intermediate for id {}", id);
-                        }
-                        std::mem::drop(results);
-                        debug!("[LISTEN] << unlocked self.results");
-                    }
-
                     // bye
-                    Response::Data {
+                    Response::Data(ResponseData {
                         status: Status::Bye,
                         ..
-                    } => {
+                    }) => {
                         bail!("disconnected");
                     }
 
-                    Response::Done { tag, .. } => {
+                    Response::Done(ResponseDone { tag, .. }) => {
                         if tag.starts_with(TAG_PREFIX) {
                             // let id = tag.trim_start_matches(TAG_PREFIX).parse::<usize>()?;
+                            debug!("[LISTEN] Done: {:?}", tag);
                             let mut results = results.write();
-                            if let Some(HandlerResult {
-                                end: ref mut opt,
-                                waker,
-                                ..
-                            }) = results.iter_mut().next()
+                            if let Some(HandlerResult { end, waker, .. }) =
+                                results.iter_mut().next()
                             {
-                                if let Some(opt) = opt.take() {
-                                    opt.send(resp).unwrap();
+                                if let Some(end) = end.take() {
+                                    end.send(resp).unwrap();
                                 }
                                 // *opt = Some(resp);
                                 if let Some(waker) = waker.take() {
@@ -364,7 +338,20 @@ where
                         }
                     }
 
-                    _ => {}
+                    _ => {
+                        debug!("[LISTEN] RESPONSE: {:?}", resp);
+                        let mut results = results.write();
+                        if let Some(HandlerResult { id, sender, .. }) = results.iter_mut().next() {
+                            // we don't really care if it fails to send
+                            // this just means that the other side has dropped the channel
+                            //
+                            // which is fine since that just means they don't care about
+                            // intermediate messages
+                            let _ = sender.send(resp);
+                            debug!("[LISTEN] pushed to intermediate for id {}", id);
+                            debug!("[LISTEN] res: {:?}", results);
+                        }
+                    } // _ => {}
                 }
             }
 

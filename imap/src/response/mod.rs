@@ -9,17 +9,8 @@ pub enum Response {
         code: Option<ResponseCode>,
         information: Option<String>,
     },
-    Done {
-        tag: String,
-        status: Status,
-        code: Option<ResponseCode>,
-        information: Option<String>,
-    },
-    Data {
-        status: Status,
-        code: Option<ResponseCode>,
-        information: Option<String>,
-    },
+    Done(ResponseDone),
+    Data(ResponseData),
     Expunge(u32),
     Vanished {
         earlier: bool,
@@ -27,6 +18,21 @@ pub enum Response {
     },
     Fetch(u32, Vec<AttributeValue>),
     MailboxData(MailboxData),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ResponseData {
+    pub status: Status,
+    pub code: Option<ResponseCode>,
+    pub information: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ResponseDone {
+    pub tag: String,
+    pub status: Status,
+    pub code: Option<ResponseCode>,
+    pub information: Option<String>,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
