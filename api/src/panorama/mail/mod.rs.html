@@ -304,7 +304,7 @@
             <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;listing all mailboxes...&quot;</span>);
             <span class="kw">let</span> <span class="ident">folder_list</span> <span class="op">=</span> <span class="ident">authed</span>.<span class="ident">list</span>().<span class="kw">await</span><span class="question-mark">?</span>;
             <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;mailbox list: {:?}&quot;</span>, <span class="ident">folder_list</span>);
-            <span class="ident">mail2ui_tx</span>.<span class="ident">send</span>(<span class="ident">MailEvent</span>::<span class="ident">FolderList</span>(<span class="ident">folder_list</span>));
+            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">mail2ui_tx</span>.<span class="ident">send</span>(<span class="ident">MailEvent</span>::<span class="ident">FolderList</span>(<span class="ident">folder_list</span>));
 
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">idle_stream</span> <span class="op">=</span> <span class="ident">authed</span>.<span class="ident">idle</span>().<span class="kw">await</span><span class="question-mark">?</span>;
 

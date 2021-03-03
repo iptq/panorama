@@ -55,7 +55,7 @@
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">command</span>::<span class="ident">Command</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">response</span>::{<span class="ident">Response</span>, <span class="ident">Status</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">response</span>::{<span class="ident">Response</span>, <span class="ident">ResponseDone</span>, <span class="ident">Status</span>};
 
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">ClientAuthenticated</span>, <span class="ident">ClientUnauthenticated</span>};
 
@@ -91,10 +91,10 @@
 
         <span class="kw">if</span> <span class="op">!</span><span class="macro">matches</span><span class="macro">!</span>(
             <span class="ident">result</span>,
-            <span class="ident">Response</span>::<span class="ident">Done</span> {
+            <span class="ident">Response</span>::<span class="ident">Done</span>(<span class="ident">ResponseDone</span> {
                 <span class="ident">status</span>: <span class="ident">Status</span>::<span class="prelude-val">Ok</span>,
                 ..
-            }
+            })
         ) {
             <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;unable to login: {:?}&quot;</span>, <span class="ident">result</span>);
         }

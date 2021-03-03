@@ -271,6 +271,12 @@
 <span id="268">268</span>
 <span id="269">269</span>
 <span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Structs and enums that have to do with responses.</span>
 
@@ -283,17 +289,8 @@
         <span class="ident">code</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ResponseCode</span><span class="op">&gt;</span>,
         <span class="ident">information</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     },
-    <span class="ident">Done</span> {
-        <span class="ident">tag</span>: <span class="ident">String</span>,
-        <span class="ident">status</span>: <span class="ident">Status</span>,
-        <span class="ident">code</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ResponseCode</span><span class="op">&gt;</span>,
-        <span class="ident">information</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    },
-    <span class="ident">Data</span> {
-        <span class="ident">status</span>: <span class="ident">Status</span>,
-        <span class="ident">code</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ResponseCode</span><span class="op">&gt;</span>,
-        <span class="ident">information</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    },
+    <span class="ident">Done</span>(<span class="ident">ResponseDone</span>),
+    <span class="ident">Data</span>(<span class="ident">ResponseData</span>),
     <span class="ident">Expunge</span>(<span class="ident">u32</span>),
     <span class="ident">Vanished</span> {
         <span class="ident">earlier</span>: <span class="ident">bool</span>,
@@ -301,6 +298,21 @@
     },
     <span class="ident">Fetch</span>(<span class="ident">u32</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AttributeValue</span><span class="op">&gt;</span>),
     <span class="ident">MailboxData</span>(<span class="ident">MailboxData</span>),
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ResponseData</span> {
+    <span class="kw">pub</span> <span class="ident">status</span>: <span class="ident">Status</span>,
+    <span class="kw">pub</span> <span class="ident">code</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ResponseCode</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">information</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ResponseDone</span> {
+    <span class="kw">pub</span> <span class="ident">tag</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">status</span>: <span class="ident">Status</span>,
+    <span class="kw">pub</span> <span class="ident">code</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ResponseCode</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">information</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Hash</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
