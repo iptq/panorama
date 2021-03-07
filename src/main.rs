@@ -4,7 +4,11 @@ use std::thread;
 use anyhow::Result;
 use fern::colors::{Color, ColoredLevelConfig};
 use futures::future::TryFutureExt;
-use panorama::{config::spawn_config_watcher_system, mail, report_err, ui};
+use panorama::{
+    config::spawn_config_watcher_system,
+    mail::{self, MailEvent},
+    report_err, ui,
+};
 use structopt::StructOpt;
 use tokio::{
     runtime::{Builder as RuntimeBuilder, Runtime},
@@ -63,7 +67,7 @@ async fn run(opt: Opt) -> Result<()> {
     });
 
     if !opt.headless {
-        run_ui(exit_tx);
+        run_ui(exit_tx, mail2ui_rx);
     }
 
     exit_rx.recv().await;
@@ -76,7 +80,7 @@ async fn run(opt: Opt) -> Result<()> {
 }
 
 // Spawns the entire UI in a different thread, since it must be thread-local
-fn run_ui(exit_tx: mpsc::Sender<()>) {
+fn run_ui(exit_tx: mpsc::Sender<()>, mail2ui_rx: mpsc::UnboundedReceiver<MailEvent>) {
     let stdout = std::io::stdout();
 
     let rt = RuntimeBuilder::new_current_thread()
@@ -88,7 +92,9 @@ fn run_ui(exit_tx: mpsc::Sender<()>) {
         let localset = LocalSet::new();
 
         localset.spawn_local(async {
-            ui::run_ui(stdout, exit_tx).unwrap_or_else(report_err).await;
+            ui::run_ui(stdout, exit_tx, mail2ui_rx)
+                .unwrap_or_else(report_err)
+                .await;
         });
 
         rt.block_on(localset);

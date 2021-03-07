@@ -1,7 +1,7 @@
 use std::fmt;
 
 /// Commands, without the tag part.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum Command {
     Capability,
     Starttls,
@@ -19,6 +19,22 @@ pub enum Command {
 
     #[cfg(feature = "rfc2177-idle")]
     Idle,
+}
+
+impl fmt::Debug for Command {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use Command::*;
+        match self {
+            Capability => write!(f, "CAPABILITY"),
+            Starttls => write!(f, "STARTTLS"),
+            Login { .. } => write!(f, "LOGIN"),
+            Select { mailbox } => write!(f, "SELECT {}", mailbox),
+            List { reference, mailbox } => write!(f, "LIST {:?} {:?}", reference, mailbox),
+
+            #[cfg(feature = "rfc2177-idle")]
+            Idle => write!(f, "IDLE"),
+        }
+    }
 }
 
 impl fmt::Display for Command {

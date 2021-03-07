@@ -1,19 +1,21 @@
-use std::collections::{HashSet, VecDeque};
 use std::pin::Pin;
 use std::sync::Arc;
-use std::task::{Context, Poll, Waker};
+use std::task::{Context, Poll};
 
-use anyhow::{Context as AnyhowContext, Error, Result};
+use anyhow::Result;
 use futures::{
-    future::{self, Either, Future, FutureExt, TryFutureExt},
-    stream::StreamExt,
+    future::{self, Either, FutureExt, TryFutureExt},
+    stream::{Peekable, Stream, StreamExt},
 };
-use parking_lot::RwLock;
+use parking_lot::Mutex;
 use tokio::{
     io::{
         self, AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader, ReadHalf, WriteHalf,
     },
-    sync::{mpsc, oneshot},
+    sync::{
+        mpsc,
+        oneshot::{self, error::TryRecvError},
+    },
     task::JoinHandle,
 };
 use tokio_rustls::{
@@ -23,169 +25,89 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::command::Command;
 use crate::parser::{parse_capability, parse_response};
-use crate::response::{Capability, Response, ResponseCode, ResponseData, ResponseDone, Status};
+use crate::response::{Response, ResponseDone};
 
 use super::ClientConfig;
 
-pub type CapsLock = Arc<RwLock<Option<HashSet<Capability>>>>;
-pub type ResponseFuture = Box<dyn Future<Output = Result<Response>> + Send + Unpin>;
-pub type ResponseSender = mpsc::UnboundedSender<Response>;
-pub type ResponseStream = mpsc::UnboundedReceiver<Response>;
-type ResultQueue = Arc<RwLock<VecDeque<HandlerResult>>>;
-pub type GreetingState = Arc<RwLock<(Option<Response>, Option<Waker>)>>;
 pub const TAG_PREFIX: &str = "ptag";
+type Command2 = (Command, mpsc::UnboundedSender<Response>);
 
-#[derive(Debug)]
-struct HandlerResult {
-    id: usize,
-    end: Option<oneshot::Sender<Response>>,
-    sender: ResponseSender,
-    waker: Option<Waker>,
-}
-
-/// The lower-level Client struct, that is shared by all of the exported structs in the state machine.
 pub struct Client<C> {
+    ctr: usize,
     config: ClientConfig,
-
-    /// write half of the connection
     conn: WriteHalf<C>,
-
-    /// counter for monotonically incrementing unique ids
-    id: usize,
-
-    results: ResultQueue,
-
-    /// cached set of capabilities
-    caps: CapsLock,
-
-    /// join handle for the listener thread
+    cmd_tx: mpsc::UnboundedSender<Command2>,
+    greeting_rx: Option<oneshot::Receiver<()>>,
+    exit_tx: oneshot::Sender<()>,
     listener_handle: JoinHandle<Result<ReadHalf<C>>>,
-
-    /// used for telling the listener thread to stop and return the read half
-    exit_tx: mpsc::Sender<()>,
-
-    /// used for receiving the greeting
-    greeting: GreetingState,
 }
 
 impl<C> Client<C>
 where
     C: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
-    /// Creates a new client that wraps a connection
     pub fn new(conn: C, config: ClientConfig) -> Self {
         let (read_half, write_half) = io::split(conn);
-        let results = Arc::new(RwLock::new(VecDeque::new()));
-        let (exit_tx, exit_rx) = mpsc::channel(1);
-        let greeting = Arc::new(RwLock::new((None, None)));
-        let caps: CapsLock = Arc::new(RwLock::new(None));
-
-        let listener_handle = tokio::spawn(
-            listen(
-                read_half,
-                caps.clone(),
-                results.clone(),
-                exit_rx,
-                greeting.clone(),
-            )
-            .map_err(|err| {
+        let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
+        let (greeting_tx, greeting_rx) = oneshot::channel();
+        let (exit_tx, exit_rx) = oneshot::channel();
+        let handle = tokio::spawn(
+            listen(read_half, cmd_rx, greeting_tx, exit_rx).map_err(|err| {
                 error!("Help, the listener loop died: {}", err);
                 err
             }),
         );
 
         Client {
-            config,
+            ctr: 0,
             conn: write_half,
-            id: 0,
-            results,
-            listener_handle,
-            caps,
+            config,
+            cmd_tx,
+            greeting_rx: Some(greeting_rx),
             exit_tx,
-            greeting,
+            listener_handle: handle,
         }
     }
 
-    /// Returns a future that doesn't resolve until we receive a greeting from the server.
-    pub fn wait_for_greeting(&self) -> GreetingWaiter {
-        debug!("waiting for greeting");
-        GreetingWaiter(self.greeting.clone())
+    pub async fn wait_for_greeting(&mut self) -> Result<()> {
+        if let Some(greeting_rx) = self.greeting_rx.take() {
+            greeting_rx.await?;
+        }
+        Ok(())
     }
 
-    /// Sends a command to the server and returns a handle to retrieve the result
-    pub async fn execute(&mut self, cmd: Command) -> Result<(ResponseFuture, ResponseStream)> {
-        // debug!("executing command {:?}", cmd);
-        let id = self.id;
-        self.id += 1;
+    pub async fn execute(&mut self, cmd: Command) -> Result<ResponseStream> {
+        let id = self.ctr;
+        self.ctr += 1;
 
-        // create a channel for sending the final response
-        let (end_tx, end_rx) = oneshot::channel();
-
-        // create a channel for sending responses for this particular client call
-        // this should queue up responses
-        let (tx, rx) = mpsc::unbounded_channel();
-
-        debug!("EX[{}]: adding handler result to the handlers queue", id);
-        {
-            let mut handlers = self.results.write();
-            handlers.push_back(HandlerResult {
-                id,
-                end: Some(end_tx),
-                sender: tx,
-                waker: None,
-            });
-        }
-
-        debug!("EX[{}]: send the command to the server", id);
         let cmd_str = format!("{}{} {}\r\n", TAG_PREFIX, id, cmd);
         self.conn.write_all(cmd_str.as_bytes()).await?;
         self.conn.flush().await?;
 
-        debug!("EX[{}]: hellosu", id);
-        let q = self.results.clone();
-        // let end = Box::new(end_rx.map_err(|err| Error::from).map(move |resp| resp));
-        let end = Box::new(end_rx.map_err(Error::from).map(move |resp| {
-            debug!("EX[{}]: -end result- {:?}", id, resp);
-            // pop the first entry from the list
-            let mut results = q.write();
-            results.pop_front();
-            resp
-        }));
+        let (tx, rx) = mpsc::unbounded_channel();
+        self.cmd_tx.send((cmd, tx))?;
 
-        Ok((end, rx))
+        Ok(ResponseStream { inner: rx })
     }
 
-    /// Executes the CAPABILITY command
-    pub async fn capabilities(&mut self, force: bool) -> Result<()> {
-        {
-            let caps = self.caps.read();
-            if caps.is_some() && !force {
-                return Ok(());
+    pub async fn has_capability(&mut self, cap: impl AsRef<str>) -> Result<bool> {
+        // TODO: cache capabilities if needed?
+        let cap = cap.as_ref();
+        let cap = parse_capability(cap)?;
+
+        let resp = self.execute(Command::Capability).await?;
+        let (_, data) = resp.wait().await?;
+
+        for resp in data {
+            if let Response::Capabilities(caps) = resp {
+                return Ok(caps.contains(&cap));
             }
+            // debug!("cap: {:?}", resp);
         }
 
-        let cmd = Command::Capability;
-        // debug!("sending: {:?} {:?}", cmd, cmd.to_string());
-        let (result, intermediate) = self
-            .execute(cmd)
-            .await
-            .context("error executing CAPABILITY command")?;
-        let _ = result.await?;
-
-        if let Some(Response::Capabilities(new_caps)) = UnboundedReceiverStream::new(intermediate)
-            .filter(|resp| future::ready(matches!(resp, Response::Capabilities(_))))
-            .next()
-            .await
-        {
-            debug!("FOUND NEW CAPABILITIES: {:?}", new_caps);
-            let mut caps = self.caps.write();
-            *caps = Some(new_caps.iter().cloned().collect());
-        }
-
-        Ok(())
+        Ok(false)
     }
 
-    /// Attempts to upgrade this connection using STARTTLS
     pub async fn upgrade(mut self) -> Result<Client<TlsStream<C>>> {
         // TODO: make sure STARTTLS is in the capability list
         if !self.has_capability("STARTTLS").await? {
@@ -193,17 +115,17 @@ where
         }
 
         // first, send the STARTTLS command
-        let (resp, _) = self.execute(Command::Starttls).await?;
-        let resp = resp.await?;
+        let mut resp = self.execute(Command::Starttls).await?;
+        let resp = resp.next().await.unwrap();
         debug!("server response to starttls: {:?}", resp);
 
         debug!("sending exit for upgrade");
-        self.exit_tx.send(()).await?;
+        // TODO: check that the channel is still open?
+        self.exit_tx.send(()).unwrap();
         let reader = self.listener_handle.await??;
         let writer = self.conn;
 
         let conn = reader.unsplit(writer);
-
         let server_name = &self.config.hostname;
 
         let mut tls_config = RustlsConfig::new();
@@ -217,147 +139,106 @@ where
 
         Ok(Client::new(stream, self.config))
     }
+}
 
-    /// Check if this client has a particular capability
-    pub async fn has_capability(&mut self, cap: impl AsRef<str>) -> Result<bool> {
-        let cap = cap.as_ref().to_owned();
-        debug!("checking for the capability: {:?}", cap);
-        let cap = parse_capability(cap)?;
+pub struct ResponseStream {
+    inner: mpsc::UnboundedReceiver<Response>,
+}
 
-        self.capabilities(false).await?;
-        let caps = self.caps.read();
-        // TODO: refresh caps
+impl ResponseStream {
+    /// Retrieves just the DONE item in the stream, discarding the rest
+    pub async fn done(mut self) -> Result<Option<ResponseDone>> {
+        while let Some(resp) = self.inner.recv().await {
+            if let Response::Done(done) = resp {
+                return Ok(Some(done));
+            }
+        }
+        Ok(None)
+    }
 
-        let caps = caps.as_ref().unwrap();
-        let result = caps.contains(&cap);
-        debug!("cap result: {:?}", result);
-        Ok(result)
+    /// Waits for the entire stream to finish, returning the DONE status and the stream
+    pub async fn wait(mut self) -> Result<(Option<ResponseDone>, Vec<Response>)> {
+        let mut done = None;
+        let mut vec = Vec::new();
+        while let Some(resp) = self.inner.recv().await {
+            if let Response::Done(d) = resp {
+                done = Some(d);
+                break;
+            } else {
+                vec.push(resp);
+            }
+        }
+        Ok((done, vec))
     }
 }
 
-pub struct GreetingWaiter(GreetingState);
-
-impl Future for GreetingWaiter {
-    type Output = Response;
-    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        let (state, waker) = &mut *self.0.write();
-        debug!("g {:?}", state);
-        if waker.is_none() {
-            *waker = Some(cx.waker().clone());
-        }
-
-        match state.take() {
-            Some(v) => Poll::Ready(v),
-            None => Poll::Pending,
-        }
+impl Stream for ResponseStream {
+    type Item = Response;
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        self.inner.poll_recv(cx)
     }
 }
 
-/// Main listen loop for the application
+#[allow(unreachable_code)]
 async fn listen<C>(
-    conn: C,
-    caps: CapsLock,
-    results: ResultQueue,
-    mut exit: mpsc::Receiver<()>,
-    greeting: GreetingState,
-) -> Result<C>
+    conn: ReadHalf<C>,
+    mut cmd_rx: mpsc::UnboundedReceiver<Command2>,
+    greeting_tx: oneshot::Sender<()>,
+    mut exit_rx: oneshot::Receiver<()>,
+) -> Result<ReadHalf<C>>
 where
     C: AsyncRead + Unpin,
 {
-    // debug!("amogus");
     let mut reader = BufReader::new(conn);
-    let mut greeting = Some(greeting);
+    let mut greeting_tx = Some(greeting_tx);
+    let mut curr_cmd: Option<Command2> = None;
+    let mut exit_rx = exit_rx.map_err(|_| ()).shared();
+    // let mut exit_fut = Some(exit_rx.fuse());
+    // let mut fut1 = None;
 
     loop {
         let mut next_line = String::new();
-        let fut = reader.read_line(&mut next_line).fuse();
-        pin_mut!(fut);
-        let fut2 = exit.recv().fuse();
-        pin_mut!(fut2);
+        let read_fut = reader.read_line(&mut next_line).fuse();
+        pin_mut!(read_fut);
 
-        match future::select(fut, fut2).await {
-            Either::Left((res, _)) => {
-                let bytes = res.context("read failed")?;
-                if bytes == 0 {
-                    bail!("connection probably died");
-                }
+        // only listen for a new command if there isn't one already
+        let mut cmd_fut = if let Some(_) = curr_cmd {
+            // if there is one, just make a future that never resolves so it'll always pick the
+            // other options in the select.
+            future::pending().boxed().fuse()
+        } else {
+            cmd_rx.recv().boxed().fuse()
+        };
 
-                debug!("[LISTEN] got a new line {:?}", next_line);
-                let resp = parse_response(next_line)?;
-                debug!("[LISTEN] parsed as {:?}", resp);
+        select! {
+            _ = exit_rx => {
+                debug!("exiting the loop");
+                break;
+            }
 
-                // if this is the very first message, treat it as a greeting
-                if let Some(greeting) = greeting.take() {
-                    let (greeting, waker) = &mut *greeting.write();
-                    debug!("[LISTEN] received greeting!");
-                    *greeting = Some(resp.clone());
-                    if let Some(waker) = waker.take() {
-                        waker.wake();
-                    }
-                }
-
-                // update capabilities list
-                // TODO: probably not really necessary here (done somewhere else)?
-                if let Response::Capabilities(new_caps)
-                | Response::Data(ResponseData {
-                    status: Status::Ok,
-                    code: Some(ResponseCode::Capabilities(new_caps)),
-                    ..
-                }) = &resp
-                {
-                    let caps = &mut *caps.write();
-                    *caps = Some(new_caps.iter().cloned().collect());
-                    debug!("new caps: {:?}", caps);
-                }
-
-                match &resp {
-                    // bye
-                    Response::Data(ResponseData {
-                        status: Status::Bye,
-                        ..
-                    }) => {
-                        bail!("disconnected");
-                    }
-
-                    Response::Done(ResponseDone { tag, .. }) => {
-                        if tag.starts_with(TAG_PREFIX) {
-                            // let id = tag.trim_start_matches(TAG_PREFIX).parse::<usize>()?;
-                            debug!("[LISTEN] Done: {:?}", tag);
-                            let mut results = results.write();
-                            if let Some(HandlerResult { end, waker, .. }) =
-                                results.iter_mut().next()
-                            {
-                                if let Some(end) = end.take() {
-                                    end.send(resp).unwrap();
-                                }
-                                // *opt = Some(resp);
-                                if let Some(waker) = waker.take() {
-                                    waker.wake();
-                                }
-                            }
-                        }
-                    }
-
-                    _ => {
-                        debug!("[LISTEN] RESPONSE: {:?}", resp);
-                        let mut results = results.write();
-                        if let Some(HandlerResult { id, sender, .. }) = results.iter_mut().next() {
-                            // we don't really care if it fails to send
-                            // this just means that the other side has dropped the channel
-                            //
-                            // which is fine since that just means they don't care about
-                            // intermediate messages
-                            let _ = sender.send(resp);
-                            debug!("[LISTEN] pushed to intermediate for id {}", id);
-                            debug!("[LISTEN] res: {:?}", results);
-                        }
-                    } // _ => {}
+            cmd = cmd_fut => {
+                if curr_cmd.is_none() {
+                    curr_cmd = cmd;
                 }
             }
 
-            Either::Right((_, _)) => {
-                debug!("exiting read loop");
-                break;
+            len = read_fut => {
+                // res should not be None here
+                let resp = parse_response(next_line)?;
+
+                // if this is the very first response, then it's a greeting
+                if let Some(greeting_tx) = greeting_tx.take() {
+                    greeting_tx.send(());
+                }
+
+                if let Response::Done(_) = resp {
+                    // since this is the DONE message, clear curr_cmd so another one can be sent
+                    if let Some((_, cmd_tx)) = curr_cmd.take() {
+                        cmd_tx.send(resp)?;
+                    }
+                } else if let Some((ref cmd, ref mut cmd_tx)) = curr_cmd {
+                    cmd_tx.send(resp)?;
+                }
             }
         }
     }

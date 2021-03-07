@@ -12,6 +12,7 @@ use crossterm::{
     event::{self, Event, KeyCode, KeyEvent},
     style, terminal,
 };
+use futures::{future::FutureExt, select, stream::StreamExt};
 use tokio::{sync::mpsc, time};
 use tui::{
     backend::CrosstermBackend,
@@ -22,70 +23,42 @@ use tui::{
     Frame, Terminal,
 };
 
-use self::mail_tab::{MailTab, MailTabState};
+use crate::mail::MailEvent;
 
-// pub(crate) type FrameType<'a> = Frame<'a, CrosstermBackend<Stdout>>;
+use self::mail_tab::render_mail_tab;
+
+pub(crate) type FrameType<'a, 'b> = Frame<'a, CrosstermBackend<&'b mut Stdout>>;
 
 const FRAME_DURATION: Duration = Duration::from_millis(17);
 
 /// Main entrypoint for the UI
-pub async fn run_ui(mut stdout: Stdout, exit_tx: mpsc::Sender<()>) -> Result<()> {
+pub async fn run_ui(
+    mut stdout: Stdout,
+    exit_tx: mpsc::Sender<()>,
+    mut mail2ui_rx: mpsc::UnboundedReceiver<MailEvent>,
+) -> Result<()> {
     execute!(stdout, cursor::Hide, terminal::EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
 
     let backend = CrosstermBackend::new(&mut stdout);
     let mut term = Terminal::new(backend)?;
 
-    let mut mail_state = MailTabState::new();
+    let mut folders = Vec::<String>::new();
 
     loop {
         term.draw(|f| {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .margin(0)
-                .constraints([
-                    Constraint::Length(1),
-                    Constraint::Max(5000),
-                    // Constraint::Percentage(10),
-                    // Constraint::Percentage(80),
-                    // Constraint::Percentage(10),
-                ])
+                .constraints([Constraint::Length(1), Constraint::Max(5000)])
                 .split(f.size());
-
-            // let chunks2 = Layout::default()
-            //     .direction(Direction::Horizontal)
-            //     .margin(0)
-            //     .constraints([
-            //         Constraint::Length(20),
-            //         Constraint::Max(5000),
-            //         //
-            //     ])
-            //     .split(chunks[1]);
 
             // this is the title bar
             let titles = vec!["hellosu"].into_iter().map(Spans::from).collect();
             let tabs = Tabs::new(titles);
             f.render_widget(tabs, chunks[0]);
 
-            let mail_tab = MailTab;
-            f.render_stateful_widget(mail_tab, chunks[1], &mut mail_state);
-            // TODO: check active tab
-            // let items = [
-            //     ListItem::new("Osu"),
-            //     ListItem::new("Game").style(Style::default().add_modifier(Modifier::BOLD)),
-            // ];
-            // let dirlist = List::new(items)
-            //     .block(Block::default().title("List").borders(Borders::ALL))
-            //     .style(Style::default().fg(Color::White))
-            //     .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-            //     .highlight_symbol(">>");
-            // f.render_widget(dirlist, chunks2[0]);
-
-            // let block = Block::default().title("Block").borders(Borders::ALL);
-            // f.render_widget(block, chunks2[1]);
-
-            // let block = Block::default().title("Block 2").borders(Borders::ALL);
-            // f.render_widget(block, chunks[1]);
+            render_mail_tab(f, chunks[1], &folders);
         })?;
 
         let event = if event::poll(FRAME_DURATION)? {
@@ -105,17 +78,22 @@ pub async fn run_ui(mut stdout: Stdout, exit_tx: mpsc::Sender<()>) -> Result<()>
             None
         };
 
-        // approx 60fps
-        time::sleep(FRAME_DURATION).await;
+        select! {
+            mail_evt = mail2ui_rx.recv().fuse() => {
+                debug!("received mail event: {:?}", mail_evt);
+                // TODO: handle case that channel is closed later
+                let mail_evt = mail_evt.unwrap();
 
-        // if let Event::Input(input) = events.next()? {
-        //     match input {
-        //         Key::Char('q') => {
-        //             break;
-        //         }
-        //         _ => {}
-        //     }
-        // }
+                match mail_evt {
+                    MailEvent::FolderList(new_folders) => {
+                        folders = new_folders;
+                    }
+                }
+            }
+
+            // approx 60fps
+            _ = time::sleep(FRAME_DURATION).fuse() => {}
+        }
     }
 
     mem::drop(term);

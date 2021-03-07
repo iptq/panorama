@@ -1,4 +1,5 @@
 use anyhow::Result;
+use futures::stream::StreamExt;
 
 use crate::command::Command;
 use crate::response::{Response, ResponseDone, Status};
@@ -11,6 +12,8 @@ pub trait Auth {
     // TODO: return the unauthed client if failed?
     async fn perform_auth(self, client: ClientUnauthenticated) -> Result<ClientAuthenticated>;
 
+    /// Converts the wrappers around the client once the authentication has happened. Should only
+    /// be called by the `perform_auth` function.
     fn convert_client(client: ClientUnauthenticated) -> ClientAuthenticated {
         match client {
             ClientUnauthenticated::Encrypted(e) => ClientAuthenticated::Encrypted(e),
@@ -32,18 +35,25 @@ impl Auth for Plain {
             password: self.password,
         };
 
-        let (result, _) = client.execute(command).await?;
-        let result = result.await?;
+        let result = client.execute(command).await?;
+        let done = result.done().await?;
 
-        if !matches!(
-            result,
-            Response::Done(ResponseDone {
-                status: Status::Ok,
-                ..
-            })
-        ) {
-            bail!("unable to login: {:?}", result);
+        assert!(done.is_some());
+        let done = done.unwrap();
+
+        if done.status != Status::Ok {
+            bail!("unable to login: {:?}", done);
         }
+
+        // if !matches!(
+        //     result,
+        //     Response::Done(ResponseDone {
+        //         status: Status::Ok,
+        //         ..
+        //     })
+        // ) {
+        //     bail!("unable to login: {:?}", result);
+        // }
 
         Ok(<Self as Auth>::convert_client(client))
     }

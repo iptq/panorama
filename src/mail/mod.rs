@@ -21,6 +21,7 @@ use tokio_stream::wrappers::WatchStream;
 use crate::config::{Config, ConfigWatcher, ImapAuth, MailAccountConfig, TlsMethod};
 
 /// Command sent to the mail thread by something else (i.e. UI)
+#[derive(Debug)]
 pub enum MailCommand {
     /// Refresh the list
     Refresh,
@@ -30,6 +31,7 @@ pub enum MailCommand {
 }
 
 /// Possible events returned from the server that should be sent to the UI
+#[derive(Debug)]
 pub enum MailEvent {
     /// Got the list of folders
     FolderList(Vec<String>),

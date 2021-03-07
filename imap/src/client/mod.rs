@@ -50,9 +50,9 @@ use tokio_rustls::{
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::command::Command;
-use crate::response::{Response, ResponseData, ResponseDone};
+use crate::response::{MailboxData, Response, ResponseData, ResponseDone};
 
-pub use self::inner::{Client, ResponseFuture, ResponseStream};
+pub use self::inner::{Client, ResponseStream};
 
 /// Struct used to start building the config for a client.
 ///
@@ -93,12 +93,12 @@ impl ClientConfig {
             let dnsname = DNSNameRef::try_from_ascii_str(hostname).unwrap();
             let conn = tls_config.connect(dnsname, conn).await?;
 
-            let inner = Client::new(conn, self);
-            inner.wait_for_greeting().await;
+            let mut inner = Client::new(conn, self);
+            inner.wait_for_greeting().await?;
             return Ok(ClientUnauthenticated::Encrypted(inner));
         } else {
-            let inner = Client::new(conn, self);
-            inner.wait_for_greeting().await;
+            let mut inner = Client::new(conn, self);
+            inner.wait_for_greeting().await?;
             return Ok(ClientUnauthenticated::Unencrypted(inner));
         }
     }
@@ -121,7 +121,7 @@ impl ClientUnauthenticated {
     }
 
     /// Exposing low-level execute
-    async fn execute(&mut self, cmd: Command) -> Result<(ResponseFuture, ResponseStream)> {
+    async fn execute(&mut self, cmd: Command) -> Result<ResponseStream> {
         match self {
             ClientUnauthenticated::Encrypted(e) => e.execute(cmd).await,
             ClientUnauthenticated::Unencrypted(e) => e.execute(cmd).await,
@@ -137,12 +137,6 @@ impl ClientUnauthenticated {
     }
 }
 
-#[derive(Debug)]
-pub struct ResponseCombined {
-    pub data: Vec<Response>,
-    pub done: ResponseDone,
-}
-
 pub enum ClientAuthenticated {
     Encrypted(Client<TlsStream<TcpStream>>),
     Unencrypted(Client<TcpStream>),
@@ -150,43 +144,11 @@ pub enum ClientAuthenticated {
 
 impl ClientAuthenticated {
     /// Exposing low-level execute
-    async fn execute(&mut self, cmd: Command) -> Result<(ResponseFuture, ResponseStream)> {
+    async fn execute(&mut self, cmd: Command) -> Result<ResponseStream> {
         match self {
             ClientAuthenticated::Encrypted(e) => e.execute(cmd).await,
             ClientAuthenticated::Unencrypted(e) => e.execute(cmd).await,
         }
-    }
-
-    /// A wrapper around `execute` that waits for the response and returns a combined data
-    /// structure containing the intermediate results as well as the final status
-    async fn execute_combined(&mut self, cmd: Command) -> Result<ResponseCombined> {
-        let (resp, mut stream) = self.execute(cmd).await?;
-        let mut resp = resp.into_stream(); // turn into stream to avoid mess with returning futures from select
-
-        let mut data = Vec::new();
-        debug!("[COMBI] loop");
-        let done = loop {
-            let fut1 = resp.next().fuse();
-            let fut2 = stream.recv().fuse();
-            pin_mut!(fut1);
-            pin_mut!(fut2);
-
-            match future::select(fut1, fut2).await {
-                Either::Left((Some(Ok(Response::Done(done))), _)) => {
-                    debug!("[COMBI] left: {:?}", done);
-                    break done;
-                }
-                Either::Left(_) => unreachable!("got non-Response::Done from listen!"),
-
-                Either::Right((Some(resp), _)) => {
-                    debug!("[COMBI] right: {:?}", resp);
-                    data.push(resp);
-                }
-                Either::Right(_) => unreachable!(),
-            }
-        };
-
-        Ok(ResponseCombined { data, done })
     }
 
     /// Runs the LIST command
@@ -196,29 +158,17 @@ impl ClientAuthenticated {
             mailbox: "*".to_owned(),
         };
 
-        let res = self.execute_combined(cmd).await?;
-        debug!("res: {:?}", res);
-        todo!()
+        let res = self.execute(cmd).await?;
+        let (_, data) = res.wait().await?;
 
-        // let mut folders = Vec::new();
-        // loop {
-        //     let st_next = st.recv();
-        //     pin_mut!(st_next);
+        let mut folders = Vec::new();
+        for resp in data {
+            if let Response::MailboxData(MailboxData::List { name, .. }) = resp {
+                folders.push(name.to_owned());
+            }
+        }
 
-        //     match future::select(resp, st_next).await {
-        //         Either::Left((v, _)) => {
-        //             break;
-        //         }
-
-        //         Either::Right((v, _) ) => {
-        //             debug!("RESP: {:?}", v);
-        //            //  folders.push(v);
-        //         }
-        //     }
-        // }
-
-        // let resp = resp.await?;
-        // debug!("list response: {:?}", resp);
+        Ok(folders)
     }
 
     /// Runs the SELECT command
@@ -226,11 +176,12 @@ impl ClientAuthenticated {
         let cmd = Command::Select {
             mailbox: mailbox.as_ref().to_owned(),
         };
-        let (resp, mut st) = self.execute(cmd).await?;
+        let mut stream = self.execute(cmd).await?;
+        // let (resp, mut st) = self.execute(cmd).await?;
         debug!("execute called returned...");
-        debug!("ST: {:?}", st.recv().await);
-        let resp = resp.await?;
-        debug!("select response: {:?}", resp);
+        debug!("ST: {:?}", stream.next().await);
+        // let resp = resp.await?;
+        // debug!("select response: {:?}", resp);
 
         // nuke the capabilities cache
         self.nuke_capabilities();
@@ -240,10 +191,10 @@ impl ClientAuthenticated {
 
     /// Runs the IDLE command
     #[cfg(feature = "rfc2177-idle")]
-    pub async fn idle(&mut self) -> Result<UnboundedReceiverStream<Response>> {
+    pub async fn idle(&mut self) -> Result<ResponseStream> {
         let cmd = Command::Idle;
-        let (_, stream) = self.execute(cmd).await?;
-        Ok(UnboundedReceiverStream::new(stream))
+        let stream = self.execute(cmd).await?;
+        Ok(stream)
     }
 
     fn nuke_capabilities(&mut self) {
