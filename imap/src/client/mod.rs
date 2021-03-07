@@ -39,17 +39,13 @@ mod inner;
 use std::sync::Arc;
 
 use anyhow::Result;
-use futures::{
-    future::{self, Either, FutureExt},
-    stream::StreamExt,
-};
 use tokio::net::TcpStream;
 use tokio_rustls::{
     client::TlsStream, rustls::ClientConfig as RustlsConfig, webpki::DNSNameRef, TlsConnector,
 };
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
-use crate::command::Command;
+use crate::command::{Command, FetchItems, SearchCriteria};
 use crate::response::{MailboxData, Response, ResponseData, ResponseDone};
 
 pub use self::inner::{Client, ResponseStream};
@@ -176,17 +172,47 @@ impl ClientAuthenticated {
         let cmd = Command::Select {
             mailbox: mailbox.as_ref().to_owned(),
         };
-        let mut stream = self.execute(cmd).await?;
-        // let (resp, mut st) = self.execute(cmd).await?;
-        debug!("execute called returned...");
-        debug!("ST: {:?}", stream.next().await);
-        // let resp = resp.await?;
-        // debug!("select response: {:?}", resp);
+        let stream = self.execute(cmd).await?;
+        let (done, data) = stream.wait().await?;
+        for resp in data {
+            debug!("execute called returned: {:?}", resp);
+        }
 
         // nuke the capabilities cache
         self.nuke_capabilities();
 
         Ok(())
+    }
+
+    /// Runs the SEARCH command
+    pub async fn uid_search(&mut self) -> Result<Vec<u32>> {
+        let cmd = Command::UidSearch {
+            criteria: SearchCriteria::All,
+        };
+        let stream = self.execute(cmd).await?;
+        let (_, data) = stream.wait().await?;
+        for resp in data {
+            if let Response::MailboxData(MailboxData::Search(uids)) = resp {
+                return Ok(uids);
+            }
+        }
+        bail!("could not find the SEARCH response")
+    }
+
+    /// Runs the UID FETCH command
+    pub async fn uid_fetch(&mut self, uids: &[u32]) -> Result<()> {
+        let cmd = Command::UidFetch {
+            uids: uids.to_vec(),
+            items: FetchItems::All,
+        };
+        debug!("uid fetch: {}", cmd);
+        let stream = self.execute(cmd).await?;
+        let (done, data) = stream.wait().await?;
+        debug!("done: {:?} {:?}", done, data);
+        for resp in data {
+            debug!("uid fetch: {:?}", resp);
+        }
+        todo!()
     }
 
     /// Runs the IDLE command

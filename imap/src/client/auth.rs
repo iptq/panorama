@@ -1,5 +1,4 @@
 use anyhow::Result;
-use futures::stream::StreamExt;
 
 use crate::command::Command;
 use crate::response::{Response, ResponseDone, Status};

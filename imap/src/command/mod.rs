@@ -16,6 +16,17 @@ pub enum Command {
         reference: String,
         mailbox: String,
     },
+    Search {
+        criteria: SearchCriteria,
+    },
+    UidSearch {
+        criteria: SearchCriteria,
+    },
+    UidFetch {
+        // TODO: do sequence-set
+        uids: Vec<u32>,
+        items: FetchItems,
+    },
 
     #[cfg(feature = "rfc2177-idle")]
     Idle,
@@ -25,14 +36,8 @@ impl fmt::Debug for Command {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use Command::*;
         match self {
-            Capability => write!(f, "CAPABILITY"),
-            Starttls => write!(f, "STARTTLS"),
             Login { .. } => write!(f, "LOGIN"),
-            Select { mailbox } => write!(f, "SELECT {}", mailbox),
-            List { reference, mailbox } => write!(f, "LIST {:?} {:?}", reference, mailbox),
-
-            #[cfg(feature = "rfc2177-idle")]
-            Idle => write!(f, "IDLE"),
+            _ => <Self as fmt::Display>::fmt(self, f),
         }
     }
 }
@@ -45,10 +50,53 @@ impl fmt::Display for Command {
             Starttls => write!(f, "STARTTLS"),
             Login { username, password } => write!(f, "LOGIN {:?} {:?}", username, password),
             Select { mailbox } => write!(f, "SELECT {}", mailbox),
+            Search { criteria } => write!(f, "SEARCH {}", criteria),
+            UidSearch { criteria } => write!(f, "UID SEARCH {}", criteria),
             List { reference, mailbox } => write!(f, "LIST {:?} {:?}", reference, mailbox),
+            UidFetch { uids, items } => write!(
+                f,
+                "UID FETCH {} {}",
+                uids.iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+                    .join(","),
+                items
+            ),
 
             #[cfg(feature = "rfc2177-idle")]
             Idle => write!(f, "IDLE"),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum SearchCriteria {
+    All,
+}
+
+impl fmt::Display for SearchCriteria {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use SearchCriteria::*;
+        match self {
+            All => write!(f, "ALL"),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum FetchItems {
+    All,
+    Fast,
+    Full,
+}
+
+impl fmt::Display for FetchItems {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use FetchItems::*;
+        match self {
+            All => write!(f, "ALL"),
+            Fast => write!(f, "FAST"),
+            Full => write!(f, "FULL"),
         }
     }
 }

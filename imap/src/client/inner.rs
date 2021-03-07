@@ -223,6 +223,7 @@ where
             }
 
             len = read_fut => {
+                trace!("read line {:?}", next_line);
                 // res should not be None here
                 let resp = parse_response(next_line)?;
 

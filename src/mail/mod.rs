@@ -135,16 +135,18 @@ async fn imap_main(acct: MailAccountConfig, mail2ui_tx: UnboundedSender<MailEven
         authed.select("INBOX").await?;
 
         loop {
-            debug!("listing all mailboxes...");
             let folder_list = authed.list().await?;
             debug!("mailbox list: {:?}", folder_list);
             let _ = mail2ui_tx.send(MailEvent::FolderList(folder_list));
 
+            let message_list = authed.uid_search().await?;
+            authed.uid_fetch(&message_list).await?;
+
             let mut idle_stream = authed.idle().await?;
 
             loop {
-                idle_stream.next().await;
-                debug!("got an event");
+                let evt = idle_stream.next().await;
+                debug!("got an event: {:?}", evt);
 
                 if false {
                     break;

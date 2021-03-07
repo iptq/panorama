@@ -152,6 +152,7 @@ fn build_msg_att_static(pair: Pair<Rule>) -> AttributeValue {
             index: None,
             data: None,
         },
+        Rule::msg_att_static_uid => AttributeValue::Uid(build_number(unwrap1(unwrap1(pair)))),
         _ => unreachable!("{:#?}", pair),
     }
 }
@@ -312,6 +313,10 @@ fn build_mailbox_data(pair: Pair<Rule>) -> MailboxData {
                 delimiter,
                 name,
             }
+        }
+        Rule::mailbox_data_search => {
+            let uids = pair.into_inner().map(build_number).collect();
+            MailboxData::Search(uids)
         }
         _ => unreachable!("{:#?}", pair),
     }
