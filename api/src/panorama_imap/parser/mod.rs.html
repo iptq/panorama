@@ -533,6 +533,11 @@
 <span id="530">530</span>
 <span id="531">531</span>
 <span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Module that implements parsers for all of the IMAP types.</span>
 
@@ -688,6 +693,7 @@
             <span class="ident">index</span>: <span class="prelude-val">None</span>,
             <span class="ident">data</span>: <span class="prelude-val">None</span>,
         },
+        <span class="ident">Rule</span>::<span class="ident">msg_att_static_uid</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AttributeValue</span>::<span class="ident">Uid</span>(<span class="ident">build_number</span>(<span class="ident">unwrap1</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>)))),
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
     }
 }
@@ -848,6 +854,10 @@
                 <span class="ident">delimiter</span>,
                 <span class="ident">name</span>,
             }
+        }
+        <span class="ident">Rule</span>::<span class="ident">mailbox_data_search</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">uids</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>().<span class="ident">map</span>(<span class="ident">build_number</span>).<span class="ident">collect</span>();
+            <span class="ident">MailboxData</span>::<span class="ident">Search</span>(<span class="ident">uids</span>)
         }
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
     }

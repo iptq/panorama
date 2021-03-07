@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["panorama_imap"] = [{"text":"impl Display for Command","synthetic":false,"types":[]}];
+implementors["panorama_imap"] = [{"text":"impl Display for Command","synthetic":false,"types":[]},{"text":"impl Display for SearchCriteria","synthetic":false,"types":[]},{"text":"impl Display for FetchItems","synthetic":false,"types":[]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
