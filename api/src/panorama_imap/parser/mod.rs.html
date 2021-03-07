@@ -988,21 +988,21 @@
 
         <span class="macro">assert_eq</span><span class="macro">!</span>(
             <span class="ident">parse_response</span>(<span class="string">&quot;* OK IMAP4rev1 Service Ready\r\n&quot;</span>),
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Data</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Data</span>(<span class="ident">ResponseData</span> {
                 <span class="ident">status</span>: <span class="ident">Status</span>::<span class="prelude-val">Ok</span>,
                 <span class="ident">code</span>: <span class="prelude-val">None</span>,
                 <span class="ident">information</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;IMAP4rev1 Service Ready&quot;</span>.<span class="ident">to_owned</span>()),
-            })
+            }))
         );
 
         <span class="macro">assert_eq</span><span class="macro">!</span>(
             <span class="ident">parse_response</span>(<span class="string">&quot;a001 OK LOGIN completed\r\n&quot;</span>),
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Done</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Done</span>(<span class="ident">ResponseDone</span> {
                 <span class="ident">tag</span>: <span class="string">&quot;a001&quot;</span>.<span class="ident">to_owned</span>(),
                 <span class="ident">status</span>: <span class="ident">Status</span>::<span class="prelude-val">Ok</span>,
                 <span class="ident">code</span>: <span class="prelude-val">None</span>,
                 <span class="ident">information</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;LOGIN completed&quot;</span>.<span class="ident">to_owned</span>()),
-            })
+            }))
         );
 
         <span class="macro">assert_eq</span><span class="macro">!</span>(
@@ -1028,30 +1028,30 @@
 
         <span class="macro">assert_eq</span><span class="macro">!</span>(
             <span class="ident">parse_response</span>(<span class="string">&quot;* OK [UNSEEN 17] Message 17 is the first unseen message\r\n&quot;</span>),
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Data</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Data</span>(<span class="ident">ResponseData</span> {
                 <span class="ident">status</span>: <span class="ident">Status</span>::<span class="prelude-val">Ok</span>,
                 <span class="ident">code</span>: <span class="prelude-val">Some</span>(<span class="ident">ResponseCode</span>::<span class="ident">Unseen</span>(<span class="number">17</span>)),
                 <span class="ident">information</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;Message 17 is the first unseen message&quot;</span>.<span class="ident">to_owned</span>()),
-            })
+            }))
         );
 
         <span class="macro">assert_eq</span><span class="macro">!</span>(
             <span class="ident">parse_response</span>(<span class="string">&quot;* OK [UIDVALIDITY 3857529045] UIDs valid\r\n&quot;</span>),
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Data</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Data</span>(<span class="ident">ResponseData</span> {
                 <span class="ident">status</span>: <span class="ident">Status</span>::<span class="prelude-val">Ok</span>,
                 <span class="ident">code</span>: <span class="prelude-val">Some</span>(<span class="ident">ResponseCode</span>::<span class="ident">UidValidity</span>(<span class="number">3857529045</span>)),
                 <span class="ident">information</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;UIDs valid&quot;</span>.<span class="ident">to_owned</span>()),
-            })
+            }))
         );
 
         <span class="macro">assert_eq</span><span class="macro">!</span>(
             <span class="ident">parse_response</span>(<span class="string">&quot;a002 OK [READ-WRITE] SELECT completed\r\n&quot;</span>),
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Done</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Done</span>(<span class="ident">ResponseDone</span> {
                 <span class="ident">tag</span>: <span class="string">&quot;a002&quot;</span>.<span class="ident">to_owned</span>(),
                 <span class="ident">status</span>: <span class="ident">Status</span>::<span class="prelude-val">Ok</span>,
                 <span class="ident">code</span>: <span class="prelude-val">Some</span>(<span class="ident">ResponseCode</span>::<span class="ident">ReadWrite</span>),
                 <span class="ident">information</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;SELECT completed&quot;</span>.<span class="ident">to_owned</span>()),
-            })
+            }))
         );
 
         <span class="macro">assert_eq</span><span class="macro">!</span>(
