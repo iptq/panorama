@@ -447,21 +447,21 @@ mod tests {
 
         assert_eq!(
             parse_response("* OK IMAP4rev1 Service Ready\r\n"),
-            Ok(Response::Data {
+            Ok(Response::Data(ResponseData {
                 status: Status::Ok,
                 code: None,
                 information: Some("IMAP4rev1 Service Ready".to_owned()),
-            })
+            }))
         );
 
         assert_eq!(
             parse_response("a001 OK LOGIN completed\r\n"),
-            Ok(Response::Done {
+            Ok(Response::Done(ResponseDone {
                 tag: "a001".to_owned(),
                 status: Status::Ok,
                 code: None,
                 information: Some("LOGIN completed".to_owned()),
-            })
+            }))
         );
 
         assert_eq!(
@@ -487,30 +487,30 @@ mod tests {
 
         assert_eq!(
             parse_response("* OK [UNSEEN 17] Message 17 is the first unseen message\r\n"),
-            Ok(Response::Data {
+            Ok(Response::Data(ResponseData {
                 status: Status::Ok,
                 code: Some(ResponseCode::Unseen(17)),
                 information: Some("Message 17 is the first unseen message".to_owned()),
-            })
+            }))
         );
 
         assert_eq!(
             parse_response("* OK [UIDVALIDITY 3857529045] UIDs valid\r\n"),
-            Ok(Response::Data {
+            Ok(Response::Data(ResponseData {
                 status: Status::Ok,
                 code: Some(ResponseCode::UidValidity(3857529045)),
                 information: Some("UIDs valid".to_owned()),
-            })
+            }))
         );
 
         assert_eq!(
             parse_response("a002 OK [READ-WRITE] SELECT completed\r\n"),
-            Ok(Response::Done {
+            Ok(Response::Done(ResponseDone {
                 tag: "a002".to_owned(),
                 status: Status::Ok,
                 code: Some(ResponseCode::ReadWrite),
                 information: Some("SELECT completed".to_owned()),
-            })
+            }))
         );
 
         assert_eq!(
