@@ -456,108 +456,18 @@
 <span id="453">453</span>
 <span id="454">454</span>
 <span id="455">455</span>
-<span id="456">456</span>
-<span id="457">457</span>
-<span id="458">458</span>
-<span id="459">459</span>
-<span id="460">460</span>
-<span id="461">461</span>
-<span id="462">462</span>
-<span id="463">463</span>
-<span id="464">464</span>
-<span id="465">465</span>
-<span id="466">466</span>
-<span id="467">467</span>
-<span id="468">468</span>
-<span id="469">469</span>
-<span id="470">470</span>
-<span id="471">471</span>
-<span id="472">472</span>
-<span id="473">473</span>
-<span id="474">474</span>
-<span id="475">475</span>
-<span id="476">476</span>
-<span id="477">477</span>
-<span id="478">478</span>
-<span id="479">479</span>
-<span id="480">480</span>
-<span id="481">481</span>
-<span id="482">482</span>
-<span id="483">483</span>
-<span id="484">484</span>
-<span id="485">485</span>
-<span id="486">486</span>
-<span id="487">487</span>
-<span id="488">488</span>
-<span id="489">489</span>
-<span id="490">490</span>
-<span id="491">491</span>
-<span id="492">492</span>
-<span id="493">493</span>
-<span id="494">494</span>
-<span id="495">495</span>
-<span id="496">496</span>
-<span id="497">497</span>
-<span id="498">498</span>
-<span id="499">499</span>
-<span id="500">500</span>
-<span id="501">501</span>
-<span id="502">502</span>
-<span id="503">503</span>
-<span id="504">504</span>
-<span id="505">505</span>
-<span id="506">506</span>
-<span id="507">507</span>
-<span id="508">508</span>
-<span id="509">509</span>
-<span id="510">510</span>
-<span id="511">511</span>
-<span id="512">512</span>
-<span id="513">513</span>
-<span id="514">514</span>
-<span id="515">515</span>
-<span id="516">516</span>
-<span id="517">517</span>
-<span id="518">518</span>
-<span id="519">519</span>
-<span id="520">520</span>
-<span id="521">521</span>
-<span id="522">522</span>
-<span id="523">523</span>
-<span id="524">524</span>
-<span id="525">525</span>
-<span id="526">526</span>
-<span id="527">527</span>
-<span id="528">528</span>
-<span id="529">529</span>
-<span id="530">530</span>
-<span id="531">531</span>
-<span id="532">532</span>
-<span id="533">533</span>
-<span id="534">534</span>
-<span id="535">535</span>
-<span id="536">536</span>
-<span id="537">537</span>
-<span id="538">538</span>
-<span id="539">539</span>
-<span id="540">540</span>
-<span id="541">541</span>
-<span id="542">542</span>
-<span id="543">543</span>
-<span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
-<span id="547">547</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Module that implements parsers for all of the IMAP types.</span>
 
 <span class="kw">mod</span> <span class="ident">literal</span>;
 
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">mod</span> <span class="ident">tests</span>;
+
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">mem</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
 
-<span class="kw">use</span> <span class="ident">pest</span>::{<span class="ident">error</span>::<span class="ident">Error</span>, <span class="ident">iterators</span>::<span class="ident">Pair</span>, <span class="ident">ParseResult</span> <span class="kw">as</span> <span class="ident">PestResult</span>, <span class="ident">Parser</span>, <span class="ident">ParserState</span>};
+<span class="kw">use</span> <span class="ident">pest</span>::{<span class="ident">error</span>::<span class="ident">Error</span>, <span class="ident">iterators</span>::<span class="ident">Pair</span>, <span class="ident">Parser</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">response</span>::<span class="kw-2">*</span>;
 
@@ -702,7 +612,7 @@
 
     <span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
         <span class="ident">Rule</span>::<span class="ident">msg_att_static_internaldate</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="ident">AttributeValue</span>::<span class="ident">InternalDate</span>(<span class="ident">build_string</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>)))
+            <span class="ident">AttributeValue</span>::<span class="ident">InternalDate</span>(<span class="ident">build_string</span>(<span class="ident">unwrap1</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>))))
         }
         <span class="ident">Rule</span>::<span class="ident">msg_att_static_rfc822_size</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AttributeValue</span>::<span class="ident">Rfc822Size</span>(<span class="ident">build_number</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>))),
         <span class="ident">Rule</span>::<span class="ident">msg_att_static_envelope</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AttributeValue</span>::<span class="ident">Envelope</span>(<span class="ident">build_envelope</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>))),
@@ -717,9 +627,32 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">build_envelope</span>(<span class="ident">_pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Envelope</span> {
+<span class="kw">fn</span> <span class="ident">build_envelope</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Envelope</span> {
     <span class="comment">// TODO: do this</span>
-    <span class="ident">Envelope</span>::<span class="ident">default</span>()
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
+    <span class="kw">let</span> <span class="ident">date</span> <span class="op">=</span> <span class="ident">build_nstring</span>(<span class="ident">unwrap1</span>(<span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>()));
+    <span class="kw">let</span> <span class="ident">subject</span> <span class="op">=</span> <span class="ident">build_nstring</span>(<span class="ident">unwrap1</span>(<span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>()));
+    <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(); <span class="comment">// env_from</span>
+    <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(); <span class="comment">// env_sender</span>
+    <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(); <span class="comment">// env_reply_to</span>
+    <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(); <span class="comment">// env_to</span>
+    <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(); <span class="comment">// env_cc</span>
+    <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(); <span class="comment">// env_bcc</span>
+    <span class="kw">let</span> <span class="ident">in_reply_to</span> <span class="op">=</span> <span class="ident">build_nstring</span>(<span class="ident">unwrap1</span>(<span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>()));
+    <span class="kw">let</span> <span class="ident">message_id</span> <span class="op">=</span> <span class="ident">build_nstring</span>(<span class="ident">unwrap1</span>(<span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>()));
+
+    <span class="ident">Envelope</span> {
+        <span class="ident">date</span>,
+        <span class="ident">subject</span>,
+        <span class="ident">from</span>: <span class="prelude-val">None</span>,
+        <span class="ident">sender</span>: <span class="prelude-val">None</span>,
+        <span class="ident">reply_to</span>: <span class="prelude-val">None</span>,
+        <span class="ident">to</span>: <span class="prelude-val">None</span>,
+        <span class="ident">cc</span>: <span class="prelude-val">None</span>,
+        <span class="ident">bcc</span>: <span class="prelude-val">None</span>,
+        <span class="ident">in_reply_to</span>,
+        <span class="ident">message_id</span>,
+    }
 }
 
 <span class="kw">fn</span> <span class="ident">build_resp_cond_state</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Status</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ResponseCode</span><span class="op">&gt;</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) {
@@ -943,17 +876,26 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// [1]: self::build_string</span>
 <span class="kw">fn</span> <span class="ident">build_nstring</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">nil</span>) {
-        <span class="kw">return</span> <span class="prelude-val">None</span>;
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">nstring</span>));
+    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">unwrap1</span>(<span class="ident">pair</span>);
+    <span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
+        <span class="ident">Rule</span>::<span class="ident">nil</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+        <span class="ident">Rule</span>::<span class="ident">string</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">build_string</span>(<span class="ident">pair</span>)),
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
     }
-
-    <span class="prelude-val">Some</span>(<span class="ident">build_string</span>(<span class="ident">pair</span>))
 }
 
 <span class="doccomment">/// Extracts a string-type, discarding the surrounding quotes and unescaping the escaped characters</span>
 <span class="kw">fn</span> <span class="ident">build_string</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
-    <span class="comment">// TODO: actually get rid of the quotes and escaped chars</span>
-    <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">to_owned</span>()
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">string</span>));
+    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">unwrap1</span>(<span class="ident">pair</span>);
+
+    <span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
+        <span class="ident">Rule</span>::<span class="ident">literal</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">build_literal</span>(<span class="ident">pair</span>),
+        <span class="comment">// TODO: escaping stuff?</span>
+        <span class="ident">Rule</span>::<span class="ident">quoted</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">trim_start_matches</span>(<span class="string">&quot;\&quot;&quot;</span>).<span class="ident">trim_end_matches</span>(<span class="string">&quot;\&quot;&quot;</span>).<span class="ident">replace</span>(<span class="string">&quot;\\\&quot;&quot;</span>, <span class="string">&quot;\&quot;&quot;</span>).<span class="ident">to_owned</span>(),
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
+    }
 }
 
 <span class="kw">fn</span> <span class="ident">parse_literal</span>(<span class="ident">s</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ParseResult</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
@@ -969,132 +911,6 @@
     <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
     <span class="kw">let</span> <span class="ident">literal_str</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
     <span class="ident">literal_str</span>.<span class="ident">as_str</span>().<span class="ident">to_owned</span>()
-}
-
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">response</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident">pest</span>::<span class="ident">Parser</span>;
-
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_literal</span>() {
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">parse_literal</span>(<span class="string">&quot;{7}\r\nhellosu&quot;</span>), <span class="prelude-val">Ok</span>(<span class="string">&quot;hellosu&quot;</span>.<span class="ident">to_owned</span>()));
-    }
-
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="attribute">#[<span class="ident">rustfmt</span>::<span class="ident">skip</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_capability</span>() {
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">parse_capability</span>(<span class="string">&quot;IMAP4rev1&quot;</span>), <span class="prelude-val">Ok</span>(<span class="ident">Capability</span>::<span class="ident">Imap4rev1</span>));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">parse_capability</span>(<span class="string">&quot;LOGINDISABLED&quot;</span>), <span class="prelude-val">Ok</span>(<span class="ident">Capability</span>::<span class="ident">Atom</span>(<span class="string">&quot;LOGINDISABLED&quot;</span>.<span class="ident">to_owned</span>())));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">parse_capability</span>(<span class="string">&quot;AUTH=PLAIN&quot;</span>), <span class="prelude-val">Ok</span>(<span class="ident">Capability</span>::<span class="ident">Auth</span>(<span class="string">&quot;PLAIN&quot;</span>.<span class="ident">to_owned</span>())));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">parse_capability</span>(<span class="string">&quot;auth=plain&quot;</span>), <span class="prelude-val">Ok</span>(<span class="ident">Capability</span>::<span class="ident">Auth</span>(<span class="string">&quot;PLAIN&quot;</span>.<span class="ident">to_owned</span>())));
-
-        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">parse_capability</span>(<span class="string">&quot;(OSU)&quot;</span>).<span class="ident">is_err</span>());
-        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">parse_capability</span>(<span class="string">&quot;\x01HELLO&quot;</span>).<span class="ident">is_err</span>());
-    }
-
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="attribute">#[<span class="ident">rustfmt</span>::<span class="ident">skip</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_nil</span>() {
-        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">Rfc3501</span>::<span class="ident">parse</span>(<span class="ident">Rule</span>::<span class="ident">nil</span>, <span class="string">&quot;NIL&quot;</span>).<span class="ident">is_ok</span>());
-        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">Rfc3501</span>::<span class="ident">parse</span>(<span class="ident">Rule</span>::<span class="ident">nil</span>, <span class="string">&quot;anything else&quot;</span>).<span class="ident">is_err</span>());
-    }
-
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_section_8</span>() {
-        <span class="comment">// this little exchange is from section 8 of rfc3501</span>
-        <span class="comment">// https://tools.ietf.org/html/rfc3501#section-8</span>
-
-        <span class="macro">assert_eq</span><span class="macro">!</span>(
-            <span class="ident">parse_response</span>(<span class="string">&quot;* OK IMAP4rev1 Service Ready\r\n&quot;</span>),
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Data</span>(<span class="ident">ResponseData</span> {
-                <span class="ident">status</span>: <span class="ident">Status</span>::<span class="prelude-val">Ok</span>,
-                <span class="ident">code</span>: <span class="prelude-val">None</span>,
-                <span class="ident">information</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;IMAP4rev1 Service Ready&quot;</span>.<span class="ident">to_owned</span>()),
-            }))
-        );
-
-        <span class="macro">assert_eq</span><span class="macro">!</span>(
-            <span class="ident">parse_response</span>(<span class="string">&quot;a001 OK LOGIN completed\r\n&quot;</span>),
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Done</span>(<span class="ident">ResponseDone</span> {
-                <span class="ident">tag</span>: <span class="string">&quot;a001&quot;</span>.<span class="ident">to_owned</span>(),
-                <span class="ident">status</span>: <span class="ident">Status</span>::<span class="prelude-val">Ok</span>,
-                <span class="ident">code</span>: <span class="prelude-val">None</span>,
-                <span class="ident">information</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;LOGIN completed&quot;</span>.<span class="ident">to_owned</span>()),
-            }))
-        );
-
-        <span class="macro">assert_eq</span><span class="macro">!</span>(
-            <span class="ident">parse_response</span>(<span class="string">&quot;* 18 EXISTS\r\n&quot;</span>),
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">MailboxData</span>(<span class="ident">MailboxData</span>::<span class="ident">Exists</span>(<span class="number">18</span>)))
-        );
-
-        <span class="macro">assert_eq</span><span class="macro">!</span>(
-            <span class="ident">parse_response</span>(<span class="string">&quot;* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\r\n&quot;</span>),
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">MailboxData</span>(<span class="ident">MailboxData</span>::<span class="ident">Flags</span>(<span class="macro">vec</span><span class="macro">!</span>[
-                <span class="ident">MailboxFlag</span>::<span class="ident">Answered</span>,
-                <span class="ident">MailboxFlag</span>::<span class="ident">Flagged</span>,
-                <span class="ident">MailboxFlag</span>::<span class="ident">Deleted</span>,
-                <span class="ident">MailboxFlag</span>::<span class="ident">Seen</span>,
-                <span class="ident">MailboxFlag</span>::<span class="ident">Draft</span>,
-            ])))
-        );
-
-        <span class="macro">assert_eq</span><span class="macro">!</span>(
-            <span class="ident">parse_response</span>(<span class="string">&quot;* 2 RECENT\r\n&quot;</span>),
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">MailboxData</span>(<span class="ident">MailboxData</span>::<span class="ident">Recent</span>(<span class="number">2</span>)))
-        );
-
-        <span class="macro">assert_eq</span><span class="macro">!</span>(
-            <span class="ident">parse_response</span>(<span class="string">&quot;* OK [UNSEEN 17] Message 17 is the first unseen message\r\n&quot;</span>),
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Data</span>(<span class="ident">ResponseData</span> {
-                <span class="ident">status</span>: <span class="ident">Status</span>::<span class="prelude-val">Ok</span>,
-                <span class="ident">code</span>: <span class="prelude-val">Some</span>(<span class="ident">ResponseCode</span>::<span class="ident">Unseen</span>(<span class="number">17</span>)),
-                <span class="ident">information</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;Message 17 is the first unseen message&quot;</span>.<span class="ident">to_owned</span>()),
-            }))
-        );
-
-        <span class="macro">assert_eq</span><span class="macro">!</span>(
-            <span class="ident">parse_response</span>(<span class="string">&quot;* OK [UIDVALIDITY 3857529045] UIDs valid\r\n&quot;</span>),
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Data</span>(<span class="ident">ResponseData</span> {
-                <span class="ident">status</span>: <span class="ident">Status</span>::<span class="prelude-val">Ok</span>,
-                <span class="ident">code</span>: <span class="prelude-val">Some</span>(<span class="ident">ResponseCode</span>::<span class="ident">UidValidity</span>(<span class="number">3857529045</span>)),
-                <span class="ident">information</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;UIDs valid&quot;</span>.<span class="ident">to_owned</span>()),
-            }))
-        );
-
-        <span class="macro">assert_eq</span><span class="macro">!</span>(
-            <span class="ident">parse_response</span>(<span class="string">&quot;a002 OK [READ-WRITE] SELECT completed\r\n&quot;</span>),
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Done</span>(<span class="ident">ResponseDone</span> {
-                <span class="ident">tag</span>: <span class="string">&quot;a002&quot;</span>.<span class="ident">to_owned</span>(),
-                <span class="ident">status</span>: <span class="ident">Status</span>::<span class="prelude-val">Ok</span>,
-                <span class="ident">code</span>: <span class="prelude-val">Some</span>(<span class="ident">ResponseCode</span>::<span class="ident">ReadWrite</span>),
-                <span class="ident">information</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;SELECT completed&quot;</span>.<span class="ident">to_owned</span>()),
-            }))
-        );
-
-        <span class="macro">assert_eq</span><span class="macro">!</span>(
-            <span class="ident">parse_response</span>(<span class="macro">concat</span><span class="macro">!</span>(
-                <span class="string">r#&quot;* 12 FETCH (FLAGS (\Seen) INTERNALDATE &quot;17-Jul-1996 02:44:25 -0700&quot; RFC822.SIZE 4286 ENVELOPE (&quot;Wed, 17 Jul 1996 02:23:25 -0700 (PDT)&quot; &quot;IMAP4rev1 WG mtg summary and minutes&quot; ((&quot;Terry Gray&quot; NIL &quot;gray&quot; &quot;cac.washington.edu&quot;)) ((&quot;Terry Gray&quot; NIL &quot;gray&quot; &quot;cac.washington.edu&quot;)) ((&quot;Terry Gray&quot; NIL &quot;gray&quot; &quot;cac.washington.edu&quot;)) ((NIL NIL &quot;imap&quot; &quot;cac.washington.edu&quot;)) ((NIL NIL &quot;minutes&quot; &quot;CNRI.Reston.VA.US&quot;)(&quot;John Klensin&quot; NIL &quot;KLENSIN&quot; &quot;MIT.EDU&quot;)) NIL NIL &quot;&lt;B27397-0100000@cac.washington.edu&gt;&quot;) BODY (&quot;TEXT&quot; &quot;PLAIN&quot; (&quot;CHARSET&quot; &quot;US-ASCII&quot;) NIL NIL &quot;7BIT&quot; 302892))&quot;#</span>,
-                <span class="string">&quot;\r\n&quot;</span>,
-            )),
-            <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">Fetch</span>(
-                <span class="number">12</span>,
-                <span class="macro">vec</span><span class="macro">!</span>[
-                    <span class="ident">AttributeValue</span>::<span class="ident">Flags</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">MailboxFlag</span>::<span class="ident">Seen</span>]),
-                    <span class="ident">AttributeValue</span>::<span class="ident">InternalDate</span>(<span class="string">&quot;\&quot;17-Jul-1996 02:44:25 -0700\&quot;&quot;</span>.<span class="ident">to_owned</span>()),
-                    <span class="ident">AttributeValue</span>::<span class="ident">Rfc822Size</span>(<span class="number">4286</span>),
-                    <span class="ident">AttributeValue</span>::<span class="ident">Envelope</span>(<span class="ident">Envelope</span>::<span class="ident">default</span>()),
-                    <span class="ident">AttributeValue</span>::<span class="ident">BodySection</span> {
-                        <span class="ident">section</span>: <span class="prelude-val">None</span>,
-                        <span class="ident">index</span>: <span class="prelude-val">None</span>,
-                        <span class="ident">data</span>: <span class="prelude-val">None</span>,
-                    },
-                ]
-            ))
-        );
-    }
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "panorama_imap";</script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>
