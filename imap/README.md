@@ -14,7 +14,7 @@ implementation of their commands:
     - AUTHENTICATE: not yet implemented
     - LOGIN: plain only
   - authenticated state:
-    - SELECT: not yet implemented
+    - SELECT: incomplete args
     - EXAMINE: not yet implemented
     - CREATE: not yet implemented
     - DELETE: not yet implemented
@@ -29,10 +29,10 @@ implementation of their commands:
     - CHECK: not yet implemented
     - CLOSE: not yet implemented
     - EXPUNGE: not yet implemented
-    - SEARCH: not yet implemented
-    - FETCH: not yet implemented
+    - SEARCH: incomplete args
+    - FETCH: incomplete args
     - STORE: not yet implemented
     - COPY: not yet implemented
-    - UID: not yet implemented
+    - UID: incomplete args
 - RFC2177 (IMAP4 IDLE)
   - IDLE: works?
