@@ -44,6 +44,7 @@ pub async fn run_ui(
     let mut term = Terminal::new(backend)?;
 
     let mut folders = Vec::<String>::new();
+    let mut messages = Vec::<String>::new();
 
     loop {
         term.draw(|f| {
@@ -58,7 +59,7 @@ pub async fn run_ui(
             let tabs = Tabs::new(titles);
             f.render_widget(tabs, chunks[0]);
 
-            render_mail_tab(f, chunks[1], &folders);
+            render_mail_tab(f, chunks[1], &folders, &messages);
         })?;
 
         let event = if event::poll(FRAME_DURATION)? {
@@ -87,6 +88,9 @@ pub async fn run_ui(
                 match mail_evt {
                     MailEvent::FolderList(new_folders) => {
                         folders = new_folders;
+                    }
+                    MailEvent::MessageList(new_messages) => {
+                        messages = new_messages;
                     }
                 }
             }

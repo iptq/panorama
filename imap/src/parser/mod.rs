@@ -25,6 +25,15 @@ pub fn parse_capability(s: impl AsRef<str>) -> ParseResult<Capability> {
     Ok(build_capability(pair))
 }
 
+pub fn parse_streamed_response(s: impl AsRef<str>) -> ParseResult<(Response, usize)> {
+    let mut pairs = Rfc3501::parse(Rule::streamed_response, s.as_ref())?;
+    let pair = unwrap1(pairs.next().unwrap());
+    let span = pair.as_span();
+    let range = span.end() - span.start();
+    let response = build_response(pair);
+    Ok((response, range))
+}
+
 pub fn parse_response(s: impl AsRef<str>) -> ParseResult<Response> {
     let mut pairs = Rfc3501::parse(Rule::response, s.as_ref())?;
     let pair = pairs.next().unwrap();
@@ -386,6 +395,7 @@ fn build_nstring(pair: Pair<Rule>) -> Option<String> {
     if matches!(pair.as_rule(), Rule::nil) {
         return None;
     }
+
     Some(build_string(pair))
 }
 

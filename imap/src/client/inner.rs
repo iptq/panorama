@@ -4,10 +4,9 @@ use std::task::{Context, Poll};
 
 use anyhow::Result;
 use futures::{
-    future::{self, Either, FutureExt, TryFutureExt},
-    stream::{Peekable, Stream, StreamExt},
+    future::{self, FutureExt, TryFutureExt},
+    stream::{Stream, StreamExt},
 };
-use parking_lot::Mutex;
 use tokio::{
     io::{
         self, AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader, ReadHalf, WriteHalf,
@@ -21,8 +20,9 @@ use tokio::{
 use tokio_rustls::{
     client::TlsStream, rustls::ClientConfig as RustlsConfig, webpki::DNSNameRef, TlsConnector,
 };
-use tokio_stream::wrappers::UnboundedReceiverStream;
+use tokio_util::codec::FramedRead;
 
+use crate::codec::ImapCodec;
 use crate::command::Command;
 use crate::parser::{parse_capability, parse_response};
 use crate::response::{Response, ResponseDone};
@@ -189,16 +189,20 @@ async fn listen<C>(
 where
     C: AsyncRead + Unpin,
 {
-    let mut reader = BufReader::new(conn);
+    let codec = ImapCodec::default();
+    let mut framed = FramedRead::new(conn, codec);
+    // let mut reader = BufReader::new(conn);
     let mut greeting_tx = Some(greeting_tx);
     let mut curr_cmd: Option<Command2> = None;
     let mut exit_rx = exit_rx.map_err(|_| ()).shared();
     // let mut exit_fut = Some(exit_rx.fuse());
     // let mut fut1 = None;
+    let mut cache = String::new();
 
     loop {
-        let mut next_line = String::new();
-        let read_fut = reader.read_line(&mut next_line).fuse();
+        // let mut next_line = String::new();
+        // let read_fut = reader.read_line(&mut next_line).fuse();
+        let read_fut = framed.next().fuse();
         pin_mut!(read_fut);
 
         // only listen for a new command if there isn't one already
@@ -222,10 +226,24 @@ where
                 }
             }
 
-            len = read_fut => {
-                trace!("read line {:?}", next_line);
+            resp = read_fut => {
+                // trace!("read line {:?}", next_line);
                 // res should not be None here
-                let resp = parse_response(next_line)?;
+                // cache += &next_line;
+                // let resp = match parse_response(&cache) {
+                //     Ok(v) => {
+                //         cache.clear();
+                //         v
+                //     }
+                //     Err(e) => {
+                //         error!("parse error: {}", e);
+                //         continue;
+                //     }
+                // };
+                let resp = match resp {
+                    Some(Ok(v)) => v,
+                    a => { error!("failed: {:?}", a); bail!("fuck"); },
+                };
 
                 // if this is the very first response, then it's a greeting
                 if let Some(greeting_tx) = greeting_tx.take() {
@@ -244,6 +262,6 @@ where
         }
     }
 
-    let conn = reader.into_inner();
+    let conn = framed.into_inner();
     Ok(conn)
 }

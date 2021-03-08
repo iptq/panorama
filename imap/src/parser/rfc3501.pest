@@ -1,3 +1,5 @@
+streamed_response = { response ~ ANY* }
+
 // formal syntax from https://tools.ietf.org/html/rfc3501#section-9
 addr_adl = { nstring }
 addr_host = { nstring }
@@ -93,7 +95,7 @@ msg_att_static_internaldate = { ^"INTERNALDATE" ~ sp ~ date_time }
 msg_att_static_rfc822_size = { ^"RFC822.SIZE" ~ sp ~ number }
 msg_att_static_uid = { ^"UID" ~ sp ~ uniqueid }
 nil = { ^"NIL" }
-nstring = { string | nil }
+nstring = { nil | string }
 number = @{ digit{1,} }
 nz_number = @{ digit_nz ~ digit* }
 quoted = @{ dquote ~ quoted_char* ~ dquote }
@@ -124,7 +126,7 @@ section_spec = { section_msgtext | (section_part ~ ("." ~ section_text)?) }
 section_text = { section_msgtext | "MIME" }
 status_att = { ^"MESSAGES" | ^"RECENT" | ^"UIDNEXT" | ^"UIDVALIDITY" | ^"UNSEEN" }
 status_att_list = { status_att ~ sp ~ number ~ (sp ~ status_att ~ sp ~ number)* }
-string = @{ quoted | literal }
+string = ${ quoted | literal }
 tag = @{ tag_char{1,} }
 tag_char = @{ !"+" ~ astring_char }
 text = @{ text_char{1,} }

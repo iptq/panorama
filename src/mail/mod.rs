@@ -35,6 +35,9 @@ pub enum MailCommand {
 pub enum MailEvent {
     /// Got the list of folders
     FolderList(Vec<String>),
+
+    /// Got the current list of messages
+    MessageList(Vec<String>),
 }
 
 /// Main entrypoint for the mail listener.
@@ -139,8 +142,13 @@ async fn imap_main(acct: MailAccountConfig, mail2ui_tx: UnboundedSender<MailEven
             debug!("mailbox list: {:?}", folder_list);
             let _ = mail2ui_tx.send(MailEvent::FolderList(folder_list));
 
-            let message_list = authed.uid_search().await?;
-            authed.uid_fetch(&message_list).await?;
+            let message_uids = authed.uid_search().await?;
+            let message_list = authed.uid_fetch(&message_uids).await?;
+            let mut messages = Vec::new();
+            for (_, attrs) in message_list {
+                messages.push(format!("{:?}", attrs));
+            }
+            let _ = mail2ui_tx.send(MailEvent::MessageList(messages));
 
             let mut idle_stream = authed.idle().await?;
 

@@ -43,10 +43,9 @@ use tokio::net::TcpStream;
 use tokio_rustls::{
     client::TlsStream, rustls::ClientConfig as RustlsConfig, webpki::DNSNameRef, TlsConnector,
 };
-use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::command::{Command, FetchItems, SearchCriteria};
-use crate::response::{MailboxData, Response, ResponseData, ResponseDone};
+use crate::response::{AttributeValue, MailboxData, Response, ResponseData, ResponseDone};
 
 pub use self::inner::{Client, ResponseStream};
 
@@ -200,7 +199,7 @@ impl ClientAuthenticated {
     }
 
     /// Runs the UID FETCH command
-    pub async fn uid_fetch(&mut self, uids: &[u32]) -> Result<()> {
+    pub async fn uid_fetch(&mut self, uids: &[u32]) -> Result<Vec<(u32, Vec<AttributeValue>)>> {
         let cmd = Command::UidFetch {
             uids: uids.to_vec(),
             items: FetchItems::All,
@@ -208,11 +207,13 @@ impl ClientAuthenticated {
         debug!("uid fetch: {}", cmd);
         let stream = self.execute(cmd).await?;
         let (done, data) = stream.wait().await?;
-        debug!("done: {:?} {:?}", done, data);
-        for resp in data {
-            debug!("uid fetch: {:?}", resp);
-        }
-        todo!()
+        Ok(data
+            .into_iter()
+            .filter_map(|resp| match resp {
+                Response::Fetch(n, attrs) => Some((n, attrs)),
+                _ => None,
+            })
+            .collect())
     }
 
     /// Runs the IDLE command

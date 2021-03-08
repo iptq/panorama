@@ -1,31 +1,27 @@
-use pest::{ParseResult as PestResult, ParserState};
+use pest::{iterators::QueueableToken, ParseResult as PestResult, ParserState};
 
 use super::Rule;
 
 type PSR<'a> = Box<ParserState<'a, Rule>>;
 
 /// This is a hack around the literal syntax to allow us to parse characters statefully.
-pub(crate) fn literal_internal(state: PSR) -> PestResult<PSR> {
+pub(crate) fn literal_internal(mut state: PSR) -> PestResult<PSR> {
+    // debug!("STATE: {:?}", state);
     use pest::Atomicity;
 
     // yoinked from the generated code
     #[inline]
     #[allow(non_snake_case, unused_variables)]
     pub fn digit(state: PSR) -> PestResult<PSR> {
-        state.rule(Rule::digit, |state| {
-            state.atomic(Atomicity::Atomic, |state| {
-                state.match_range('\u{30}'..'\u{39}')
-            })
-        })
+        state.match_range('\u{30}'..'\u{39}')
     }
     #[inline]
     #[allow(non_snake_case, unused_variables)]
     pub fn number(state: PSR) -> PestResult<PSR> {
         state.rule(Rule::number, |state| {
-            state.atomic(Atomicity::Atomic, |state| {
-                state.sequence(|state| {
-                    digit(state).and_then(|state| state.repeat(|state| digit(state)))
-                })
+            state.sequence(|state| {
+                debug!("number::atomic::sequence");
+                digit(state).and_then(|state| state.repeat(digit))
             })
         })
     }
@@ -41,18 +37,49 @@ pub(crate) fn literal_internal(state: PSR) -> PestResult<PSR> {
     #[inline]
     #[allow(non_snake_case, unused_variables)]
     pub fn crlf(state: PSR) -> PestResult<PSR> {
+        debug!(
+            "running rule 'crlf' {:?}",
+            state.queue().iter().rev().take(10).collect::<Vec<_>>()
+        );
         state.sequence(|state| state.match_string("\r")?.match_string("\n"))
     }
 
-    let state = state.match_string("{").and_then(number)?;
+    let state: PSR = state.match_string("{").and_then(number)?;
     let num_chars = {
-        let mut queue = state.queue().iter().rev();
-        println!("QUEUE: {:?}", queue);
-        let end = queue.next().unwrap();
-        let start = queue.next().unwrap();
+        let queue = state.queue();
+        let (start_idx, end_pos) = queue
+            .iter()
+            .rev()
+            .find_map(|p| match p {
+                QueueableToken::End {
+                    start_token_index: start,
+                    rule: Rule::number,
+                    input_pos: pos,
+                } => Some((*start, *pos)),
+                _ => None,
+            })
+            .unwrap();
+        let start_pos = match queue[start_idx] {
+            QueueableToken::Start { input_pos: pos, .. } => pos,
+            _ => unreachable!(),
+        };
+        debug!("start_pos: {}, end_pos: {}", start_pos, end_pos);
+
         let inp = state.position().get_str();
-        let seg = &inp[start.input_pos()..end.input_pos()];
-        seg.parse::<usize>().unwrap()
+        let seg = &inp[start_pos..end_pos];
+        match seg.parse::<usize>() {
+            Ok(v) => {
+                debug!("got length: {}", v);
+                v
+            }
+            Err(e) => {
+                error!(
+                    "failed to parse int from {}..{} {:?}: {}",
+                    start_pos, end_pos, seg, e
+                );
+                return Err(state);
+            }
+        }
     };
 
     state

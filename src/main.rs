@@ -3,7 +3,7 @@ use std::thread;
 
 use anyhow::Result;
 use fern::colors::{Color, ColoredLevelConfig};
-use futures::future::TryFutureExt;
+use futures::future::{FutureExt, TryFutureExt};
 use panorama::{
     config::spawn_config_watcher_system,
     mail::{self, MailEvent},
@@ -109,6 +109,7 @@ fn setup_logger(log_file: Option<impl AsRef<Path>>) -> Result<()> {
         .warn(Color::Yellow)
         .error(Color::Red);
     let mut logger = fern::Dispatch::new()
+        .filter(|meta| meta.target() != "tokio_util::codec::framed_impl")
         .format(move |out, message, record| {
             out.finish(format_args!(
                 "{}[{}][{}] {}",

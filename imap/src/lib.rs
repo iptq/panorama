@@ -20,6 +20,7 @@ extern crate log;
 extern crate pest_derive;
 
 pub mod client;
+pub mod codec;
 pub mod command;
 pub mod parser;
 pub mod response;
