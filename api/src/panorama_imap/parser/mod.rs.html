@@ -538,6 +538,16 @@
 <span id="535">535</span>
 <span id="536">536</span>
 <span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Module that implements parsers for all of the IMAP types.</span>
 
@@ -564,6 +574,15 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">Rfc3501</span>::<span class="ident">parse</span>(<span class="ident">Rule</span>::<span class="ident">capability</span>, <span class="ident">s</span>.<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
     <span class="prelude-val">Ok</span>(<span class="ident">build_capability</span>(<span class="ident">pair</span>))
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse_streamed_response</span>(<span class="ident">s</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ParseResult</span><span class="op">&lt;</span>(<span class="ident">Response</span>, <span class="ident">usize</span>)<span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">Rfc3501</span>::<span class="ident">parse</span>(<span class="ident">Rule</span>::<span class="ident">streamed_response</span>, <span class="ident">s</span>.<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">unwrap1</span>(<span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>());
+    <span class="kw">let</span> <span class="ident">span</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">as_span</span>();
+    <span class="kw">let</span> <span class="ident">range</span> <span class="op">=</span> <span class="ident">span</span>.<span class="ident">end</span>() <span class="op">-</span> <span class="ident">span</span>.<span class="ident">start</span>();
+    <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">build_response</span>(<span class="ident">pair</span>);
+    <span class="prelude-val">Ok</span>((<span class="ident">response</span>, <span class="ident">range</span>))
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse_response</span>(<span class="ident">s</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ParseResult</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span> {
@@ -927,6 +946,7 @@
     <span class="kw">if</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">nil</span>) {
         <span class="kw">return</span> <span class="prelude-val">None</span>;
     }
+
     <span class="prelude-val">Some</span>(<span class="ident">build_string</span>(<span class="ident">pair</span>))
 }
 
