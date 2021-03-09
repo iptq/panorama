@@ -1,6 +1,7 @@
 # Config
 
-Configuration is done by editing `$XDG_CONFIG_HOME/panorama/panorama.toml`. It
+Configuration is done by editing `$XDG_CONFIG_HOME/panorama/panorama.toml`.
+This is usually found somewhere like `$HOME/.config/panorama/panorama.toml` It
 follows the [TOML][1] file format, and the data structures are defined in code
 at `src/config.rs`.
 
