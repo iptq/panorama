@@ -174,24 +174,35 @@ fn build_envelope(pair: Pair<Rule>) -> Envelope {
     let mut pairs = pair.into_inner();
     let date = build_nstring(unwrap1(pairs.next().unwrap()));
     let subject = build_nstring(unwrap1(pairs.next().unwrap()));
-    pairs.next().unwrap(); // env_from
-    pairs.next().unwrap(); // env_sender
-    pairs.next().unwrap(); // env_reply_to
-    pairs.next().unwrap(); // env_to
-    pairs.next().unwrap(); // env_cc
-    pairs.next().unwrap(); // env_bcc
+
+    let address1 = |r: Rule, pair: Pair<Rule>| -> Option<Vec<Address>> {
+        assert!(matches!(pair.as_rule(), r));
+        let pair = unwrap1(pair);
+        match pair.as_rule() {
+            Rule::nil => None,
+            Rule::env_address1 => Some(pair.into_inner().map(build_address).collect()),
+            _ => unreachable!("{:?}", pair),
+        }
+    };
+
+    let from = address1(Rule::env_from, pairs.next().unwrap());
+    let sender = address1(Rule::env_sender, pairs.next().unwrap());
+    let reply_to = address1(Rule::env_reply_to, pairs.next().unwrap());
+    let to = address1(Rule::env_to, pairs.next().unwrap());
+    let cc = address1(Rule::env_cc, pairs.next().unwrap());
+    let bcc = address1(Rule::env_bcc, pairs.next().unwrap());
     let in_reply_to = build_nstring(unwrap1(pairs.next().unwrap()));
     let message_id = build_nstring(unwrap1(pairs.next().unwrap()));
 
     Envelope {
         date,
         subject,
-        from: None,
-        sender: None,
-        reply_to: None,
-        to: None,
-        cc: None,
-        bcc: None,
+        from,
+        sender,
+        reply_to,
+        to,
+        cc,
+        bcc,
         in_reply_to,
         message_id,
     }
@@ -483,6 +494,8 @@ fn build_zone(pair: Pair<Rule>) -> FixedOffset {
 }
 
 fn build_date_time(pair: Pair<Rule>) -> DateTime<FixedOffset> {
+    assert!(matches!(pair.as_rule(), Rule::date_time));
+
     let mut pairs = pair.into_inner();
     let pair = pairs.next().unwrap();
     assert!(matches!(pair.as_rule(), Rule::date_day_fixed));
@@ -522,4 +535,32 @@ fn build_date_time(pair: Pair<Rule>) -> DateTime<FixedOffset> {
     let zone = build_zone(pair);
 
     zone.ymd(year, month, day).and_hms(hour, minute, second)
+}
+
+fn build_address(pair: Pair<Rule>) -> Address {
+    assert!(matches!(pair.as_rule(), Rule::address));
+
+    let mut pairs = pair.into_inner();
+    let pair = pairs.next().unwrap();
+    assert!(matches!(pair.as_rule(), Rule::addr_name));
+    let name = build_nstring(unwrap1(pair));
+
+    let pair = pairs.next().unwrap();
+    assert!(matches!(pair.as_rule(), Rule::addr_adl));
+    let adl = build_nstring(unwrap1(pair));
+
+    let pair = pairs.next().unwrap();
+    assert!(matches!(pair.as_rule(), Rule::addr_mailbox));
+    let mailbox = build_nstring(unwrap1(pair));
+
+    let pair = pairs.next().unwrap();
+    assert!(matches!(pair.as_rule(), Rule::addr_host));
+    let host = build_nstring(unwrap1(pair));
+
+    Address {
+        name,
+        adl,
+        mailbox,
+        host,
+    }
 }

@@ -23,6 +23,21 @@ fn test_literal() {
 }
 
 #[test]
+fn test_address() -> Result<()> {
+    let p = parse(Rule::address, build_address);
+    assert_eq!(
+        p(r#"("Terry Gray" NIL "gray" "cac.washington.edu")"#)?,
+        Address {
+            name: Some("Terry Gray".to_owned()),
+            adl: None,
+            mailbox: Some("gray".to_owned()),
+            host: Some("cac.washington.edu".to_owned()),
+        }
+    );
+    Ok(())
+}
+
+#[test]
 fn test_zone() {
     let p = parse(Rule::zone, build_zone);
     assert_eq!(p("+0000"), Ok(FixedOffset::east(0)));
@@ -133,6 +148,31 @@ fn test_section_8() {
         }))
     );
 
+    let terry_addr = Address {
+        name: Some("Terry Gray".to_owned()),
+        adl: None,
+        mailbox: Some("gray".to_owned()),
+        host: Some("cac.washington.edu".to_owned()),
+    };
+    let imap_addr = Address {
+        name: None,
+        adl: None,
+        mailbox: Some("imap".to_owned()),
+        host: Some("cac.washington.edu".to_owned()),
+    };
+    let minutes_addr = Address {
+        name: None,
+        adl: None,
+        mailbox: Some("minutes".to_owned()),
+        host: Some("CNRI.Reston.VA.US".to_owned()),
+    };
+    let john_addr = Address {
+        name: Some("John Klensin".to_owned()),
+        adl: None,
+        mailbox: Some("KLENSIN".to_owned()),
+        host: Some("MIT.EDU".to_owned()),
+    };
+
     assert_eq!(
         parse_response(concat!(
             r#"* 12 FETCH (FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700" RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" "IMAP4rev1 WG mtg summary and minutes" (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) ((NIL NIL "imap" "cac.washington.edu")) ((NIL NIL "minutes" "CNRI.Reston.VA.US")("John Klensin" NIL "KLENSIN" "MIT.EDU")) NIL NIL "<B27397-0100000@cac.washington.edu>") BODY ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 302892))"#,
@@ -149,11 +189,11 @@ fn test_section_8() {
                 AttributeValue::Envelope(Envelope {
                     date: Some("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)".to_owned()),
                     subject: Some("IMAP4rev1 WG mtg summary and minutes".to_owned()),
-                    from: None,
-                    sender: None,
-                    reply_to: None,
-                    to: None,
-                    cc: None,
+                    from: Some(vec![terry_addr.clone()]),
+                    sender: Some(vec![terry_addr.clone()]),
+                    reply_to: Some(vec![terry_addr.clone()]),
+                    to: Some(vec![imap_addr.clone()]),
+                    cc: Some(vec![minutes_addr.clone(), john_addr.clone()]),
                     bcc: None,
                     in_reply_to: None,
                     message_id: Some("<B27397-0100000@cac.washington.edu>".to_owned()),

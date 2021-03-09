@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, Duration, Local, Datelike};
+use chrono::{DateTime, Datelike, Duration, Local};
 use chrono_humanize::HumanTime;
 use panorama_imap::response::Envelope;
 use tui::{
@@ -35,7 +35,7 @@ fn humanize_timestamp(date: DateTime<Local>) -> String {
 
     if diff < Duration::days(1) {
         HumanTime::from(date).to_string()
-    }else if date.year() == now.year() {
+    } else if date.year() == now.year() {
         date.format("%b %e  %T").to_string()
     } else {
         date.to_rfc2822()
@@ -73,7 +73,7 @@ impl MailTabState {
                     "".to_owned(),
                     id.to_string(),
                     meta.map(|m| humanize_timestamp(m.date)).unwrap_or_default(),
-                    "".to_owned(),
+                    meta.map(|m| m.from.clone()).unwrap_or_default(),
                     meta.map(|m| m.subject.clone()).unwrap_or_default(),
                 ])
             })
