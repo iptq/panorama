@@ -11,6 +11,7 @@ use panorama_imap::{
         ClientBuilder, ClientConfig,
     },
     command::Command as ImapCommand,
+    response::Envelope,
 };
 use tokio::{
     sync::mpsc::{UnboundedReceiver, UnboundedSender},
@@ -37,7 +38,7 @@ pub enum MailEvent {
     FolderList(Vec<String>),
 
     /// Got the current list of messages
-    MessageList(Vec<String>),
+    MessageList(Vec<Envelope>),
 }
 
 /// Main entrypoint for the mail listener.
@@ -144,11 +145,7 @@ async fn imap_main(acct: MailAccountConfig, mail2ui_tx: UnboundedSender<MailEven
 
             let message_uids = authed.uid_search().await?;
             let message_list = authed.uid_fetch(&message_uids).await?;
-            let mut messages = Vec::new();
-            for (_, attrs) in message_list {
-                messages.push(format!("{:?}", attrs));
-            }
-            let _ = mail2ui_tx.send(MailEvent::MessageList(messages));
+            let _ = mail2ui_tx.send(MailEvent::MessageList(message_list));
 
             let mut idle_stream = authed.idle().await?;
 

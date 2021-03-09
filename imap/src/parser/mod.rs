@@ -378,11 +378,15 @@ fn build_mailbox_list(pair: Pair<Rule>) -> (Vec<String>, Option<String>, String)
     };
 
     assert!(matches!(pair.as_rule(), Rule::mailbox_list_string));
-    let s = build_nstring(pair);
+    let s = build_nstring(unwrap1(pair));
 
     pair = pairs.next().unwrap();
     assert!(matches!(pair.as_rule(), Rule::mailbox));
-    let mailbox = build_string(pair);
+    let mailbox = if pair.as_str().to_lowercase() == "inbox" {
+        pair.as_str().to_owned()
+    } else {
+        build_astring(unwrap1(pair))
+    };
 
     (flags, s, mailbox)
 }
@@ -413,6 +417,19 @@ where
     pair.as_str().parse::<T>().unwrap()
 }
 
+fn build_astring(pair: Pair<Rule>) -> String {
+    assert!(matches!(pair.as_rule(), Rule::astring));
+    let pair_str = pair.as_str().to_owned();
+    let mut pairs = pair.into_inner();
+    let rule = pairs.peek().map(|p| p.as_rule());
+    if let Some(Rule::string) = rule {
+        let pair = pairs.next().unwrap();
+        build_string(pair)
+    } else {
+        pair_str
+    }
+}
+
 /// Wrapper around [build_string][1], except return None for the `nil` case
 ///
 /// [1]: self::build_string
@@ -434,7 +451,12 @@ fn build_string(pair: Pair<Rule>) -> String {
     match pair.as_rule() {
         Rule::literal => build_literal(pair),
         // TODO: escaping stuff?
-        Rule::quoted => pair.as_str().trim_start_matches("\"").trim_end_matches("\"").replace("\\\"", "\"").to_owned(),
+        Rule::quoted => pair
+            .as_str()
+            .trim_start_matches("\"")
+            .trim_end_matches("\"")
+            .replace("\\\"", "\"")
+            .to_owned(),
         _ => unreachable!(),
     }
 }

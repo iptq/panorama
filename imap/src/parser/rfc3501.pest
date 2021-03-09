@@ -76,7 +76,9 @@ mailbox_data_recent = { number ~ sp ~ ^"RECENT" }
 mailbox_data_search = { ^"SEARCH" ~ (sp ~ nz_number)* }
 mailbox_list = { mailbox_list_flags ~ sp ~ mailbox_list_string ~ sp ~ mailbox }
 mailbox_list_flags = { "(" ~ mbx_list_flags* ~ ")" }
-mailbox_list_string = { dquote ~ quoted_char ~ dquote | nil }
+// TODO: technically this should only be 1 quoted char
+// mailbox_list_string = { dquote ~ quoted_char ~ dquote | nil }
+mailbox_list_string = ${ nstring }
 mbx_list_flags = { (mbx_list_oflag ~ sp)* ~ mbx_list_sflag ~ (sp ~ mbx_list_oflag)* | mbx_list_oflag ~ (sp ~ mbx_list_oflag)* }
 mbx_list_oflag = { "\\NoInferiors" | flag_extension }
 mbx_list_sflag = { "\\NoSelect" | "\\Marked" | "\\Unmarked" }

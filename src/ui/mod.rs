@@ -25,7 +25,7 @@ use tui::{
 
 use crate::mail::MailEvent;
 
-use self::mail_tab::render_mail_tab;
+use self::mail_tab::MailTabState;
 
 pub(crate) type FrameType<'a, 'b> = Frame<'a, CrosstermBackend<&'b mut Stdout>>;
 
@@ -43,8 +43,7 @@ pub async fn run_ui(
     let backend = CrosstermBackend::new(&mut stdout);
     let mut term = Terminal::new(backend)?;
 
-    let mut folders = Vec::<String>::new();
-    let mut messages = Vec::<String>::new();
+    let mut mail_tab = MailTabState::default();
 
     loop {
         term.draw(|f| {
@@ -59,19 +58,25 @@ pub async fn run_ui(
             let tabs = Tabs::new(titles);
             f.render_widget(tabs, chunks[0]);
 
-            render_mail_tab(f, chunks[1], &folders, &messages);
+            mail_tab.render(f, chunks[1]);
+            // render_mail_tab(f, chunks[1], &folders, &messages);
         })?;
 
         let event = if event::poll(FRAME_DURATION)? {
             let event = event::read()?;
             // table.update(&event);
 
-            if let Event::Key(KeyEvent {
-                code: KeyCode::Char('q'),
-                ..
-            }) = event
-            {
-                break;
+            if let Event::Key(KeyEvent { code, .. }) = event {
+                let selected = mail_tab.message_list.selected();
+                let len = mail_tab.messages.len();
+                let seln = selected.map(|x| if x < len - 1 { x + 1 } else { x }).unwrap_or(0);
+                let selp = selected.map(|x| if x > 0 { x - 1 } else { 0 }).unwrap_or(0);
+                match code {
+                    KeyCode::Char('q') => break,
+                    KeyCode::Char('j') => mail_tab.message_list.select(Some(seln)),
+                    KeyCode::Char('k') => mail_tab.message_list.select(Some(selp)),
+                    _ => {}
+                }
             }
 
             Some(event)
@@ -87,10 +92,10 @@ pub async fn run_ui(
 
                 match mail_evt {
                     MailEvent::FolderList(new_folders) => {
-                        folders = new_folders;
+                        mail_tab.folders = new_folders;
                     }
                     MailEvent::MessageList(new_messages) => {
-                        messages = new_messages;
+                        mail_tab.messages = new_messages;
                     }
                 }
             }

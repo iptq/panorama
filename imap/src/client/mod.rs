@@ -45,7 +45,9 @@ use tokio_rustls::{
 };
 
 use crate::command::{Command, FetchItems, SearchCriteria};
-use crate::response::{AttributeValue, MailboxData, Response, ResponseData, ResponseDone};
+use crate::response::{
+    AttributeValue, Envelope, MailboxData, Response, ResponseData, ResponseDone,
+};
 
 pub use self::inner::{Client, ResponseStream};
 
@@ -199,7 +201,7 @@ impl ClientAuthenticated {
     }
 
     /// Runs the UID FETCH command
-    pub async fn uid_fetch(&mut self, uids: &[u32]) -> Result<Vec<(u32, Vec<AttributeValue>)>> {
+    pub async fn uid_fetch(&mut self, uids: &[u32]) -> Result<Vec<Envelope>> {
         let cmd = Command::UidFetch {
             uids: uids.to_vec(),
             items: FetchItems::All,
@@ -210,7 +212,10 @@ impl ClientAuthenticated {
         Ok(data
             .into_iter()
             .filter_map(|resp| match resp {
-                Response::Fetch(n, attrs) => Some((n, attrs)),
+                Response::Fetch(n, attrs) => attrs.into_iter().find_map(|attr| match attr {
+                    AttributeValue::Envelope(envelope) => Some(envelope),
+                    _ => None,
+                }),
                 _ => None,
             })
             .collect())
