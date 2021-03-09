@@ -168,8 +168,16 @@
                         <h1 id="intro"><a class="header" href="#intro">Intro</a></h1>
 <p>Panorama is a personal information manager.</p>
 <p><a href="https://pim.mzhang.io/api/panorama/">Click here for API docs</a></p>
+<h2 id="quick-start"><a class="header" href="#quick-start">Quick Start</a></h2>
+<p>Since panorama is still in active development, install from git master with</p>
+<pre><code>cargo install panorama --git https://github.com/iptq/panorama
+</code></pre>
+<p>Then, create a config file. The format along with examples can be found in
+<a href="./config.html">this page of the manual</a>.</p>
+<p>That's it! Run <code>panorama</code> forever.</p>
 <h1 id="config"><a class="header" href="#config">Config</a></h1>
-<p>Configuration is done by editing <code>$XDG_CONFIG_HOME/panorama/panorama.toml</code>. It
+<p>Configuration is done by editing <code>$XDG_CONFIG_HOME/panorama/panorama.toml</code>.
+This is usually found somewhere like <code>$HOME/.config/panorama/panorama.toml</code> It
 follows the <a href="https://toml.io/en/">TOML</a> file format, and the data structures are defined in code
 at <code>src/config.rs</code>.</p>
 <p>Example configuration:</p>
