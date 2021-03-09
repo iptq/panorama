@@ -7,6 +7,8 @@ Panorama is a terminal Personal Information Manager (PIM).
 
 Status: **not done yet**
 
+Read documentation at [pim.mzhang.io][1]
+
 Goals:
 
 - Never have to actually close the application.
@@ -23,6 +25,9 @@ Stretch goals:
 Credits
 -------
 
-IMAP library modified from [djc/tokio-imap](https://github.com/djc/tokio-imap), MIT licensed.
+IMAP library modified from [djc/tokio-imap][2], MIT licensed.
 
 License: GPLv3 or later
+
+[1]: https://pim.mzhang.io
+[2]: https://github.com/djc/tokio-imap
