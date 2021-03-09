@@ -9,6 +9,8 @@ Status: **not done yet**
 
 Read documentation at [pim.mzhang.io][1]
 
+Join chat on Matrix at [#panorama:mozilla.org][3]
+
 Goals:
 
 - Never have to actually close the application.
@@ -31,3 +33,4 @@ License: GPLv3 or later
 
 [1]: https://pim.mzhang.io
 [2]: https://github.com/djc/tokio-imap
+[3]: https://matrix.to/#/!NSaHPfsflbEkjCZViX:mozilla.org?via=mozilla.org
