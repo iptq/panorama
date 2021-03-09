@@ -43,6 +43,34 @@ fn humanize_timestamp(date: DateTime<Local>) -> String {
 }
 
 impl MailTabState {
+    pub fn move_down(&mut self) {
+        if self.message_uids.is_empty() {
+            return;
+        }
+        let len = self.message_uids.len();
+        if let Some(selected) = self.message_list.selected() {
+            if selected + 1 < len {
+                self.message_list.select(Some(selected + 1));
+            }
+        } else {
+            self.message_list.select(Some(0));
+        }
+    }
+
+    pub fn move_up(&mut self) {
+        if self.message_uids.is_empty() {
+            return;
+        }
+        let len = self.message_uids.len();
+        if let Some(selected) = self.message_list.selected() {
+            if selected >= 1 {
+                self.message_list.select(Some(selected - 1));
+            }
+        } else {
+            self.message_list.select(Some(len - 1));
+        }
+    }
+
     pub fn render(&mut self, f: &mut FrameType, area: Rect) {
         let chunks = Layout::default()
             .direction(Direction::Horizontal)

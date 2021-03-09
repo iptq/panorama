@@ -77,6 +77,8 @@ pub async fn run_ui(
             if let Event::Key(KeyEvent { code, .. }) = event {
                 match code {
                     KeyCode::Char('q') => break,
+                    KeyCode::Char('j') => mail_tab.move_down(),
+                    KeyCode::Char('k') => mail_tab.move_up(),
                     _ => {}
                 }
             }
