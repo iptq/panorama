@@ -116,9 +116,12 @@ pub async fn run_ui(
                                 AttributeValue::Envelope(Envelope {
                                     subject: new_subject, from: new_from, ..
                                 }) => {
-                                    // if let Some(new_from) = new_from {
-                                    //     from = new_from;
-                                    // }
+                                    if let Some(new_from) = new_from {
+                                        from = new_from.iter()
+                                            .filter_map(|addr| addr.name.to_owned())
+                                            .collect::<Vec<_>>()
+                                            .join(", ");
+                                    }
                                     if let Some(new_subject) = new_subject {
                                         subject = new_subject;
                                     }

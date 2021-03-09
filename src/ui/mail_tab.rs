@@ -84,8 +84,8 @@ impl MailTabState {
             .widths(&[
                 Constraint::Length(1),
                 Constraint::Max(3),
-                Constraint::Min(25),
                 Constraint::Min(20),
+                Constraint::Min(35),
                 Constraint::Max(5000),
             ])
             .header(
