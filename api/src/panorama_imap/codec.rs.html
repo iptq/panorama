@@ -29,8 +29,6 @@
 <span id="26">26</span>
 <span id="27">27</span>
 <span id="28">28</span>
-<span id="29">29</span>
-<span id="30">30</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">bytes</span>::{<span class="ident">Buf</span>, <span class="ident">BytesMut</span>};
 <span class="kw">use</span> <span class="ident">tokio_util</span>::<span class="ident">codec</span>::<span class="ident">Decoder</span>;
@@ -47,16 +45,14 @@
 
     <span class="kw">fn</span> <span class="ident">decode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">src</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BytesMut</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Item</span><span class="op">&gt;</span>, <span class="self">Self</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">from_utf8</span>(<span class="ident">src</span>)<span class="question-mark">?</span>;
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;-------------------------&quot;</span>);
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;s: {:?}&quot;</span>, <span class="ident">s</span>);
+        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;codec parsing {:?}&quot;</span>, <span class="ident">s</span>);
         <span class="kw">match</span> <span class="ident">parse_streamed_response</span>(<span class="ident">s</span>) {
             <span class="prelude-val">Ok</span>((<span class="ident">resp</span>, <span class="ident">len</span>)) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">src</span>.<span class="ident">advance</span>(<span class="ident">len</span>);
                 <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">resp</span>));
             }
-            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;failed to parse: {:?} {}&quot;</span>, <span class="ident">e</span>, <span class="ident">e</span>);
-            }
+            <span class="comment">// TODO: distinguish between incomplete data and a parse error</span>
+            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {}
         };
 
         <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)

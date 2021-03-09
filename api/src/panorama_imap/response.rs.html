@@ -277,10 +277,14 @@
 <span id="274">274</span>
 <span id="275">275</span>
 <span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Structs and enums that have to do with responses.</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ops</span>::<span class="ident">RangeInclusive</span>;
+
+<span class="kw">use</span> <span class="ident">chrono</span>::{<span class="ident">DateTime</span>, <span class="ident">FixedOffset</span>};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Response</span> {
@@ -358,7 +362,7 @@
     <span class="ident">BodyStructure</span>(<span class="ident">BodyStructure</span>),
     <span class="ident">Envelope</span>(<span class="ident">Envelope</span>),
     <span class="ident">Flags</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MailboxFlag</span><span class="op">&gt;</span>),
-    <span class="ident">InternalDate</span>(<span class="ident">String</span>),
+    <span class="ident">InternalDate</span>(<span class="ident">DateTime</span><span class="op">&lt;</span><span class="ident">FixedOffset</span><span class="op">&gt;</span>),
     <span class="ident">ModSeq</span>(<span class="ident">u64</span>), <span class="comment">// RFC 4551, section 3.3.2</span>
     <span class="ident">Rfc822</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>),
     <span class="ident">Rfc822Header</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>),

@@ -253,21 +253,6 @@
 <span id="250">250</span>
 <span id="251">251</span>
 <span id="252">252</span>
-<span id="253">253</span>
-<span id="254">254</span>
-<span id="255">255</span>
-<span id="256">256</span>
-<span id="257">257</span>
-<span id="258">258</span>
-<span id="259">259</span>
-<span id="260">260</span>
-<span id="261">261</span>
-<span id="262">262</span>
-<span id="263">263</span>
-<span id="264">264</span>
-<span id="265">265</span>
-<span id="266">266</span>
-<span id="267">267</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">pin</span>::<span class="ident">Pin</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
@@ -455,20 +440,16 @@
     <span class="ident">conn</span>: <span class="ident">ReadHalf</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
     <span class="kw-2">mut</span> <span class="ident">cmd_rx</span>: <span class="ident">mpsc</span>::<span class="ident">UnboundedReceiver</span><span class="op">&lt;</span><span class="ident">Command2</span><span class="op">&gt;</span>,
     <span class="ident">greeting_tx</span>: <span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
-    <span class="kw-2">mut</span> <span class="ident">exit_rx</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+    <span class="ident">exit_rx</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ReadHalf</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">C</span>: <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Unpin</span>,
 {
     <span class="kw">let</span> <span class="ident">codec</span> <span class="op">=</span> <span class="ident">ImapCodec</span>::<span class="ident">default</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">framed</span> <span class="op">=</span> <span class="ident">FramedRead</span>::<span class="ident">new</span>(<span class="ident">conn</span>, <span class="ident">codec</span>);
-    <span class="comment">// let mut reader = BufReader::new(conn);</span>
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">greeting_tx</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">greeting_tx</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">curr_cmd</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Command2</span><span class="op">&gt;</span> <span class="op">=</span> <span class="prelude-val">None</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">exit_rx</span> <span class="op">=</span> <span class="ident">exit_rx</span>.<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ()).<span class="ident">shared</span>();
-    <span class="comment">// let mut exit_fut = Some(exit_rx.fuse());</span>
-    <span class="comment">// let mut fut1 = None;</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cache</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">new</span>();
 
     <span class="kw">loop</span> {
         <span class="comment">// let mut next_line = String::new();</span>
@@ -491,26 +472,15 @@
                 <span class="kw">break</span>;
             }
 
+            <span class="comment">// read a command from the command list</span>
             <span class="ident">cmd</span> <span class="op">=</span> <span class="ident">cmd_fut</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">if</span> <span class="ident">curr_cmd</span>.<span class="ident">is_none</span>() {
                     <span class="ident">curr_cmd</span> <span class="op">=</span> <span class="ident">cmd</span>;
                 }
             }
 
+            <span class="comment">// got a response from the server connection</span>
             <span class="ident">resp</span> <span class="op">=</span> <span class="ident">read_fut</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="comment">// trace!(&quot;read line {:?}&quot;, next_line);</span>
-                <span class="comment">// res should not be None here</span>
-                <span class="comment">// cache += &amp;next_line;</span>
-                <span class="comment">// let resp = match parse_response(&amp;cache) {</span>
-                <span class="comment">//     Ok(v) =&gt; {</span>
-                <span class="comment">//         cache.clear();</span>
-                <span class="comment">//         v</span>
-                <span class="comment">//     }</span>
-                <span class="comment">//     Err(e) =&gt; {</span>
-                <span class="comment">//         error!(&quot;parse error: {}&quot;, e);</span>
-                <span class="comment">//         continue;</span>
-                <span class="comment">//     }</span>
-                <span class="comment">// };</span>
                 <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">resp</span> {
                     <span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(<span class="ident">v</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>,
                     <span class="ident">a</span> <span class="op">=</span><span class="op">&gt;</span> { <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;failed: {:?}&quot;</span>, <span class="ident">a</span>); <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;fuck&quot;</span>); },
@@ -518,7 +488,7 @@
 
                 <span class="comment">// if this is the very first response, then it&#39;s a greeting</span>
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">greeting_tx</span>) <span class="op">=</span> <span class="ident">greeting_tx</span>.<span class="ident">take</span>() {
-                    <span class="ident">greeting_tx</span>.<span class="ident">send</span>(());
+                    <span class="ident">greeting_tx</span>.<span class="ident">send</span>(()).<span class="ident">unwrap</span>();
                 }
 
                 <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Response</span>::<span class="ident">Done</span>(<span class="kw">_</span>) <span class="op">=</span> <span class="ident">resp</span> {

@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["MailTabState",""]]});
+initSidebarItems({"fn":[["humanize_timestamp",""]],"struct":[["EmailMetadata",""],["MailTabState",""]]});
