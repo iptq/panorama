@@ -185,12 +185,12 @@ async fn imap_main(acct: MailAccountConfig, mail2ui_tx: UnboundedSender<MailEven
                             // send DONE to stop the idle
                             std::mem::drop(idle_stream);
 
-                                let handle = Notification::new()
-                                    .summary("New Email")
-                                    .body("holy Shit,")
-                                    .icon("firefox")
-                                    .timeout(Timeout::Milliseconds(6000))
-                                    .show()?;
+                            let handle = Notification::new()
+                                .summary("New Email")
+                                .body("holy Shit,")
+                                .icon("firefox")
+                                .timeout(Timeout::Milliseconds(6000))
+                                .show()?;
 
                             let message_uids = authed.uid_search().await?;
                             let message_uids =
