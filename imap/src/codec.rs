@@ -13,16 +13,12 @@ impl Decoder for ImapCodec {
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         let s = std::str::from_utf8(src)?;
-        debug!("-------------------------");
-        debug!("s: {:?}", s);
         match parse_streamed_response(s) {
             Ok((resp, len)) => {
                 src.advance(len);
                 return Ok(Some(resp));
             }
-            Err(e) => {
-                warn!("failed to parse: {:?} {}", e, e);
-            }
+            Err(e) => {}
         };
 
         Ok(None)

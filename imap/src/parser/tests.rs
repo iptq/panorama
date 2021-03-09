@@ -1,22 +1,56 @@
+use anyhow::Result;
+use chrono::FixedOffset;
+use pest::Parser;
+
 use super::*;
 use crate::response::*;
-use pest::Parser;
+
+fn parse<F, R>(r: Rule, f: F) -> impl Fn(&str) -> ParseResult<R>
+where
+    F: Fn(Pair<Rule>) -> R,
+{
+    move |s: &str| {
+        let mut pairs = Rfc3501::parse(r, s.as_ref())?;
+        let pair = pairs.next().unwrap();
+        Ok(f(pair))
+    }
+}
 
 #[test]
 fn test_literal() {
-    assert_eq!(parse_literal("{7}\r\nhellosu"), Ok("hellosu".to_owned()));
+    let p = parse(Rule::literal, build_literal);
+    assert_eq!(p("{7}\r\nhellosu"), Ok("hellosu".to_owned()));
+}
+
+#[test]
+fn test_zone() {
+    let p = parse(Rule::zone, build_zone);
+    assert_eq!(p("+0000"), Ok(FixedOffset::east(0)));
+    assert_eq!(p("-0200"), Ok(FixedOffset::west(7200)));
+    assert_eq!(p("+0330"), Ok(FixedOffset::east(12600)));
+}
+
+#[test]
+fn test_date_time() -> Result<()> {
+    let p = parse(Rule::date_time, build_date_time);
+    assert_eq!(
+        p("\"17-Jul-1996 02:44:25 -0700\"")?,
+        DateTime::parse_from_rfc3339("1996-07-17T02:44:25-07:00")?
+    );
+    Ok(())
 }
 
 #[test]
 #[rustfmt::skip]
 fn test_capability() {
-    assert_eq!(parse_capability("IMAP4rev1"), Ok(Capability::Imap4rev1));
-    assert_eq!(parse_capability("LOGINDISABLED"), Ok(Capability::Atom("LOGINDISABLED".to_owned())));
-    assert_eq!(parse_capability("AUTH=PLAIN"), Ok(Capability::Auth("PLAIN".to_owned())));
-    assert_eq!(parse_capability("auth=plain"), Ok(Capability::Auth("PLAIN".to_owned())));
+    let p = parse(Rule::capability, build_capability);
+    assert_eq!(p("IMAP4rev1"), Ok(Capability::Imap4rev1));
+    assert_eq!(p("LOGINDISABLED"), Ok(Capability::Atom("LOGINDISABLED".to_owned())));
+    assert_eq!(p("AUTH=PLAIN"), Ok(Capability::Auth("PLAIN".to_owned())));
+    assert_eq!(p("auth=plain"), Ok(Capability::Auth("PLAIN".to_owned())));
 
-    assert!(parse_capability("(OSU)").is_err());
-    assert!(parse_capability("\x01HELLO").is_err());
+    assert!(p("(OSU)").is_err());
+    assert!(p("\x01HELLO").is_err());
 }
 
 #[test]
@@ -108,7 +142,9 @@ fn test_section_8() {
             12,
             vec![
                 AttributeValue::Flags(vec![MailboxFlag::Seen]),
-                AttributeValue::InternalDate("17-Jul-1996 02:44:25 -0700".to_owned()),
+                AttributeValue::InternalDate(
+                    DateTime::parse_from_rfc3339("1996-07-17T02:44:25-07:00").unwrap()
+                ),
                 AttributeValue::Rfc822Size(4286),
                 AttributeValue::Envelope(Envelope {
                     date: Some("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)".to_owned()),

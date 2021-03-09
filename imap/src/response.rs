@@ -2,6 +2,8 @@
 
 use std::ops::RangeInclusive;
 
+use chrono::{DateTime, FixedOffset};
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Response {
     Capabilities(Vec<Capability>),
@@ -78,7 +80,7 @@ pub enum AttributeValue {
     BodyStructure(BodyStructure),
     Envelope(Envelope),
     Flags(Vec<MailboxFlag>),
-    InternalDate(String),
+    InternalDate(DateTime<FixedOffset>),
     ModSeq(u64), // RFC 4551, section 3.3.2
     Rfc822(Option<String>),
     Rfc822Header(Option<String>),

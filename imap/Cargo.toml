@@ -8,13 +8,11 @@ categories = ["email", "network-programming", "parser-implementations"]
 license = "MIT OR Apache-2.0"
 edition = "2018"
 
-[badges]
-maintenance = { status = "passively-maintained" }
-
 [dependencies]
 anyhow = "1.0.38"
 async-trait = "0.1.42"
 bytes = { version = "1.0.1" }
+chrono = "0.4.19"
 derive_builder = "0.9.0"
 futures = "0.3.12"
 log = "0.4.14"
@@ -25,7 +23,6 @@ pest = { git = "https://github.com/iptq/pest", rev = "6a4d3a3d10e42a3ee605ca979d
 pest_derive = { git = "https://github.com/iptq/pest", rev = "6a4d3a3d10e42a3ee605ca979d0fcdac97a83a99" }
 tokio = { version = "1.1.1", features = ["full"] }
 tokio-rustls = "0.22.0"
-tokio-stream = "0.1.3"
 tokio-util = { version = "0.6.3" }
 webpki-roots = "0.21.0"
 

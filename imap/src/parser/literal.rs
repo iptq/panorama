@@ -5,8 +5,7 @@ use super::Rule;
 type PSR<'a> = Box<ParserState<'a, Rule>>;
 
 /// This is a hack around the literal syntax to allow us to parse characters statefully.
-pub(crate) fn literal_internal(mut state: PSR) -> PestResult<PSR> {
-    // debug!("STATE: {:?}", state);
+pub(crate) fn literal_internal(state: PSR) -> PestResult<PSR> {
     use pest::Atomicity;
 
     // yoinked from the generated code
@@ -19,10 +18,7 @@ pub(crate) fn literal_internal(mut state: PSR) -> PestResult<PSR> {
     #[allow(non_snake_case, unused_variables)]
     pub fn number(state: PSR) -> PestResult<PSR> {
         state.rule(Rule::number, |state| {
-            state.sequence(|state| {
-                debug!("number::atomic::sequence");
-                digit(state).and_then(|state| state.repeat(digit))
-            })
+            state.sequence(|state| digit(state).and_then(|state| state.repeat(digit)))
         })
     }
     #[inline]
@@ -37,10 +33,6 @@ pub(crate) fn literal_internal(mut state: PSR) -> PestResult<PSR> {
     #[inline]
     #[allow(non_snake_case, unused_variables)]
     pub fn crlf(state: PSR) -> PestResult<PSR> {
-        debug!(
-            "running rule 'crlf' {:?}",
-            state.queue().iter().rev().take(10).collect::<Vec<_>>()
-        );
         state.sequence(|state| state.match_string("\r")?.match_string("\n"))
     }
 
@@ -63,15 +55,11 @@ pub(crate) fn literal_internal(mut state: PSR) -> PestResult<PSR> {
             QueueableToken::Start { input_pos: pos, .. } => pos,
             _ => unreachable!(),
         };
-        debug!("start_pos: {}, end_pos: {}", start_pos, end_pos);
 
         let inp = state.position().get_str();
         let seg = &inp[start_pos..end_pos];
         match seg.parse::<usize>() {
-            Ok(v) => {
-                debug!("got length: {}", v);
-                v
-            }
+            Ok(v) => v,
             Err(e) => {
                 error!(
                     "failed to parse int from {}..{} {:?}: {}",
@@ -95,7 +83,6 @@ pub(crate) fn literal_internal(mut state: PSR) -> PestResult<PSR> {
                 state
             })
         })
-    // todo!("hit internal state: {:?}", state,);
 }
 
 pub(crate) fn noop(state: PSR) -> PestResult<PSR> {

@@ -8,6 +8,7 @@ mod tests;
 use std::fmt::Debug;
 use std::str::FromStr;
 
+use chrono::{DateTime, FixedOffset, TimeZone};
 use pest::{error::Error, iterators::Pair, Parser};
 
 use crate::response::*;
@@ -153,7 +154,7 @@ fn build_msg_att_static(pair: Pair<Rule>) -> AttributeValue {
 
     match pair.as_rule() {
         Rule::msg_att_static_internaldate => {
-            AttributeValue::InternalDate(build_string(unwrap1(unwrap1(pair))))
+            AttributeValue::InternalDate(build_date_time(unwrap1(pair)))
         }
         Rule::msg_att_static_rfc822_size => AttributeValue::Rfc822Size(build_number(unwrap1(pair))),
         Rule::msg_att_static_envelope => AttributeValue::Envelope(build_envelope(unwrap1(pair))),
@@ -272,7 +273,6 @@ fn build_capabilities(pair: Pair<Rule>) -> Vec<Capability> {
     if !matches!(pair.as_rule(), Rule::capability_data) {
         unreachable!("{:#?}", pair);
     }
-
     pair.into_inner().map(build_capability).collect()
 }
 
@@ -323,9 +323,7 @@ fn build_flag(mut pair: Pair<Rule>) -> MailboxFlag {
 }
 
 fn build_mailbox_data(pair: Pair<Rule>) -> MailboxData {
-    if !matches!(pair.as_rule(), Rule::mailbox_data) {
-        unreachable!("{:#?}", pair);
-    }
+    assert!(matches!(pair.as_rule(), Rule::mailbox_data));
 
     let mut pairs = pair.into_inner();
     let pair = pairs.next().unwrap();
@@ -357,9 +355,7 @@ fn build_mailbox_data(pair: Pair<Rule>) -> MailboxData {
 }
 
 fn build_mailbox_list(pair: Pair<Rule>) -> (Vec<String>, Option<String>, String) {
-    if !matches!(pair.as_rule(), Rule::mailbox_list) {
-        unreachable!("{:#?}", pair);
-    }
+    assert!(matches!(pair.as_rule(), Rule::mailbox_list));
 
     let mut pairs = pair.into_inner();
     let mut pair = pairs.next().unwrap();
@@ -411,9 +407,7 @@ where
     T: FromStr,
     T::Err: Debug,
 {
-    if !matches!(pair.as_rule(), Rule::nz_number | Rule::number) {
-        unreachable!("not a number {:#?}", pair);
-    }
+    assert!(matches!(pair.as_rule(), Rule::nz_number | Rule::number));
     pair.as_str().parse::<T>().unwrap()
 }
 
@@ -430,9 +424,6 @@ fn build_astring(pair: Pair<Rule>) -> String {
     }
 }
 
-/// Wrapper around [build_string][1], except return None for the `nil` case
-///
-/// [1]: self::build_string
 fn build_nstring(pair: Pair<Rule>) -> Option<String> {
     assert!(matches!(pair.as_rule(), Rule::nstring));
     let pair = unwrap1(pair);
@@ -474,4 +465,61 @@ fn build_literal(pair: Pair<Rule>) -> String {
     let _ = pairs.next().unwrap();
     let literal_str = pairs.next().unwrap();
     literal_str.as_str().to_owned()
+}
+
+fn parse_zone(s: impl AsRef<str>) -> ParseResult<FixedOffset> {
+    let mut pairs = Rfc3501::parse(Rule::zone, s.as_ref())?;
+    let pair = pairs.next().unwrap();
+    Ok(build_zone(pair))
+}
+
+fn build_zone(pair: Pair<Rule>) -> FixedOffset {
+    assert!(matches!(pair.as_rule(), Rule::zone));
+    let n = pair.as_str().parse::<i32>().unwrap();
+    let sign = if n != 0 { n / n.abs() } else { 1 };
+    let h = n.abs() / 100;
+    let m = n.abs() % 100;
+    FixedOffset::east(sign * (h * 60 + m) * 60)
+}
+
+fn build_date_time(pair: Pair<Rule>) -> DateTime<FixedOffset> {
+    let mut pairs = pair.into_inner();
+    let pair = pairs.next().unwrap();
+    assert!(matches!(pair.as_rule(), Rule::date_day_fixed));
+    let day = pair.as_str().trim().parse::<u32>().unwrap();
+
+    let pair = pairs.next().unwrap();
+    assert!(matches!(pair.as_rule(), Rule::date_month));
+    let month = match pair.as_str() {
+        "Jan" => 1,
+        "Feb" => 2,
+        "Mar" => 3,
+        "Apr" => 4,
+        "May" => 5,
+        "Jun" => 6,
+        "Jul" => 7,
+        "Aug" => 8,
+        "Sep" => 9,
+        "Oct" => 10,
+        "Nov" => 11,
+        "Dec" => 12,
+        _ => unreachable!(),
+    };
+
+    let pair = pairs.next().unwrap();
+    assert!(matches!(pair.as_rule(), Rule::date_year));
+    let year = pair.as_str().trim().parse::<i32>().unwrap();
+
+    let pair = pairs.next().unwrap();
+    assert!(matches!(pair.as_rule(), Rule::time));
+    let mut parts = pair.as_str().split(':');
+    let hour = parts.next().unwrap().parse::<u32>().unwrap();
+    let minute = parts.next().unwrap().parse::<u32>().unwrap();
+    let second = parts.next().unwrap().parse::<u32>().unwrap();
+
+    let pair = pairs.next().unwrap();
+    assert!(matches!(pair.as_rule(), Rule::zone));
+    let zone = build_zone(pair);
+
+    zone.ymd(year, month, day).and_hms(hour, minute, second)
 }

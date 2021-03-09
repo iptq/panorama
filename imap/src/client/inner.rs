@@ -184,7 +184,7 @@ async fn listen<C>(
     conn: ReadHalf<C>,
     mut cmd_rx: mpsc::UnboundedReceiver<Command2>,
     greeting_tx: oneshot::Sender<()>,
-    mut exit_rx: oneshot::Receiver<()>,
+    exit_rx: oneshot::Receiver<()>,
 ) -> Result<ReadHalf<C>>
 where
     C: AsyncRead + Unpin,
@@ -197,7 +197,7 @@ where
     let mut exit_rx = exit_rx.map_err(|_| ()).shared();
     // let mut exit_fut = Some(exit_rx.fuse());
     // let mut fut1 = None;
-    let mut cache = String::new();
+    let cache = String::new();
 
     loop {
         // let mut next_line = String::new();
@@ -227,19 +227,6 @@ where
             }
 
             resp = read_fut => {
-                // trace!("read line {:?}", next_line);
-                // res should not be None here
-                // cache += &next_line;
-                // let resp = match parse_response(&cache) {
-                //     Ok(v) => {
-                //         cache.clear();
-                //         v
-                //     }
-                //     Err(e) => {
-                //         error!("parse error: {}", e);
-                //         continue;
-                //     }
-                // };
                 let resp = match resp {
                     Some(Ok(v)) => v,
                     a => { error!("failed: {:?}", a); bail!("fuck"); },

@@ -50,16 +50,22 @@ pub async fn run_ui(
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .margin(0)
-                .constraints([Constraint::Length(1), Constraint::Max(5000)])
+                .constraints([
+                    Constraint::Length(1),
+                    Constraint::Max(5000),
+                    Constraint::Length(1),
+                ])
                 .split(f.size());
 
             // this is the title bar
-            let titles = vec!["hellosu"].into_iter().map(Spans::from).collect();
+            let titles = vec!["OSU mail"].into_iter().map(Spans::from).collect();
             let tabs = Tabs::new(titles);
             f.render_widget(tabs, chunks[0]);
 
             mail_tab.render(f, chunks[1]);
-            // render_mail_tab(f, chunks[1], &folders, &messages);
+
+            let status = Paragraph::new("hellosu");
+            f.render_widget(status, chunks[2]);
         })?;
 
         let event = if event::poll(FRAME_DURATION)? {
@@ -69,7 +75,9 @@ pub async fn run_ui(
             if let Event::Key(KeyEvent { code, .. }) = event {
                 let selected = mail_tab.message_list.selected();
                 let len = mail_tab.messages.len();
-                let seln = selected.map(|x| if x < len - 1 { x + 1 } else { x }).unwrap_or(0);
+                let seln = selected
+                    .map(|x| if x < len - 1 { x + 1 } else { x })
+                    .unwrap_or(0);
                 let selp = selected.map(|x| if x > 0 { x - 1 } else { 0 }).unwrap_or(0);
                 match code {
                     KeyCode::Char('q') => break,
