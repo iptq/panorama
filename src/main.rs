@@ -109,7 +109,10 @@ fn setup_logger(log_file: Option<impl AsRef<Path>>) -> Result<()> {
         .warn(Color::Yellow)
         .error(Color::Red);
     let mut logger = fern::Dispatch::new()
-        .filter(|meta| meta.target() != "tokio_util::codec::framed_impl")
+        .filter(|meta| {
+            meta.target() != "tokio_util::codec::framed_impl"
+                && !meta.target().starts_with("rustls::client")
+        })
         .format(move |out, message, record| {
             out.finish(format_args!(
                 "{}[{}][{}] {}",

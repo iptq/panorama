@@ -36,14 +36,20 @@
 pub mod auth;
 mod inner;
 
+use std::pin::Pin;
 use std::sync::Arc;
+use std::task::{Context, Poll};
 
 use anyhow::Result;
 use futures::{
     future::{self, FutureExt},
     stream::{Stream, StreamExt},
 };
-use tokio::net::TcpStream;
+use tokio::{
+    net::TcpStream,
+    sync::{mpsc, oneshot},
+    task::JoinHandle,
+};
 use tokio_rustls::{
     client::TlsStream, rustls::ClientConfig as RustlsConfig, webpki::DNSNameRef, TlsConnector,
 };
@@ -152,6 +158,13 @@ impl ClientAuthenticated {
         }
     }
 
+    fn sender(&self) -> mpsc::UnboundedSender<String> {
+        match self {
+            ClientAuthenticated::Encrypted(e) => e.write_tx.clone(),
+            ClientAuthenticated::Unencrypted(e) => e.write_tx.clone(),
+        }
+    }
+
     /// Checks if the server that the client is talking to has support for the given capability.
     pub async fn has_capability(&mut self, cap: impl AsRef<str>) -> Result<bool> {
         match self {
@@ -212,6 +225,25 @@ impl ClientAuthenticated {
         bail!("could not find the SEARCH response")
     }
 
+    /// Runs the FETCH command
+    pub async fn fetch(
+        &mut self,
+        uids: &[u32],
+    ) -> Result<impl Stream<Item = (u32, Vec<AttributeValue>)>> {
+        let cmd = Command::Fetch {
+            uids: uids.to_vec(),
+            items: FetchItems::All,
+        };
+        debug!("fetch: {}", cmd);
+        let stream = self.execute(cmd).await?;
+        // let (done, data) = stream.wait().await?;
+        Ok(stream.filter_map(|resp| match resp {
+            Response::Fetch(n, attrs) => future::ready(Some((n, attrs))).boxed(),
+            Response::Done(_) => future::ready(None).boxed(),
+            _ => future::pending().boxed(),
+        }))
+    }
+
     /// Runs the UID FETCH command
     pub async fn uid_fetch(
         &mut self,
@@ -234,13 +266,39 @@ impl ClientAuthenticated {
     /// Runs the IDLE command
     #[cfg(feature = "rfc2177-idle")]
     #[cfg_attr(docsrs, doc(cfg(feature = "rfc2177-idle")))]
-    pub async fn idle(&mut self) -> Result<ResponseStream> {
+    pub async fn idle(&mut self) -> Result<IdleToken> {
         let cmd = Command::Idle;
         let stream = self.execute(cmd).await?;
-        Ok(stream)
+        let sender = self.sender();
+        Ok(IdleToken { stream, sender })
     }
 
     fn nuke_capabilities(&mut self) {
         // TODO: do something here
+    }
+}
+
+#[cfg(feature = "rfc2177-idle")]
+#[cfg_attr(docsrs, doc(cfg(feature = "rfc2177-idle")))]
+pub struct IdleToken {
+    pub stream: ResponseStream,
+    sender: mpsc::UnboundedSender<String>,
+}
+
+#[cfg(feature = "rfc2177-idle")]
+#[cfg_attr(docsrs, doc(cfg(feature = "rfc2177-idle")))]
+impl Drop for IdleToken {
+    fn drop(&mut self) {
+        self.sender.send(format!("DONE\r\n"));
+    }
+}
+
+#[cfg(feature = "rfc2177-idle")]
+#[cfg_attr(docsrs, doc(cfg(feature = "rfc2177-idle")))]
+impl Stream for IdleToken {
+    type Item = Response;
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        let stream = Pin::new(&mut self.stream);
+        Stream::poll_next(stream, cx)
     }
 }

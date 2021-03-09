@@ -19,6 +19,11 @@ pub enum Command {
     Search {
         criteria: SearchCriteria,
     },
+    Fetch {
+        // TODO: do sequence-set
+        uids: Vec<u32>,
+        items: FetchItems,
+    },
     UidSearch {
         criteria: SearchCriteria,
     },
@@ -31,6 +36,10 @@ pub enum Command {
     #[cfg(feature = "rfc2177-idle")]
     #[cfg_attr(docsrs, doc(cfg(feature = "rfc2177-idle")))]
     Idle,
+
+    #[cfg(feature = "rfc2177-idle")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "rfc2177-idle")))]
+    Done,
 }
 
 impl fmt::Debug for Command {
@@ -54,6 +63,15 @@ impl fmt::Display for Command {
             Search { criteria } => write!(f, "SEARCH {}", criteria),
             UidSearch { criteria } => write!(f, "UID SEARCH {}", criteria),
             List { reference, mailbox } => write!(f, "LIST {:?} {:?}", reference, mailbox),
+            Fetch { uids, items } => write!(
+                f,
+                "FETCH {} {}",
+                uids.iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+                    .join(","),
+                items
+            ),
             UidFetch { uids, items } => write!(
                 f,
                 "UID FETCH {} {}",
@@ -66,6 +84,8 @@ impl fmt::Display for Command {
 
             #[cfg(feature = "rfc2177-idle")]
             Idle => write!(f, "IDLE"),
+            #[cfg(feature = "rfc2177-idle")]
+            Done => write!(f, "DONE"),
         }
     }
 }

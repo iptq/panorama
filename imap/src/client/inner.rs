@@ -30,15 +30,18 @@ use crate::response::{Response, ResponseDone};
 use super::ClientConfig;
 
 pub const TAG_PREFIX: &str = "ptag";
-type Command2 = (Command, mpsc::UnboundedSender<Response>);
+type Command2 = (String, Command, mpsc::UnboundedSender<Response>);
 
 pub struct Client<C> {
     ctr: usize,
     config: ClientConfig,
-    conn: WriteHalf<C>,
+    // conn: WriteHalf<C>,
+    pub(crate) write_tx: mpsc::UnboundedSender<String>,
     cmd_tx: mpsc::UnboundedSender<Command2>,
     greeting_rx: Option<oneshot::Receiver<()>>,
-    exit_tx: oneshot::Sender<()>,
+    writer_exit_tx: oneshot::Sender<()>,
+    writer_handle: JoinHandle<Result<WriteHalf<C>>>,
+    listener_exit_tx: oneshot::Sender<()>,
     listener_handle: JoinHandle<Result<ReadHalf<C>>>,
 }
 
@@ -47,25 +50,36 @@ where
     C: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
     pub fn new(conn: C, config: ClientConfig) -> Self {
-        let (read_half, write_half) = io::split(conn);
+        let (read_half, mut write_half) = io::split(conn);
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
         let (greeting_tx, greeting_rx) = oneshot::channel();
+
+        let (writer_exit_tx, exit_rx) = oneshot::channel();
+        let (write_tx, mut write_rx) = mpsc::unbounded_channel::<String>();
+        let writer_handle = tokio::spawn(write(write_half, write_rx, exit_rx).map_err(|err| {
+            error!("Help, the writer loop died: {}", err);
+            err
+        }));
+
         let (exit_tx, exit_rx) = oneshot::channel();
-        let handle = tokio::spawn(
-            listen(read_half, cmd_rx, greeting_tx, exit_rx).map_err(|err| {
-                error!("Help, the listener loop died: {}", err);
+        let listener_handle = tokio::spawn(
+            listen(read_half, cmd_rx, write_tx.clone(), greeting_tx, exit_rx).map_err(|err| {
+                error!("Help, the listener loop died: {:?} {}", err, err);
                 err
             }),
         );
 
         Client {
             ctr: 0,
-            conn: write_half,
+            // conn: write_half,
             config,
             cmd_tx,
+            write_tx,
             greeting_rx: Some(greeting_rx),
-            exit_tx,
-            listener_handle: handle,
+            writer_exit_tx,
+            listener_exit_tx: exit_tx,
+            writer_handle,
+            listener_handle,
         }
     }
 
@@ -80,14 +94,17 @@ where
         let id = self.ctr;
         self.ctr += 1;
 
-        let cmd_str = format!("{}{} {}\r\n", TAG_PREFIX, id, cmd);
-        self.conn.write_all(cmd_str.as_bytes()).await?;
-        self.conn.flush().await?;
+        let tag = format!("{}{}", TAG_PREFIX, id);
+        // let cmd_str = format!("{} {}\r\n", tag, cmd);
+        // self.write_tx.send(cmd_str);
+        // self.conn.write_all(cmd_str.as_bytes()).await?;
+        // self.conn.flush().await?;
 
         let (tx, rx) = mpsc::unbounded_channel();
-        self.cmd_tx.send((cmd, tx))?;
+        self.cmd_tx.send((tag, cmd, tx))?;
 
-        Ok(ResponseStream { inner: rx })
+        let stream = ResponseStream { inner: rx };
+        Ok(stream)
     }
 
     pub async fn has_capability(&mut self, cap: impl AsRef<str>) -> Result<bool> {
@@ -121,9 +138,13 @@ where
 
         debug!("sending exit for upgrade");
         // TODO: check that the channel is still open?
-        self.exit_tx.send(()).unwrap();
-        let reader = self.listener_handle.await??;
-        let writer = self.conn;
+        self.listener_exit_tx.send(()).unwrap();
+        self.writer_exit_tx.send(()).unwrap();
+        let (reader, writer) = future::join(self.listener_handle, self.writer_handle).await;
+        let reader = reader??;
+        let writer = writer??;
+        // let reader = self.listener_handle.await??;
+        // let writer = self.conn;
 
         let conn = reader.unsplit(writer);
         let server_name = &self.config.hostname;
@@ -142,7 +163,7 @@ where
 }
 
 pub struct ResponseStream {
-    inner: mpsc::UnboundedReceiver<Response>,
+    pub(crate) inner: mpsc::UnboundedReceiver<Response>,
 }
 
 impl ResponseStream {
@@ -180,9 +201,43 @@ impl Stream for ResponseStream {
 }
 
 #[allow(unreachable_code)]
+async fn write<C>(
+    mut conn: WriteHalf<C>,
+    mut write_rx: mpsc::UnboundedReceiver<String>,
+    exit_rx: oneshot::Receiver<()>,
+) -> Result<WriteHalf<C>>
+where
+    C: AsyncWrite + Unpin,
+{
+    let mut exit_rx = exit_rx.map_err(|_| ()).shared();
+    loop {
+        let write_fut = write_rx.recv().fuse();
+        pin_mut!(write_fut);
+
+        select! {
+            _ = exit_rx => {
+                break;
+            }
+
+            line = write_fut => {
+                if let Some(line) = line {
+                    trace!("got line {:?}", line);
+                    conn.write_all(line.as_bytes()).await?;
+                    conn.flush().await?;
+                    trace!("C>>>S: {:?}", line);
+                }
+            }
+        }
+    }
+
+    Ok(conn)
+}
+
+#[allow(unreachable_code)]
 async fn listen<C>(
     conn: ReadHalf<C>,
     mut cmd_rx: mpsc::UnboundedReceiver<Command2>,
+    mut write_tx: mpsc::UnboundedSender<String>,
     greeting_tx: oneshot::Sender<()>,
     exit_rx: oneshot::Receiver<()>,
 ) -> Result<ReadHalf<C>>
@@ -219,6 +274,10 @@ where
             // read a command from the command list
             cmd = cmd_fut => {
                 if curr_cmd.is_none() {
+                    if let Some((ref tag, ref cmd, _)) = cmd {
+                        let cmd_str = format!("{} {}\r\n", tag, cmd);
+                        write_tx.send(cmd_str);
+                    }
                     curr_cmd = cmd;
                 }
             }
@@ -237,11 +296,16 @@ where
 
                 if let Response::Done(_) = resp {
                     // since this is the DONE message, clear curr_cmd so another one can be sent
-                    if let Some((_, cmd_tx)) = curr_cmd.take() {
-                        cmd_tx.send(resp)?;
+                    if let Some((_, _, cmd_tx)) = curr_cmd.take() {
+                        let res = cmd_tx.send(resp);
+                        debug!("res0: {:?}", res);
                     }
-                } else if let Some((ref cmd, ref mut cmd_tx)) = curr_cmd {
-                    cmd_tx.send(resp)?;
+                } else if let Some((tag, cmd, cmd_tx)) = curr_cmd.as_mut() {
+                    // we got a response from the server for this command, so send it over the
+                    // channel
+                    debug!("sending {:?} to tag {}", resp, tag);
+                    let res = cmd_tx.send(resp);
+                    debug!("res1: {:?}", res);
                 }
             }
         }

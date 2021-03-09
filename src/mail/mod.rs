@@ -5,13 +5,14 @@ use futures::{
     future::FutureExt,
     stream::{Stream, StreamExt},
 };
+use notify_rust::{Notification, Timeout};
 use panorama_imap::{
     client::{
         auth::{self, Auth},
         ClientBuilder, ClientConfig,
     },
     command::Command as ImapCommand,
-    response::{AttributeValue, Envelope},
+    response::{AttributeValue, Envelope, MailboxData, Response},
 };
 use tokio::{
     sync::mpsc::{UnboundedReceiver, UnboundedSender},
@@ -47,6 +48,9 @@ pub enum MailEvent {
 
     /// Update the given UID with the given attribute list
     UpdateUid(u32, Vec<AttributeValue>),
+
+    /// New message came in with given UID
+    NewUid(u32),
 }
 
 /// Main entrypoint for the mail listener.
@@ -169,11 +173,41 @@ async fn imap_main(acct: MailAccountConfig, mail2ui_tx: UnboundedSender<MailEven
                 let mut idle_stream = authed.idle().await?;
 
                 loop {
-                    let evt = idle_stream.next().await;
+                    let evt = match idle_stream.next().await {
+                        Some(v) => v,
+                        None => break,
+                    };
                     debug!("got an event: {:?}", evt);
 
-                    if false {
-                        break;
+                    match evt {
+                        Response::MailboxData(MailboxData::Exists(uid)) => {
+                            debug!("NEW MESSAGE WITH UID {:?}, droping everything", uid);
+                            // send DONE to stop the idle
+                            std::mem::drop(idle_stream);
+
+                                let handle = Notification::new()
+                                    .summary("New Email")
+                                    .body("holy Shit,")
+                                    .icon("firefox")
+                                    .timeout(Timeout::Milliseconds(6000))
+                                    .show()?;
+
+                            let message_uids = authed.uid_search().await?;
+                            let message_uids =
+                                message_uids.into_iter().take(20).collect::<Vec<_>>();
+                            let _ = mail2ui_tx.send(MailEvent::MessageUids(message_uids.clone()));
+
+                            // TODO: make this happen concurrently with the main loop?
+                            let mut message_list = authed.uid_fetch(&message_uids).await.unwrap();
+                            while let Some((uid, attrs)) = message_list.next().await {
+                                let evt = MailEvent::UpdateUid(uid, attrs);
+                                debug!("sent {:?}", evt);
+                                mail2ui_tx.send(evt);
+                            }
+
+                            idle_stream = authed.idle().await?;
+                        }
+                        _ => {}
                     }
                 }
             } else {

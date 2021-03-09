@@ -104,6 +104,7 @@ pub async fn run_ui(
                     MailEvent::MessageUids(new_uids) => {
                         mail_tab.message_uids = new_uids;
                     }
+
                     MailEvent::UpdateUid(_, attrs) => {
                         let mut uid = None;
                         let mut date = None;
@@ -135,6 +136,10 @@ pub async fn run_ui(
                             let meta = EmailMetadata {date ,from, subject };
                             mail_tab.message_map.insert(uid, meta);
                         }
+                    }
+                    MailEvent::NewUid(uid) => {
+                        debug!("new msg!");
+                        mail_tab.message_uids.push(uid);
                     }
                     _ => {}
                 }
