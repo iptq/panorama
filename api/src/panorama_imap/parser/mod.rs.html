@@ -456,6 +456,28 @@
 <span id="453">453</span>
 <span id="454">454</span>
 <span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Module that implements parsers for all of the IMAP types.</span>
 
@@ -837,11 +859,15 @@
     };
 
     <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">mailbox_list_string</span>));
-    <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">build_nstring</span>(<span class="ident">pair</span>);
+    <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">build_nstring</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>));
 
     <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
     <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">mailbox</span>));
-    <span class="kw">let</span> <span class="ident">mailbox</span> <span class="op">=</span> <span class="ident">build_string</span>(<span class="ident">pair</span>);
+    <span class="kw">let</span> <span class="ident">mailbox</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">to_lowercase</span>() <span class="op">=</span><span class="op">=</span> <span class="string">&quot;inbox&quot;</span> {
+        <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">to_owned</span>()
+    } <span class="kw">else</span> {
+        <span class="ident">build_astring</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>))
+    };
 
     (<span class="ident">flags</span>, <span class="ident">s</span>, <span class="ident">mailbox</span>)
 }
@@ -872,6 +898,19 @@
     <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>()
 }
 
+<span class="kw">fn</span> <span class="ident">build_astring</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">astring</span>));
+    <span class="kw">let</span> <span class="ident">pair_str</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">to_owned</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
+    <span class="kw">let</span> <span class="ident">rule</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">peek</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span>.<span class="ident">as_rule</span>());
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">Rule</span>::<span class="ident">string</span>) <span class="op">=</span> <span class="ident">rule</span> {
+        <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+        <span class="ident">build_string</span>(<span class="ident">pair</span>)
+    } <span class="kw">else</span> {
+        <span class="ident">pair_str</span>
+    }
+}
+
 <span class="doccomment">/// Wrapper around [build_string][1], except return None for the `nil` case</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// [1]: self::build_string</span>
@@ -893,7 +932,12 @@
     <span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
         <span class="ident">Rule</span>::<span class="ident">literal</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">build_literal</span>(<span class="ident">pair</span>),
         <span class="comment">// TODO: escaping stuff?</span>
-        <span class="ident">Rule</span>::<span class="ident">quoted</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">trim_start_matches</span>(<span class="string">&quot;\&quot;&quot;</span>).<span class="ident">trim_end_matches</span>(<span class="string">&quot;\&quot;&quot;</span>).<span class="ident">replace</span>(<span class="string">&quot;\\\&quot;&quot;</span>, <span class="string">&quot;\&quot;&quot;</span>).<span class="ident">to_owned</span>(),
+        <span class="ident">Rule</span>::<span class="ident">quoted</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">pair</span>
+            .<span class="ident">as_str</span>()
+            .<span class="ident">trim_start_matches</span>(<span class="string">&quot;\&quot;&quot;</span>)
+            .<span class="ident">trim_end_matches</span>(<span class="string">&quot;\&quot;&quot;</span>)
+            .<span class="ident">replace</span>(<span class="string">&quot;\\\&quot;&quot;</span>, <span class="string">&quot;\&quot;&quot;</span>)
+            .<span class="ident">to_owned</span>(),
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
     }
 }

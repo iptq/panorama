@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["render_mail_tab",""]]});
+initSidebarItems({"struct":[["MailTabState",""]]});
