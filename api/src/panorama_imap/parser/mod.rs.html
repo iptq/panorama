@@ -526,6 +526,47 @@
 <span id="523">523</span>
 <span id="524">524</span>
 <span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
+<span id="562">562</span>
+<span id="563">563</span>
+<span id="564">564</span>
+<span id="565">565</span>
+<span id="566">566</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Module that implements parsers for all of the IMAP types.</span>
 
@@ -703,24 +744,35 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
     <span class="kw">let</span> <span class="ident">date</span> <span class="op">=</span> <span class="ident">build_nstring</span>(<span class="ident">unwrap1</span>(<span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>()));
     <span class="kw">let</span> <span class="ident">subject</span> <span class="op">=</span> <span class="ident">build_nstring</span>(<span class="ident">unwrap1</span>(<span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>()));
-    <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(); <span class="comment">// env_from</span>
-    <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(); <span class="comment">// env_sender</span>
-    <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(); <span class="comment">// env_reply_to</span>
-    <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(); <span class="comment">// env_to</span>
-    <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(); <span class="comment">// env_cc</span>
-    <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(); <span class="comment">// env_bcc</span>
+
+    <span class="kw">let</span> <span class="ident">address1</span> <span class="op">=</span> <span class="op">|</span><span class="ident">r</span>: <span class="ident">Rule</span>, <span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span><span class="op">|</span> <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Address</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">r</span>));
+        <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">unwrap1</span>(<span class="ident">pair</span>);
+        <span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
+            <span class="ident">Rule</span>::<span class="ident">nil</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">Rule</span>::<span class="ident">env_address1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">pair</span>.<span class="ident">into_inner</span>().<span class="ident">map</span>(<span class="ident">build_address</span>).<span class="ident">collect</span>()),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">pair</span>),
+        }
+    };
+
+    <span class="kw">let</span> <span class="ident">from</span> <span class="op">=</span> <span class="ident">address1</span>(<span class="ident">Rule</span>::<span class="ident">env_from</span>, <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>());
+    <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="ident">address1</span>(<span class="ident">Rule</span>::<span class="ident">env_sender</span>, <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>());
+    <span class="kw">let</span> <span class="ident">reply_to</span> <span class="op">=</span> <span class="ident">address1</span>(<span class="ident">Rule</span>::<span class="ident">env_reply_to</span>, <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>());
+    <span class="kw">let</span> <span class="ident">to</span> <span class="op">=</span> <span class="ident">address1</span>(<span class="ident">Rule</span>::<span class="ident">env_to</span>, <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>());
+    <span class="kw">let</span> <span class="ident">cc</span> <span class="op">=</span> <span class="ident">address1</span>(<span class="ident">Rule</span>::<span class="ident">env_cc</span>, <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>());
+    <span class="kw">let</span> <span class="ident">bcc</span> <span class="op">=</span> <span class="ident">address1</span>(<span class="ident">Rule</span>::<span class="ident">env_bcc</span>, <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>());
     <span class="kw">let</span> <span class="ident">in_reply_to</span> <span class="op">=</span> <span class="ident">build_nstring</span>(<span class="ident">unwrap1</span>(<span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>()));
     <span class="kw">let</span> <span class="ident">message_id</span> <span class="op">=</span> <span class="ident">build_nstring</span>(<span class="ident">unwrap1</span>(<span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>()));
 
     <span class="ident">Envelope</span> {
         <span class="ident">date</span>,
         <span class="ident">subject</span>,
-        <span class="ident">from</span>: <span class="prelude-val">None</span>,
-        <span class="ident">sender</span>: <span class="prelude-val">None</span>,
-        <span class="ident">reply_to</span>: <span class="prelude-val">None</span>,
-        <span class="ident">to</span>: <span class="prelude-val">None</span>,
-        <span class="ident">cc</span>: <span class="prelude-val">None</span>,
-        <span class="ident">bcc</span>: <span class="prelude-val">None</span>,
+        <span class="ident">from</span>,
+        <span class="ident">sender</span>,
+        <span class="ident">reply_to</span>,
+        <span class="ident">to</span>,
+        <span class="ident">cc</span>,
+        <span class="ident">bcc</span>,
         <span class="ident">in_reply_to</span>,
         <span class="ident">message_id</span>,
     }
@@ -1012,6 +1064,8 @@
 }
 
 <span class="kw">fn</span> <span class="ident">build_date_time</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">DateTime</span><span class="op">&lt;</span><span class="ident">FixedOffset</span><span class="op">&gt;</span> {
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">date_time</span>));
+
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
     <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
     <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">date_day_fixed</span>));
@@ -1051,6 +1105,34 @@
     <span class="kw">let</span> <span class="ident">zone</span> <span class="op">=</span> <span class="ident">build_zone</span>(<span class="ident">pair</span>);
 
     <span class="ident">zone</span>.<span class="ident">ymd</span>(<span class="ident">year</span>, <span class="ident">month</span>, <span class="ident">day</span>).<span class="ident">and_hms</span>(<span class="ident">hour</span>, <span class="ident">minute</span>, <span class="ident">second</span>)
+}
+
+<span class="kw">fn</span> <span class="ident">build_address</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Address</span> {
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">address</span>));
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
+    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">addr_name</span>));
+    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">build_nstring</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>));
+
+    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">addr_adl</span>));
+    <span class="kw">let</span> <span class="ident">adl</span> <span class="op">=</span> <span class="ident">build_nstring</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>));
+
+    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">addr_mailbox</span>));
+    <span class="kw">let</span> <span class="ident">mailbox</span> <span class="op">=</span> <span class="ident">build_nstring</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>));
+
+    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">addr_host</span>));
+    <span class="kw">let</span> <span class="ident">host</span> <span class="op">=</span> <span class="ident">build_nstring</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>));
+
+    <span class="ident">Address</span> {
+        <span class="ident">name</span>,
+        <span class="ident">adl</span>,
+        <span class="ident">mailbox</span>,
+        <span class="ident">host</span>,
+    }
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "panorama_imap";</script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>
