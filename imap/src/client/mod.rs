@@ -223,6 +223,7 @@ impl ClientAuthenticated {
 
     /// Runs the IDLE command
     #[cfg(feature = "rfc2177-idle")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "rfc2177-idle")))]
     pub async fn idle(&mut self) -> Result<ResponseStream> {
         let cmd = Command::Idle;
         let stream = self.execute(cmd).await?;

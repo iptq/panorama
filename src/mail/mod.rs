@@ -144,6 +144,7 @@ async fn imap_main(acct: MailAccountConfig, mail2ui_tx: UnboundedSender<MailEven
             let _ = mail2ui_tx.send(MailEvent::FolderList(folder_list));
 
             let message_uids = authed.uid_search().await?;
+            let message_uids = message_uids.into_iter().take(20).collect::<Vec<_>>();
             let message_list = authed.uid_fetch(&message_uids).await?;
             let _ = mail2ui_tx.send(MailEvent::MessageList(message_list));
 

@@ -29,6 +29,7 @@ pub enum Command {
     },
 
     #[cfg(feature = "rfc2177-idle")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "rfc2177-idle")))]
     Idle,
 }
 
