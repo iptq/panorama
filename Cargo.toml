@@ -35,6 +35,7 @@ toml = "0.5.8"
 tui = { version = "0.14.0", default-features = false, features = ["crossterm"] }
 webpki-roots = "0.21.0"
 xdg = "2.2.0"
+chrono-humanize = "0.1.2"
 
 [dependencies.panorama-imap]
 path = "imap"

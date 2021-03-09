@@ -41,8 +41,6 @@ char8 = @{ '\x01'..'\xff' }
 continue_req = { "+" ~ sp ~ (resp_text | base64) ~ crlf }
 date_day_fixed = { (sp ~ digit) | digit{2} }
 date_month = { "Jan" | "Feb" | "Mar" | "Apr" | "May" | "Jun" | "Jul" | "Aug" | "Sep" | "Oct" | "Nov" | "Dec" }
-// TODO: date_time is a real date time
-// date_time = ${ string }
 date_time = { dquote_ ~ date_day_fixed ~ "-" ~ date_month ~ "-" ~ date_year ~ sp ~ time ~ sp ~ zone ~ dquote_ }
 date_year = @{ digit{4} }
 digit_nz = @{ '\x31'..'\x39' }

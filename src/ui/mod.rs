@@ -7,12 +7,14 @@ use std::mem;
 use std::time::Duration;
 
 use anyhow::Result;
+use chrono::{Local, TimeZone};
 use crossterm::{
     cursor,
     event::{self, Event, KeyCode, KeyEvent},
     style, terminal,
 };
 use futures::{future::FutureExt, select, stream::StreamExt};
+use panorama_imap::response::{AttributeValue, Envelope};
 use tokio::{sync::mpsc, time};
 use tui::{
     backend::CrosstermBackend,
@@ -25,7 +27,7 @@ use tui::{
 
 use crate::mail::MailEvent;
 
-use self::mail_tab::MailTabState;
+use self::mail_tab::{EmailMetadata, MailTabState};
 
 pub(crate) type FrameType<'a, 'b> = Frame<'a, CrosstermBackend<&'b mut Stdout>>;
 
@@ -73,16 +75,8 @@ pub async fn run_ui(
             // table.update(&event);
 
             if let Event::Key(KeyEvent { code, .. }) = event {
-                let selected = mail_tab.message_list.selected();
-                let len = mail_tab.messages.len();
-                let seln = selected
-                    .map(|x| if x < len - 1 { x + 1 } else { x })
-                    .unwrap_or(0);
-                let selp = selected.map(|x| if x > 0 { x - 1 } else { 0 }).unwrap_or(0);
                 match code {
                     KeyCode::Char('q') => break,
-                    KeyCode::Char('j') => mail_tab.message_list.select(Some(seln)),
-                    KeyCode::Char('k') => mail_tab.message_list.select(Some(selp)),
                     _ => {}
                 }
             }
@@ -105,6 +99,39 @@ pub async fn run_ui(
                     MailEvent::MessageList(new_messages) => {
                         mail_tab.messages = new_messages;
                     }
+                    MailEvent::MessageUids(new_uids) => {
+                        mail_tab.message_uids = new_uids;
+                    }
+                    MailEvent::UpdateUid(_, attrs) => {
+                        let mut uid = None;
+                        let mut date = None;
+                        let mut from = String::new();
+                        let mut subject = String::new();
+                        for attr in attrs {
+                            match attr {
+                                AttributeValue::Uid(new_uid) => uid = Some(new_uid),
+                                AttributeValue::InternalDate(new_date) => {
+                                    date = Some(new_date.with_timezone(&Local));
+                                }
+                                AttributeValue::Envelope(Envelope {
+                                    subject: new_subject, from: new_from, ..
+                                }) => {
+                                    // if let Some(new_from) = new_from {
+                                    //     from = new_from;
+                                    // }
+                                    if let Some(new_subject) = new_subject {
+                                        subject = new_subject;
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                        if let (Some(uid), Some(date)) = (uid, date) {
+                            let meta = EmailMetadata {date ,from, subject };
+                            mail_tab.message_map.insert(uid, meta);
+                        }
+                    }
+                    _ => {}
                 }
             }
 

@@ -191,13 +191,9 @@ where
 {
     let codec = ImapCodec::default();
     let mut framed = FramedRead::new(conn, codec);
-    // let mut reader = BufReader::new(conn);
     let mut greeting_tx = Some(greeting_tx);
     let mut curr_cmd: Option<Command2> = None;
     let mut exit_rx = exit_rx.map_err(|_| ()).shared();
-    // let mut exit_fut = Some(exit_rx.fuse());
-    // let mut fut1 = None;
-    let cache = String::new();
 
     loop {
         // let mut next_line = String::new();
@@ -220,12 +216,14 @@ where
                 break;
             }
 
+            // read a command from the command list
             cmd = cmd_fut => {
                 if curr_cmd.is_none() {
                     curr_cmd = cmd;
                 }
             }
 
+            // got a response from the server connection
             resp = read_fut => {
                 let resp = match resp {
                     Some(Ok(v)) => v,
@@ -234,7 +232,7 @@ where
 
                 // if this is the very first response, then it's a greeting
                 if let Some(greeting_tx) = greeting_tx.take() {
-                    greeting_tx.send(());
+                    greeting_tx.send(()).unwrap();
                 }
 
                 if let Response::Done(_) = resp {

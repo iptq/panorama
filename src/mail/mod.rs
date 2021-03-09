@@ -11,7 +11,7 @@ use panorama_imap::{
         ClientBuilder, ClientConfig,
     },
     command::Command as ImapCommand,
-    response::Envelope,
+    response::{AttributeValue, Envelope},
 };
 use tokio::{
     sync::mpsc::{UnboundedReceiver, UnboundedSender},
@@ -23,6 +23,7 @@ use crate::config::{Config, ConfigWatcher, ImapAuth, MailAccountConfig, TlsMetho
 
 /// Command sent to the mail thread by something else (i.e. UI)
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum MailCommand {
     /// Refresh the list
     Refresh,
@@ -33,12 +34,19 @@ pub enum MailCommand {
 
 /// Possible events returned from the server that should be sent to the UI
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum MailEvent {
     /// Got the list of folders
     FolderList(Vec<String>),
 
     /// Got the current list of messages
     MessageList(Vec<Envelope>),
+
+    /// A list of the UIDs in the current mail view
+    MessageUids(Vec<u32>),
+
+    /// Update the given UID with the given attribute list
+    UpdateUid(u32, Vec<AttributeValue>),
 }
 
 /// Main entrypoint for the mail listener.
@@ -145,17 +153,33 @@ async fn imap_main(acct: MailAccountConfig, mail2ui_tx: UnboundedSender<MailEven
 
             let message_uids = authed.uid_search().await?;
             let message_uids = message_uids.into_iter().take(20).collect::<Vec<_>>();
-            let message_list = authed.uid_fetch(&message_uids).await?;
-            let _ = mail2ui_tx.send(MailEvent::MessageList(message_list));
+            let _ = mail2ui_tx.send(MailEvent::MessageUids(message_uids.clone()));
 
-            let mut idle_stream = authed.idle().await?;
+            // TODO: make this happen concurrently with the main loop?
+            let mut message_list = authed.uid_fetch(&message_uids).await.unwrap();
+            while let Some((uid, attrs)) = message_list.next().await {
+                let evt = MailEvent::UpdateUid(uid, attrs);
+                debug!("sent {:?}", evt);
+                mail2ui_tx.send(evt);
+            }
 
-            loop {
-                let evt = idle_stream.next().await;
-                debug!("got an event: {:?}", evt);
+            // check if IDLE is supported
+            let supports_idle = authed.has_capability("IDLE").await?;
+            if supports_idle {
+                let mut idle_stream = authed.idle().await?;
 
-                if false {
-                    break;
+                loop {
+                    let evt = idle_stream.next().await;
+                    debug!("got an event: {:?}", evt);
+
+                    if false {
+                        break;
+                    }
+                }
+            } else {
+                loop {
+                    tokio::time::sleep(std::time::Duration::from_secs(20)).await;
+                    debug!("heartbeat");
                 }
             }
 

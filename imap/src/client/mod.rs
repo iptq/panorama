@@ -39,6 +39,10 @@ mod inner;
 use std::sync::Arc;
 
 use anyhow::Result;
+use futures::{
+    future::{self, FutureExt},
+    stream::{Stream, StreamExt},
+};
 use tokio::net::TcpStream;
 use tokio_rustls::{
     client::TlsStream, rustls::ClientConfig as RustlsConfig, webpki::DNSNameRef, TlsConnector,
@@ -148,6 +152,14 @@ impl ClientAuthenticated {
         }
     }
 
+    /// Checks if the server that the client is talking to has support for the given capability.
+    pub async fn has_capability(&mut self, cap: impl AsRef<str>) -> Result<bool> {
+        match self {
+            ClientAuthenticated::Encrypted(e) => e.has_capability(cap).await,
+            ClientAuthenticated::Unencrypted(e) => e.has_capability(cap).await,
+        }
+    }
+
     /// Runs the LIST command
     pub async fn list(&mut self) -> Result<Vec<String>> {
         let cmd = Command::List {
@@ -201,24 +213,22 @@ impl ClientAuthenticated {
     }
 
     /// Runs the UID FETCH command
-    pub async fn uid_fetch(&mut self, uids: &[u32]) -> Result<Vec<Envelope>> {
+    pub async fn uid_fetch(
+        &mut self,
+        uids: &[u32],
+    ) -> Result<impl Stream<Item = (u32, Vec<AttributeValue>)>> {
         let cmd = Command::UidFetch {
             uids: uids.to_vec(),
             items: FetchItems::All,
         };
         debug!("uid fetch: {}", cmd);
         let stream = self.execute(cmd).await?;
-        let (done, data) = stream.wait().await?;
-        Ok(data
-            .into_iter()
-            .filter_map(|resp| match resp {
-                Response::Fetch(n, attrs) => attrs.into_iter().find_map(|attr| match attr {
-                    AttributeValue::Envelope(envelope) => Some(envelope),
-                    _ => None,
-                }),
-                _ => None,
-            })
-            .collect())
+        // let (done, data) = stream.wait().await?;
+        Ok(stream.filter_map(|resp| match resp {
+            Response::Fetch(n, attrs) => future::ready(Some((n, attrs))).boxed(),
+            Response::Done(_) => future::ready(None).boxed(),
+            _ => future::pending().boxed(),
+        }))
     }
 
     /// Runs the IDLE command

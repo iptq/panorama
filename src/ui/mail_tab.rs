@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use chrono::{DateTime, Duration, Local, Datelike};
+use chrono_humanize::HumanTime;
 use panorama_imap::response::Envelope;
 use tui::{
     buffer::Buffer,
@@ -12,8 +16,30 @@ use super::FrameType;
 #[derive(Default)]
 pub struct MailTabState {
     pub folders: Vec<String>,
+    pub message_uids: Vec<u32>,
+    pub message_map: HashMap<u32, EmailMetadata>,
     pub messages: Vec<Envelope>,
     pub message_list: TableState,
+}
+
+#[derive(Debug)]
+pub struct EmailMetadata {
+    pub date: DateTime<Local>,
+    pub from: String,
+    pub subject: String,
+}
+
+fn humanize_timestamp(date: DateTime<Local>) -> String {
+    let now = Local::now();
+    let diff = now - date;
+
+    if diff < Duration::days(1) {
+        HumanTime::from(date).to_string()
+    }else if date.year() == now.year() {
+        date.format("%b %e  %T").to_string()
+    } else {
+        date.to_rfc2822()
+    }
 }
 
 impl MailTabState {
@@ -39,16 +65,34 @@ impl MailTabState {
 
         // message list table
         let rows = self
-            .messages
+            .message_uids
             .iter()
-            .map(|s| Row::new(vec![s.subject.clone().unwrap_or_default()]))
+            .map(|id| {
+                let meta = self.message_map.get(id);
+                Row::new(vec![
+                    "".to_owned(),
+                    id.to_string(),
+                    meta.map(|m| humanize_timestamp(m.date)).unwrap_or_default(),
+                    "".to_owned(),
+                    meta.map(|m| m.subject.clone()).unwrap_or_default(),
+                ])
+            })
             .collect::<Vec<_>>();
 
         let table = Table::new(rows)
             .style(Style::default().fg(Color::White))
-            .widths(&[Constraint::Max(5000)])
-            .header(Row::new(vec!["Subject"]).style(Style::default().add_modifier(Modifier::BOLD)))
-            .highlight_style(Style::default().fg(Color::Black).bg(Color::LightBlue));
+            .widths(&[
+                Constraint::Length(1),
+                Constraint::Max(3),
+                Constraint::Min(25),
+                Constraint::Min(20),
+                Constraint::Max(5000),
+            ])
+            .header(
+                Row::new(vec!["", "UID", "Date", "From", "Subject"])
+                    .style(Style::default().add_modifier(Modifier::BOLD)),
+            )
+            .highlight_style(Style::default().bg(Color::DarkGray));
 
         f.render_widget(dirlist, chunks[0]);
         f.render_stateful_widget(table, chunks[1], &mut self.message_list);
