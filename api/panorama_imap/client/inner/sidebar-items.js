@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["TAG_PREFIX",""]],"fn":[["listen",""]],"struct":[["Client",""],["ResponseStream",""]],"type":[["Command2",""]]});
+initSidebarItems({"constant":[["TAG_PREFIX",""]],"fn":[["listen",""],["write",""]],"struct":[["Client",""],["ResponseStream",""]],"type":[["Command2",""]]});
