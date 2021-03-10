@@ -1,9 +1,17 @@
 //! UI library
 
+mod colon_prompt;
+mod input;
+mod keybinds;
 mod mail_tab;
 
+use std::any::Any;
 use std::io::Stdout;
 use std::mem;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use std::time::Duration;
 
 use anyhow::Result;
@@ -13,6 +21,7 @@ use crossterm::{
     event::{self, Event, KeyCode, KeyEvent},
     style, terminal,
 };
+use downcast_rs::Downcast;
 use futures::{future::FutureExt, select, stream::StreamExt};
 use panorama_imap::response::{AttributeValue, Envelope};
 use tokio::{sync::mpsc, time};
@@ -20,16 +29,19 @@ use tui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
-    text::Spans,
+    text::{Span, Spans},
     widgets::*,
     Frame, Terminal,
 };
 
 use crate::mail::MailEvent;
 
+use self::colon_prompt::ColonPrompt;
+use self::input::{BaseInputHandler, HandlesInput, InputResult};
 use self::mail_tab::{EmailMetadata, MailTabState};
 
 pub(crate) type FrameType<'a, 'b> = Frame<'a, CrosstermBackend<&'b mut Stdout>>;
+pub(crate) type TermType<'a, 'b> = &'b mut Terminal<CrosstermBackend<&'a mut Stdout>>;
 
 const FRAME_DURATION: Duration = Duration::from_millis(17);
 
@@ -44,10 +56,14 @@ pub async fn run_ui(
 
     let backend = CrosstermBackend::new(&mut stdout);
     let mut term = Terminal::new(backend)?;
-
     let mut mail_tab = MailTabState::default();
 
-    loop {
+    // state stack for handling inputs
+    let should_exit = Arc::new(AtomicBool::new(false));
+    let mut input_states: Vec<Box<dyn HandlesInput>> =
+        vec![Box::new(BaseInputHandler(should_exit.clone()))];
+
+    while !should_exit.load(Ordering::Relaxed) {
         term.draw(|f| {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
@@ -64,24 +80,70 @@ pub async fn run_ui(
             let tabs = Tabs::new(titles);
             f.render_widget(tabs, chunks[0]);
 
+            // this is the main mail tab
             mail_tab.render(f, chunks[1]);
 
-            let status = Paragraph::new("hellosu");
-            f.render_widget(status, chunks[2]);
+            // this is the status bar
+            if let Some(last_state) = input_states.last() {
+                let downcasted = last_state.downcast_ref::<ColonPrompt>();
+                match downcasted {
+                    Some(colon_prompt) => {
+                        let status = Block::default().title(vec![
+                            Span::styled(":", Style::default().fg(Color::Gray)),
+                            Span::raw(&colon_prompt.value),
+                        ]);
+                        f.render_widget(status, chunks[2]);
+                        f.set_cursor(colon_prompt.value.len() as u16 + 1, chunks[2].y);
+                    }
+                    None => {
+                        let status = Paragraph::new("hellosu");
+                        f.render_widget(status, chunks[2]);
+                    }
+                };
+            }
         })?;
 
         let event = if event::poll(FRAME_DURATION)? {
             let event = event::read()?;
             // table.update(&event);
 
-            if let Event::Key(KeyEvent { code, .. }) = event {
-                match code {
-                    KeyCode::Char('q') => break,
-                    KeyCode::Char('j') => mail_tab.move_down(),
-                    KeyCode::Char('k') => mail_tab.move_up(),
-                    _ => {}
+            if let Event::Key(evt) = event {
+                // handle states in the state stack
+                // although this is written in a for loop, every case except one should break
+                let mut should_pop = false;
+                for input_state in input_states.iter_mut().rev() {
+                    match input_state.handle_key(&mut term, evt)? {
+                        InputResult::Ok => break,
+                        InputResult::Push(state) => {
+                            input_states.push(state);
+                            break;
+                        }
+                        InputResult::Pop => {
+                            should_pop = true;
+                            break;
+                        }
+                    }
+                }
+
+                if should_pop {
+                    input_states.pop();
                 }
             }
+
+            // if let Event::Key(KeyEvent { code, .. }) = event {
+            //     match code {
+            //         // KeyCode::Char('q') => break,
+            //         KeyCode::Char('j') => mail_tab.move_down(),
+            //         KeyCode::Char('k') => mail_tab.move_up(),
+            //         KeyCode::Char(':') => {
+            //             let rect = term.size()?;
+            //             term.set_cursor(1, rect.height - 1)?;
+            //             term.show_cursor()?;
+            //             colon_prompt = Some(ColonPrompt::default());
+            //         }
+            //         _ => {}
+            //     }
+            // }
 
             Some(event)
         } else {
@@ -95,15 +157,9 @@ pub async fn run_ui(
                 let mail_evt = mail_evt.unwrap();
 
                 match mail_evt {
-                    MailEvent::FolderList(new_folders) => {
-                        mail_tab.folders = new_folders;
-                    }
-                    MailEvent::MessageList(new_messages) => {
-                        mail_tab.messages = new_messages;
-                    }
-                    MailEvent::MessageUids(new_uids) => {
-                        mail_tab.message_uids = new_uids;
-                    }
+                    MailEvent::FolderList(new_folders) => mail_tab.folders = new_folders,
+                    MailEvent::MessageList(new_messages) => mail_tab.messages = new_messages,
+                    MailEvent::MessageUids(new_uids) => mail_tab.message_uids = new_uids,
 
                     MailEvent::UpdateUid(_, attrs) => {
                         let mut uid = None;

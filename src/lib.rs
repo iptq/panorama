@@ -19,6 +19,7 @@ extern crate log;
 
 pub mod config;
 pub mod mail;
+pub mod script;
 pub mod ui;
 
 /// A cloneable type that allows sending an exit-"signal" to stop the application.

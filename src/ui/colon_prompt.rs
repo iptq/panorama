@@ -1,0 +1,47 @@
+use anyhow::Result;
+use crossterm::event::{KeyCode, KeyEvent};
+
+use super::input::{HandlesInput, InputResult};
+use super::TermType;
+
+#[derive(Clone, Default, Debug)]
+pub struct ColonPrompt {
+    pub value: String,
+}
+
+impl ColonPrompt {
+    pub fn init(term: TermType) -> Self {
+        let s = term.size().unwrap();
+        term.set_cursor(1, s.height - 1);
+        term.show_cursor();
+        ColonPrompt::default()
+    }
+}
+
+impl Drop for ColonPrompt {
+    fn drop(&mut self) {}
+}
+
+impl HandlesInput for ColonPrompt {
+    fn handle_key(&mut self, term: TermType, evt: KeyEvent) -> Result<InputResult> {
+        let KeyEvent { code, .. } = evt;
+        match code {
+            KeyCode::Esc => return Ok(InputResult::Pop),
+            // KeyCode::Char('q') => return Ok(InputResult::Pop),
+            KeyCode::Char(c) => {
+                let mut b = [0; 2];
+                self.value += c.encode_utf8(&mut b);
+            }
+            KeyCode::Backspace => {
+                let mut new_len = self.value.len();
+                if new_len > 0 {
+                    new_len -= 1;
+                }
+                self.value.truncate(new_len);
+            }
+            _ => {}
+        }
+
+        Ok(InputResult::Ok)
+    }
+}

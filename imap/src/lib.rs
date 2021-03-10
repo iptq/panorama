@@ -24,10 +24,3 @@ pub mod codec;
 pub mod command;
 pub mod parser;
 pub mod response;
-
-// pub mod builders;
-// pub mod oldparser;
-// pub mod types;
-
-// pub use crate::oldparser::ParseResult;
-// pub use crate::types::*;
