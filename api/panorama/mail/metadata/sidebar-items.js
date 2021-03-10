@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["EmailMetadata","A record that describes the metadata of an email as it appears in the UI list"]]});

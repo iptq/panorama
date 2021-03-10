@@ -129,8 +129,36 @@
 <span id="126">126</span>
 <span id="127">127</span>
 <span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::{
+    <span class="ident">atomic</span>::{<span class="ident">AtomicI8</span>, <span class="ident">Ordering</span>},
+    <span class="ident">Arc</span>,
+};
 
 <span class="kw">use</span> <span class="ident">chrono</span>::{<span class="ident">DateTime</span>, <span class="ident">Datelike</span>, <span class="ident">Duration</span>, <span class="ident">Local</span>};
 <span class="kw">use</span> <span class="ident">chrono_humanize</span>::<span class="ident">HumanTime</span>;
@@ -143,6 +171,8 @@
     <span class="ident">widgets</span>::<span class="kw-2">*</span>,
 };
 
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">mail</span>::<span class="ident">EmailMetadata</span>;
+
 <span class="kw">use</span> <span class="kw">super</span>::<span class="ident">FrameType</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
@@ -152,13 +182,7 @@
     <span class="kw">pub</span> <span class="ident">message_map</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">EmailMetadata</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">messages</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Envelope</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">message_list</span>: <span class="ident">TableState</span>,
-}
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EmailMetadata</span> {
-    <span class="kw">pub</span> <span class="ident">date</span>: <span class="ident">DateTime</span><span class="op">&lt;</span><span class="ident">Local</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">from</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">subject</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">change</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">AtomicI8</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">fn</span> <span class="ident">humanize_timestamp</span>(<span class="ident">date</span>: <span class="ident">DateTime</span><span class="op">&lt;</span><span class="ident">Local</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
@@ -210,6 +234,22 @@
             .<span class="ident">constraints</span>([<span class="ident">Constraint</span>::<span class="ident">Length</span>(<span class="number">20</span>), <span class="ident">Constraint</span>::<span class="ident">Max</span>(<span class="number">5000</span>)])
             .<span class="ident">split</span>(<span class="ident">area</span>);
 
+        <span class="comment">// make the change</span>
+        <span class="kw">if</span> <span class="self">self</span>
+            .<span class="ident">change</span>
+            .<span class="ident">compare_exchange</span>(<span class="op">-</span><span class="number">1</span>, <span class="number">0</span>, <span class="ident">Ordering</span>::<span class="ident">Relaxed</span>, <span class="ident">Ordering</span>::<span class="ident">Relaxed</span>)
+            .<span class="ident">is_ok</span>()
+        {
+            <span class="self">self</span>.<span class="ident">move_up</span>();
+        }
+        <span class="kw">if</span> <span class="self">self</span>
+            .<span class="ident">change</span>
+            .<span class="ident">compare_exchange</span>(<span class="number">1</span>, <span class="number">0</span>, <span class="ident">Ordering</span>::<span class="ident">Relaxed</span>, <span class="ident">Ordering</span>::<span class="ident">Relaxed</span>)
+            .<span class="ident">is_ok</span>()
+        {
+            <span class="self">self</span>.<span class="ident">move_down</span>();
+        }
+
         <span class="comment">// folder list</span>
         <span class="kw">let</span> <span class="ident">items</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">folders</span>
@@ -218,23 +258,31 @@
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
 
         <span class="kw">let</span> <span class="ident">dirlist</span> <span class="op">=</span> <span class="ident">List</span>::<span class="ident">new</span>(<span class="ident">items</span>)
-            .<span class="ident">block</span>(<span class="ident">Block</span>::<span class="ident">default</span>().<span class="ident">borders</span>(<span class="ident">Borders</span>::<span class="ident">NONE</span>))
+            .<span class="ident">block</span>(<span class="ident">Block</span>::<span class="ident">default</span>().<span class="ident">borders</span>(<span class="ident">Borders</span>::<span class="ident">NONE</span>).<span class="ident">title</span>(<span class="ident">Span</span>::<span class="ident">styled</span>(
+                <span class="string">&quot;ur mom&quot;</span>,
+                <span class="ident">Style</span>::<span class="ident">default</span>().<span class="ident">add_modifier</span>(<span class="ident">Modifier</span>::<span class="ident">BOLD</span>),
+            )))
             .<span class="ident">style</span>(<span class="ident">Style</span>::<span class="ident">default</span>().<span class="ident">fg</span>(<span class="ident">Color</span>::<span class="ident">White</span>))
             .<span class="ident">highlight_style</span>(<span class="ident">Style</span>::<span class="ident">default</span>().<span class="ident">add_modifier</span>(<span class="ident">Modifier</span>::<span class="ident">ITALIC</span>))
             .<span class="ident">highlight_symbol</span>(<span class="string">&quot;&gt;&gt;&quot;</span>);
 
         <span class="comment">// message list table</span>
-        <span class="kw">let</span> <span class="ident">rows</span> <span class="op">=</span> <span class="self">self</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">metas</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">message_uids</span>
             .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">id</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">meta</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">message_map</span>.<span class="ident">get</span>(<span class="ident">id</span>);
+            .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">id</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">message_map</span>.<span class="ident">get</span>(<span class="ident">id</span>))
+            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+        <span class="ident">metas</span>.<span class="ident">sort_by_key</span>(<span class="op">|</span><span class="ident">m</span><span class="op">|</span> <span class="ident">m</span>.<span class="ident">date</span>);
+        <span class="kw">let</span> <span class="ident">rows</span> <span class="op">=</span> <span class="ident">metas</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">rev</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
                 <span class="ident">Row</span>::<span class="ident">new</span>(<span class="macro">vec</span><span class="macro">!</span>[
                     <span class="string">&quot;&quot;</span>.<span class="ident">to_owned</span>(),
-                    <span class="ident">id</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">meta</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">m</span><span class="op">|</span> <span class="ident">humanize_timestamp</span>(<span class="ident">m</span>.<span class="ident">date</span>)).<span class="ident">unwrap_or_default</span>(),
-                    <span class="ident">meta</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">m</span><span class="op">|</span> <span class="ident">m</span>.<span class="ident">from</span>.<span class="ident">clone</span>()).<span class="ident">unwrap_or_default</span>(),
-                    <span class="ident">meta</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">m</span><span class="op">|</span> <span class="ident">m</span>.<span class="ident">subject</span>.<span class="ident">clone</span>()).<span class="ident">unwrap_or_default</span>(),
+                    <span class="ident">meta</span>.<span class="ident">uid</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">u</span><span class="op">|</span> <span class="ident">u</span>.<span class="ident">to_string</span>()).<span class="ident">unwrap_or_default</span>(),
+                    <span class="ident">meta</span>.<span class="ident">date</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">d</span><span class="op">|</span> <span class="ident">humanize_timestamp</span>(<span class="ident">d</span>)).<span class="ident">unwrap_or_default</span>(),
+                    <span class="ident">meta</span>.<span class="ident">from</span>.<span class="ident">clone</span>(),
+                    <span class="ident">meta</span>.<span class="ident">subject</span>.<span class="ident">clone</span>(),
                 ])
             })
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
