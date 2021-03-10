@@ -121,13 +121,21 @@ impl MailTabState {
             .iter()
             .rev()
             .map(|meta| {
-                Row::new(vec![
-                    "".to_owned(),
+                let mut row = Row::new(vec![
+                    String::from(if meta.unread { "\u{2b24}" } else { "" }),
                     meta.uid.map(|u| u.to_string()).unwrap_or_default(),
                     meta.date.map(|d| humanize_timestamp(d)).unwrap_or_default(),
                     meta.from.clone(),
                     meta.subject.clone(),
-                ])
+                ]);
+                if meta.unread {
+                    row = row.style(
+                        Style::default()
+                            .fg(Color::LightCyan)
+                            .add_modifier(Modifier::BOLD),
+                    );
+                }
+                row
             })
             .collect::<Vec<_>>();
 

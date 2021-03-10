@@ -78,7 +78,7 @@ pub async fn run_ui(
                 .split(f.size());
 
             // this is the title bar
-            let titles = vec!["panorama mail"].into_iter().map(Spans::from).collect();
+            let titles = vec!["email"].into_iter().map(Spans::from).collect();
             let tabs = Tabs::new(titles);
             f.render_widget(tabs, chunks[0]);
 

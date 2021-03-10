@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use chrono::{DateTime, Local};
 use panorama_imap::response::*;
 
@@ -8,7 +10,7 @@ pub struct EmailMetadata {
     pub uid: Option<u32>,
 
     /// Whether or not this message is unread
-    pub unread: Option<bool>,
+    pub unread: bool,
 
     /// Date
     pub date: Option<DateTime<Local>>,
@@ -27,6 +29,12 @@ impl EmailMetadata {
 
         for attr in attrs {
             match attr {
+                AttributeValue::Flags(flags) => {
+                    let flags = flags.into_iter().collect::<HashSet<_>>();
+                    if !flags.contains(&MailboxFlag::Seen) {
+                        meta.unread = true;
+                    }
+                }
                 AttributeValue::Uid(new_uid) => meta.uid = Some(new_uid),
                 AttributeValue::InternalDate(new_date) => {
                     meta.date = Some(new_date.with_timezone(&Local));

@@ -240,7 +240,7 @@ pub enum MailboxData {
     },
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub enum MailboxFlag {
     Answered,
     Flagged,

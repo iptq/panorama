@@ -1,12 +1,19 @@
 design ideas
 ---
 
-- instead of dumb search with `/`, have like an omnibar with recency info built in?
+- instead of dumb search, have like an omnibar with recency info built in?
   - this requires some kind of cache and text search
+- mail view has like a "filter stack"
+  - initially, this is empty, but when u do `/` u can add stuff like `acct:personal`, or `date<2020-03` or `has:attachment` or `from:*@gmail.com`
+  - then, when u hit enter, it gets added to a stack and u can like pop off filters
+  - example wld be liek `[acct:personal] [is:unread] [subject:"(?i)*github*"]` and then when u pop off the filter u just get `[acct:personal] [is:unread]`
 - tmux-like windows
   - maybe some of the familiar commands? `<C-b %>` for split for ex,
 - gluon for scripting language
   - hook into some global keybinds/hooks struct
+  - need commands:
+    - create dir
+    - move email to dir
 - transparent self-updates?? this could work with some kind of deprecation scheme for the config files
   - for ex: v1 has `{ x: Int }`, v2 has `{ [deprecated] x: Int, x2: Float }` and v3 has `{ x2: Float }`  
     this means v1 -> v2 upgrade can be done automatically but because there are _any_ pending deprecated values being used
