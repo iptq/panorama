@@ -1825,6 +1825,7 @@ dependencies = [
  "panorama-imap",
  "panorama-smtp",
  "parking_lot",
+ "quoted_printable",
  "serde",
  "structopt",
  "tokio 1.2.0",
@@ -1852,6 +1853,7 @@ dependencies = [
  "parking_lot",
  "pest",
  "pest_derive",
+ "quoted_printable",
  "tokio 1.2.0",
  "tokio-rustls",
  "tokio-util",
@@ -2098,6 +2100,12 @@ checksum = "c3d0b9745dc2debf507c8422de05d7226cc1f0644216dfdfead988f9b1ab32a7"
 dependencies = [
  "proc-macro2",
 ]
+
+[[package]]
+name = "quoted_printable"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47b080c5db639b292ac79cbd34be0cfc5d36694768d8341109634d90b86930e2"
 
 [[package]]
 name = "rand"

@@ -1,5 +1,7 @@
 //! Mail
 
+mod metadata;
+
 use anyhow::Result;
 use futures::{
     future::FutureExt,
@@ -21,6 +23,8 @@ use tokio::{
 use tokio_stream::wrappers::WatchStream;
 
 use crate::config::{Config, ConfigWatcher, ImapAuth, MailAccountConfig, TlsMethod};
+
+pub use self::metadata::EmailMetadata;
 
 /// Command sent to the mail thread by something else (i.e. UI)
 #[derive(Debug)]
@@ -156,7 +160,7 @@ async fn imap_main(acct: MailAccountConfig, mail2ui_tx: UnboundedSender<MailEven
             let _ = mail2ui_tx.send(MailEvent::FolderList(folder_list));
 
             let message_uids = authed.uid_search().await?;
-            let message_uids = message_uids.into_iter().take(20).collect::<Vec<_>>();
+            let message_uids = message_uids.into_iter().take(30).collect::<Vec<_>>();
             let _ = mail2ui_tx.send(MailEvent::MessageUids(message_uids.clone()));
 
             // TODO: make this happen concurrently with the main loop?

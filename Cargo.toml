@@ -37,6 +37,7 @@ tui = { version = "0.14.0", default-features = false, features = ["crossterm"] }
 webpki-roots = "0.21.0"
 xdg = "2.2.0"
 downcast-rs = "1.2.0"
+quoted_printable = "0.4.2"
 
 [dependencies.panorama-imap]
 path = "imap"

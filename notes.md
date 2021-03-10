@@ -1,3 +1,17 @@
+design ideas
+---
+
+- instead of dumb search with `/`, have like an omnibar with recency info built in?
+  - this requires some kind of cache and text search
+- tmux-like windows
+  - maybe some of the familiar commands? `<C-b %>` for split for ex,
+- gluon for scripting language
+  - hook into some global keybinds/hooks struct
+- transparent self-updates?? this could work with some kind of deprecation scheme for the config files
+  - for ex: v1 has `{ x: Int }`, v2 has `{ [deprecated] x: Int, x2: Float }` and v3 has `{ x2: Float }`  
+    this means v1 -> v2 upgrade can be done automatically but because there are _any_ pending deprecated values being used
+    it's not allowed to automatically upgrade to v3
+
 imap routine
 ---
 

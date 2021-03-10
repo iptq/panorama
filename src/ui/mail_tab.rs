@@ -1,4 +1,8 @@
 use std::collections::HashMap;
+use std::sync::{
+    atomic::{AtomicI8, Ordering},
+    Arc,
+};
 
 use chrono::{DateTime, Datelike, Duration, Local};
 use chrono_humanize::HumanTime;
@@ -11,6 +15,8 @@ use tui::{
     widgets::*,
 };
 
+use crate::mail::EmailMetadata;
+
 use super::FrameType;
 
 #[derive(Default)]
@@ -20,13 +26,7 @@ pub struct MailTabState {
     pub message_map: HashMap<u32, EmailMetadata>,
     pub messages: Vec<Envelope>,
     pub message_list: TableState,
-}
-
-#[derive(Debug)]
-pub struct EmailMetadata {
-    pub date: DateTime<Local>,
-    pub from: String,
-    pub subject: String,
+    pub change: Arc<AtomicI8>,
 }
 
 fn humanize_timestamp(date: DateTime<Local>) -> String {
@@ -78,6 +78,22 @@ impl MailTabState {
             .constraints([Constraint::Length(20), Constraint::Max(5000)])
             .split(area);
 
+        // make the change
+        if self
+            .change
+            .compare_exchange(-1, 0, Ordering::Relaxed, Ordering::Relaxed)
+            .is_ok()
+        {
+            self.move_up();
+        }
+        if self
+            .change
+            .compare_exchange(1, 0, Ordering::Relaxed, Ordering::Relaxed)
+            .is_ok()
+        {
+            self.move_down();
+        }
+
         // folder list
         let items = self
             .folders
@@ -86,23 +102,31 @@ impl MailTabState {
             .collect::<Vec<_>>();
 
         let dirlist = List::new(items)
-            .block(Block::default().borders(Borders::NONE))
+            .block(Block::default().borders(Borders::NONE).title(Span::styled(
+                "ur mom",
+                Style::default().add_modifier(Modifier::BOLD),
+            )))
             .style(Style::default().fg(Color::White))
             .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
             .highlight_symbol(">>");
 
         // message list table
-        let rows = self
+        let mut metas = self
             .message_uids
             .iter()
-            .map(|id| {
-                let meta = self.message_map.get(id);
+            .filter_map(|id| self.message_map.get(id))
+            .collect::<Vec<_>>();
+        metas.sort_by_key(|m| m.date);
+        let rows = metas
+            .iter()
+            .rev()
+            .map(|meta| {
                 Row::new(vec![
                     "".to_owned(),
-                    id.to_string(),
-                    meta.map(|m| humanize_timestamp(m.date)).unwrap_or_default(),
-                    meta.map(|m| m.from.clone()).unwrap_or_default(),
-                    meta.map(|m| m.subject.clone()).unwrap_or_default(),
+                    meta.uid.map(|u| u.to_string()).unwrap_or_default(),
+                    meta.date.map(|d| humanize_timestamp(d)).unwrap_or_default(),
+                    meta.from.clone(),
+                    meta.subject.clone(),
                 ])
             })
             .collect::<Vec<_>>();

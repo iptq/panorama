@@ -21,6 +21,7 @@ parking_lot = "0.11.1"
 # pest_derive = { path = "../../pest/derive" }
 pest = { git = "https://github.com/iptq/pest", rev = "6a4d3a3d10e42a3ee605ca979d0fcdac97a83a99" }
 pest_derive = { git = "https://github.com/iptq/pest", rev = "6a4d3a3d10e42a3ee605ca979d0fcdac97a83a99" }
+quoted_printable = "0.4.2"
 tokio = { version = "1.1.1", features = ["full"] }
 tokio-rustls = "0.22.0"
 tokio-util = { version = "0.6.3" }

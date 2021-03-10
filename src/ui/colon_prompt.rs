@@ -32,12 +32,20 @@ impl HandlesInput for ColonPrompt {
                 let mut b = [0; 2];
                 self.value += c.encode_utf8(&mut b);
             }
+            KeyCode::Enter => {
+                let cmd = self.value.clone();
+                self.value.clear();
+                debug!("executing colon command: {:?}", cmd);
+                return Ok(InputResult::Pop);
+            }
             KeyCode::Backspace => {
                 let mut new_len = self.value.len();
                 if new_len > 0 {
                     new_len -= 1;
+                    self.value.truncate(new_len);
+                } else {
+                    return Ok(InputResult::Pop);
                 }
-                self.value.truncate(new_len);
             }
             _ => {}
         }

@@ -34,11 +34,11 @@ use tui::{
     Frame, Terminal,
 };
 
-use crate::mail::MailEvent;
+use crate::mail::{EmailMetadata, MailEvent};
 
 use self::colon_prompt::ColonPrompt;
 use self::input::{BaseInputHandler, HandlesInput, InputResult};
-use self::mail_tab::{EmailMetadata, MailTabState};
+use self::mail_tab::MailTabState;
 
 pub(crate) type FrameType<'a, 'b> = Frame<'a, CrosstermBackend<&'b mut Stdout>>;
 pub(crate) type TermType<'a, 'b> = &'b mut Terminal<CrosstermBackend<&'a mut Stdout>>;
@@ -60,8 +60,10 @@ pub async fn run_ui(
 
     // state stack for handling inputs
     let should_exit = Arc::new(AtomicBool::new(false));
-    let mut input_states: Vec<Box<dyn HandlesInput>> =
-        vec![Box::new(BaseInputHandler(should_exit.clone()))];
+    let mut input_states: Vec<Box<dyn HandlesInput>> = vec![Box::new(BaseInputHandler(
+        should_exit.clone(),
+        mail_tab.change.clone(),
+    ))];
 
     while !should_exit.load(Ordering::Relaxed) {
         term.draw(|f| {
@@ -76,7 +78,7 @@ pub async fn run_ui(
                 .split(f.size());
 
             // this is the title bar
-            let titles = vec!["OSU mail"].into_iter().map(Spans::from).collect();
+            let titles = vec!["panorama mail"].into_iter().map(Spans::from).collect();
             let tabs = Tabs::new(titles);
             f.render_widget(tabs, chunks[0]);
 
@@ -130,21 +132,6 @@ pub async fn run_ui(
                 }
             }
 
-            // if let Event::Key(KeyEvent { code, .. }) = event {
-            //     match code {
-            //         // KeyCode::Char('q') => break,
-            //         KeyCode::Char('j') => mail_tab.move_down(),
-            //         KeyCode::Char('k') => mail_tab.move_up(),
-            //         KeyCode::Char(':') => {
-            //             let rect = term.size()?;
-            //             term.set_cursor(1, rect.height - 1)?;
-            //             term.show_cursor()?;
-            //             colon_prompt = Some(ColonPrompt::default());
-            //         }
-            //         _ => {}
-            //     }
-            // }
-
             Some(event)
         } else {
             None
@@ -161,37 +148,10 @@ pub async fn run_ui(
                     MailEvent::MessageList(new_messages) => mail_tab.messages = new_messages,
                     MailEvent::MessageUids(new_uids) => mail_tab.message_uids = new_uids,
 
-                    MailEvent::UpdateUid(_, attrs) => {
-                        let mut uid = None;
-                        let mut date = None;
-                        let mut from = String::new();
-                        let mut subject = String::new();
-                        for attr in attrs {
-                            match attr {
-                                AttributeValue::Uid(new_uid) => uid = Some(new_uid),
-                                AttributeValue::InternalDate(new_date) => {
-                                    date = Some(new_date.with_timezone(&Local));
-                                }
-                                AttributeValue::Envelope(Envelope {
-                                    subject: new_subject, from: new_from, ..
-                                }) => {
-                                    if let Some(new_from) = new_from {
-                                        from = new_from.iter()
-                                            .filter_map(|addr| addr.name.to_owned())
-                                            .collect::<Vec<_>>()
-                                            .join(", ");
-                                    }
-                                    if let Some(new_subject) = new_subject {
-                                        subject = new_subject;
-                                    }
-                                }
-                                _ => {}
-                            }
-                        }
-                        if let (Some(uid), Some(date)) = (uid, date) {
-                            let meta = EmailMetadata {date ,from, subject };
-                            mail_tab.message_map.insert(uid, meta);
-                        }
+                    MailEvent::UpdateUid(uid, attrs) => {
+                        let meta = EmailMetadata::from_attrs(attrs);
+                        let uid = meta.uid.unwrap_or(uid);
+                        mail_tab.message_map.insert(uid, meta);
                     }
                     MailEvent::NewUid(uid) => {
                         debug!("new msg!");
