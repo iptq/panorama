@@ -153,6 +153,14 @@
 <span id="150">150</span>
 <span id="151">151</span>
 <span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::{
@@ -277,13 +285,21 @@
             .<span class="ident">iter</span>()
             .<span class="ident">rev</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-                <span class="ident">Row</span>::<span class="ident">new</span>(<span class="macro">vec</span><span class="macro">!</span>[
-                    <span class="string">&quot;&quot;</span>.<span class="ident">to_owned</span>(),
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">Row</span>::<span class="ident">new</span>(<span class="macro">vec</span><span class="macro">!</span>[
+                    <span class="ident">String</span>::<span class="ident">from</span>(<span class="kw">if</span> <span class="ident">meta</span>.<span class="ident">unread</span> { <span class="string">&quot;\u{2b24}&quot;</span> } <span class="kw">else</span> { <span class="string">&quot;&quot;</span> }),
                     <span class="ident">meta</span>.<span class="ident">uid</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">u</span><span class="op">|</span> <span class="ident">u</span>.<span class="ident">to_string</span>()).<span class="ident">unwrap_or_default</span>(),
                     <span class="ident">meta</span>.<span class="ident">date</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">d</span><span class="op">|</span> <span class="ident">humanize_timestamp</span>(<span class="ident">d</span>)).<span class="ident">unwrap_or_default</span>(),
                     <span class="ident">meta</span>.<span class="ident">from</span>.<span class="ident">clone</span>(),
                     <span class="ident">meta</span>.<span class="ident">subject</span>.<span class="ident">clone</span>(),
-                ])
+                ]);
+                <span class="kw">if</span> <span class="ident">meta</span>.<span class="ident">unread</span> {
+                    <span class="ident">row</span> <span class="op">=</span> <span class="ident">row</span>.<span class="ident">style</span>(
+                        <span class="ident">Style</span>::<span class="ident">default</span>()
+                            .<span class="ident">fg</span>(<span class="ident">Color</span>::<span class="ident">LightCyan</span>)
+                            .<span class="ident">add_modifier</span>(<span class="ident">Modifier</span>::<span class="ident">BOLD</span>),
+                    );
+                }
+                <span class="ident">row</span>
             })
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
 
