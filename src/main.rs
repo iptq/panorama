@@ -99,7 +99,7 @@ fn run_ui(
         let localset = LocalSet::new();
 
         localset.spawn_local(async {
-            ui::run_ui(stdout, exit_tx, mail2ui_rx)
+            ui::run_ui2(stdout, exit_tx, mail2ui_rx)
                 .unwrap_or_else(report_err)
                 .await;
         });

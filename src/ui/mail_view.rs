@@ -17,10 +17,10 @@ use tui::{
 
 use crate::mail::EmailMetadata;
 
-use super::FrameType;
+use super::{FrameType, HandlesInput, Window, UI};
 
-#[derive(Default)]
-pub struct MailTabState {
+#[derive(Default, Debug)]
+pub struct MailView {
     pub folders: Vec<String>,
     pub message_uids: Vec<u32>,
     pub message_map: HashMap<u32, EmailMetadata>,
@@ -29,70 +29,19 @@ pub struct MailTabState {
     pub change: Arc<AtomicI8>,
 }
 
-fn humanize_timestamp(date: DateTime<Local>) -> String {
-    let now = Local::now();
-    let diff = now - date;
+impl HandlesInput for MailView {}
 
-    if diff < Duration::days(1) {
-        HumanTime::from(date).to_string()
-    } else if date.year() == now.year() {
-        date.format("%b %e  %T").to_string()
-    } else {
-        date.to_rfc2822()
-    }
-}
-
-impl MailTabState {
-    pub fn move_down(&mut self) {
-        if self.message_uids.is_empty() {
-            return;
-        }
-        let len = self.message_uids.len();
-        if let Some(selected) = self.message_list.selected() {
-            if selected + 1 < len {
-                self.message_list.select(Some(selected + 1));
-            }
-        } else {
-            self.message_list.select(Some(0));
-        }
+impl Window for MailView {
+    fn name(&self) -> String {
+        String::from("email")
     }
 
-    pub fn move_up(&mut self) {
-        if self.message_uids.is_empty() {
-            return;
-        }
-        let len = self.message_uids.len();
-        if let Some(selected) = self.message_list.selected() {
-            if selected >= 1 {
-                self.message_list.select(Some(selected - 1));
-            }
-        } else {
-            self.message_list.select(Some(len - 1));
-        }
-    }
-
-    pub fn render(&mut self, f: &mut FrameType, area: Rect) {
+    fn draw(&self, f: FrameType, area: Rect, ui: &UI) {
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
             .margin(0)
             .constraints([Constraint::Length(20), Constraint::Max(5000)])
             .split(area);
-
-        // make the change
-        if self
-            .change
-            .compare_exchange(-1, 0, Ordering::Relaxed, Ordering::Relaxed)
-            .is_ok()
-        {
-            self.move_up();
-        }
-        if self
-            .change
-            .compare_exchange(1, 0, Ordering::Relaxed, Ordering::Relaxed)
-            .is_ok()
-        {
-            self.move_down();
-        }
 
         // folder list
         let items = self
@@ -155,6 +104,67 @@ impl MailTabState {
             .highlight_style(Style::default().bg(Color::DarkGray));
 
         f.render_widget(dirlist, chunks[0]);
-        f.render_stateful_widget(table, chunks[1], &mut self.message_list);
+        f.render_widget(table, chunks[1]);
+    }
+}
+
+fn humanize_timestamp(date: DateTime<Local>) -> String {
+    let now = Local::now();
+    let diff = now - date;
+
+    if diff < Duration::days(1) {
+        HumanTime::from(date).to_string()
+    } else if date.year() == now.year() {
+        date.format("%b %e  %T").to_string()
+    } else {
+        date.to_rfc2822()
+    }
+}
+
+impl MailView {
+    pub fn move_down(&mut self) {
+        if self.message_uids.is_empty() {
+            return;
+        }
+        let len = self.message_uids.len();
+        if let Some(selected) = self.message_list.selected() {
+            if selected + 1 < len {
+                self.message_list.select(Some(selected + 1));
+            }
+        } else {
+            self.message_list.select(Some(0));
+        }
+    }
+
+    pub fn move_up(&mut self) {
+        if self.message_uids.is_empty() {
+            return;
+        }
+        let len = self.message_uids.len();
+        if let Some(selected) = self.message_list.selected() {
+            if selected >= 1 {
+                self.message_list.select(Some(selected - 1));
+            }
+        } else {
+            self.message_list.select(Some(len - 1));
+        }
+    }
+
+    pub fn update(&mut self) {
+        // make the change
+        if self
+            .change
+            .compare_exchange(-1, 0, Ordering::Relaxed, Ordering::Relaxed)
+            .is_ok()
+        {
+            self.move_up();
+        }
+        if self
+            .change
+            .compare_exchange(1, 0, Ordering::Relaxed, Ordering::Relaxed)
+            .is_ok()
+        {
+            self.move_down();
+        }
     }
 }

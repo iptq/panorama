@@ -27,7 +27,6 @@ impl HandlesInput for ColonPrompt {
         let KeyEvent { code, .. } = evt;
         match code {
             KeyCode::Esc => return Ok(InputResult::Pop),
-            // KeyCode::Char('q') => return Ok(InputResult::Pop),
             KeyCode::Char(c) => {
                 let mut b = [0; 2];
                 self.value += c.encode_utf8(&mut b);

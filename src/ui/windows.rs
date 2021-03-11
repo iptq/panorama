@@ -2,13 +2,33 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 use tui::layout::Rect;
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+use super::{FrameType, HandlesInput, UI};
+
+pub trait Window: HandlesInput {
+    // Return some kind of name
+    fn name(&self) -> String;
+
+    // Main draw function
+    fn draw(&self, f: FrameType, area: Rect, ui: &UI);
+
+    /// Draw function, except the window is not the actively focused one
+    ///
+    /// By default, this just calls the regular draw function but the window may choose to perform
+    /// a less intensive draw if it's known to not be active
+    fn draw_inactive(&mut self, f: FrameType, area: Rect, ui: &UI) {
+        self.draw(f, area, ui);
+    }
+}
+
+downcast_rs::impl_downcast!(Window);
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LayoutId(usize);
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PageId(usize);
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct WindowLayout {
     ctr: usize,
     currently_active: Option<LayoutId>,
@@ -31,6 +51,12 @@ impl WindowLayout {
         self.ctr += 1;
         self.pages.insert(pid, pg);
         self.page_order.push(pid);
+        self.ids.insert(id, pid);
+
+        if let None = self.currently_active {
+            self.currently_active = Some(id);
+        }
+
         (id, pid)
     }
 
@@ -38,8 +64,8 @@ impl WindowLayout {
         &self.page_order
     }
 
-    /// Get a set of all windows visible on the current page
-    pub fn visible_windows(&self) -> HashMap<LayoutId, Rect> {
+    /// Get a set of all windows visible on the current page, given the size of the allotted space
+    pub fn visible_windows(&self, area: Rect) -> HashMap<LayoutId, Rect> {
         let mut map = HashMap::new();
         if let Some(page) = self
             .currently_active
@@ -52,17 +78,21 @@ impl WindowLayout {
 
             while !q.is_empty() {
                 let front = q.pop_front().expect("not empty");
+                // TODO: how to subdivide properly?
+                map.insert(front, area);
             }
         }
         map
     }
 }
 
+#[derive(Debug)]
 struct PageGraph {
     root: LayoutId,
     adj: HashMap<LayoutId, HashSet<(LayoutId, Dir)>>,
 }
 
+#[derive(Debug)]
 enum Dir {
     H,
     V,

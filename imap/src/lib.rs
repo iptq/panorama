@@ -5,6 +5,12 @@
 //! extensions. Although its primary purpose is to be used in panorama, it should be usable for
 //! general-purpose IMAP usage. See the [client][crate::client] module for more information on how
 //! to get started with a client quickly.
+//!
+//! RFCs:
+//!
+//! - RFC3501 (IMAP4) : work-in-progress
+//! - RFC2177 (IDLE) : implemented
+//! - RFC5256 (SORT / THREAD) : planned
 
 #[macro_use]
 extern crate anyhow;

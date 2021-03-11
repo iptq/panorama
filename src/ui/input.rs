@@ -43,10 +43,6 @@ impl HandlesInput for BaseInputHandler {
             KeyCode::Char(':') => {
                 let colon_prompt = Box::new(ColonPrompt::init(term));
                 return Ok(InputResult::Push(colon_prompt));
-                // let rect = term.size()?;
-                // term.set_cursor(1, rect.height - 1)?;
-                // term.show_cursor()?;
-                // colon_prompt = Some(ColonPrompt::default());
             }
             _ => {}
         }
