@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["Command","Commands, without the tag part."],["FetchItems",""],["SearchCriteria",""]]});
+initSidebarItems({"enum":[["Command","Commands, without the tag part."],["FetchAttr",""],["FetchItems",""],["SearchCriteria",""]]});

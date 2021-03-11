@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["FRAME_DURATION",""]],"fn":[["run_ui","Main entrypoint for the UI"]],"mod":[["colon_prompt",""],["input",""],["keybinds",""],["mail_tab",""]],"type":[["FrameType",""],["TermType",""]]});
+initSidebarItems({"constant":[["FRAME_DURATION",""]],"fn":[["run_ui","Main entrypoint for the UI"]],"mod":[["colon_prompt",""],["input",""],["keybinds",""],["mail_tab",""],["messages",""],["windows",""]],"type":[["FrameType",""],["TermType",""]]});

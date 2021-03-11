@@ -567,6 +567,13 @@
 <span id="564">564</span>
 <span id="565">565</span>
 <span id="566">566</span>
+<span id="567">567</span>
+<span id="568">568</span>
+<span id="569">569</span>
+<span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
+<span id="573">573</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Module that implements parsers for all of the IMAP types.</span>
 
@@ -615,73 +622,80 @@
 
 <span class="kw">fn</span> <span class="ident">build_response</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Response</span> {
     <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">response</span>));
+    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">unwrap1</span>(<span class="ident">pair</span>);
+    <span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
+        <span class="ident">Rule</span>::<span class="ident">response_done</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">build_response_done</span>(<span class="ident">pair</span>),
+        <span class="ident">Rule</span>::<span class="ident">response_data</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">build_response_data</span>(<span class="ident">pair</span>),
+        <span class="ident">Rule</span>::<span class="ident">continue_req</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">build_continue_req</span>(<span class="ident">pair</span>),
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
+    }
+}
 
+<span class="kw">fn</span> <span class="ident">build_response_done</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Response</span> {
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">response_done</span>));
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
     <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
     <span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
-        <span class="ident">Rule</span>::<span class="ident">response_done</span> <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="ident">Rule</span>::<span class="ident">response_tagged</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
             <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
-            <span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
-                <span class="ident">Rule</span>::<span class="ident">response_tagged</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
-                    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
-                    <span class="kw">let</span> <span class="ident">tag</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">to_owned</span>();
+            <span class="kw">let</span> <span class="ident">tag</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">as_str</span>().<span class="ident">to_owned</span>();
 
-                    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
-                    <span class="kw">let</span> (<span class="ident">status</span>, <span class="ident">code</span>, <span class="ident">information</span>) <span class="op">=</span> <span class="ident">build_resp_cond_state</span>(<span class="ident">pair</span>);
-                    <span class="ident">Response</span>::<span class="ident">Done</span>(<span class="ident">ResponseDone</span> {
-                        <span class="ident">tag</span>,
-                        <span class="ident">status</span>,
-                        <span class="ident">code</span>,
-                        <span class="ident">information</span>,
-                    })
-                }
-                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
-            }
-        }
-        <span class="ident">Rule</span>::<span class="ident">response_data</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
             <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
-            <span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
-                <span class="ident">Rule</span>::<span class="ident">resp_cond_state</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> (<span class="ident">status</span>, <span class="ident">code</span>, <span class="ident">information</span>) <span class="op">=</span> <span class="ident">build_resp_cond_state</span>(<span class="ident">pair</span>);
-                    <span class="ident">Response</span>::<span class="ident">Data</span>(<span class="ident">ResponseData</span> {
-                        <span class="ident">status</span>,
-                        <span class="ident">code</span>,
-                        <span class="ident">information</span>,
-                    })
-                }
-                <span class="ident">Rule</span>::<span class="ident">mailbox_data</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Response</span>::<span class="ident">MailboxData</span>(<span class="ident">build_mailbox_data</span>(<span class="ident">pair</span>)),
-                <span class="ident">Rule</span>::<span class="ident">capability_data</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Response</span>::<span class="ident">Capabilities</span>(<span class="ident">build_capabilities</span>(<span class="ident">pair</span>)),
-                <span class="ident">Rule</span>::<span class="ident">message_data</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
-                    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
-                    <span class="kw">let</span> <span class="ident">seq</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="ident">build_number</span>(<span class="ident">pair</span>);
-
-                    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
-                    <span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
-                        <span class="ident">Rule</span>::<span class="ident">message_data_expunge</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Response</span>::<span class="ident">Expunge</span>(<span class="ident">seq</span>),
-                        <span class="ident">Rule</span>::<span class="ident">message_data_fetch</span> <span class="op">=</span><span class="op">&gt;</span> {
-                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
-                            <span class="kw">let</span> <span class="ident">msg_att</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
-                            <span class="kw">let</span> <span class="ident">attrs</span> <span class="op">=</span> <span class="ident">msg_att</span>.<span class="ident">into_inner</span>().<span class="ident">map</span>(<span class="ident">build_msg_att</span>).<span class="ident">collect</span>();
-                            <span class="ident">Response</span>::<span class="ident">Fetch</span>(<span class="ident">seq</span>, <span class="ident">attrs</span>)
-                        }
-                        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
-                    }
-                }
-                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
-            }
-        }
-        <span class="ident">Rule</span>::<span class="ident">continue_req</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> (<span class="ident">code</span>, <span class="ident">s</span>) <span class="op">=</span> <span class="ident">build_resp_text</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>));
-            <span class="ident">Response</span>::<span class="ident">Continue</span> {
+            <span class="kw">let</span> (<span class="ident">status</span>, <span class="ident">code</span>, <span class="ident">information</span>) <span class="op">=</span> <span class="ident">build_resp_cond_state</span>(<span class="ident">pair</span>);
+            <span class="ident">Response</span>::<span class="ident">Done</span>(<span class="ident">ResponseDone</span> {
+                <span class="ident">tag</span>,
+                <span class="ident">status</span>,
                 <span class="ident">code</span>,
-                <span class="ident">information</span>: <span class="prelude-val">Some</span>(<span class="ident">s</span>),
+                <span class="ident">information</span>,
+            })
+        }
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">build_response_data</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Response</span> {
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">response_data</span>));
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
+    <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+    <span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
+        <span class="ident">Rule</span>::<span class="ident">resp_cond_state</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> (<span class="ident">status</span>, <span class="ident">code</span>, <span class="ident">information</span>) <span class="op">=</span> <span class="ident">build_resp_cond_state</span>(<span class="ident">pair</span>);
+            <span class="ident">Response</span>::<span class="ident">Data</span>(<span class="ident">ResponseData</span> {
+                <span class="ident">status</span>,
+                <span class="ident">code</span>,
+                <span class="ident">information</span>,
+            })
+        }
+        <span class="ident">Rule</span>::<span class="ident">mailbox_data</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Response</span>::<span class="ident">MailboxData</span>(<span class="ident">build_mailbox_data</span>(<span class="ident">pair</span>)),
+        <span class="ident">Rule</span>::<span class="ident">capability_data</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Response</span>::<span class="ident">Capabilities</span>(<span class="ident">build_capabilities</span>(<span class="ident">pair</span>)),
+        <span class="ident">Rule</span>::<span class="ident">message_data</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
+            <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">seq</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="ident">build_number</span>(<span class="ident">pair</span>);
+
+            <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+            <span class="kw">match</span> <span class="ident">pair</span>.<span class="ident">as_rule</span>() {
+                <span class="ident">Rule</span>::<span class="ident">message_data_expunge</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Response</span>::<span class="ident">Expunge</span>(<span class="ident">seq</span>),
+                <span class="ident">Rule</span>::<span class="ident">message_data_fetch</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
+                    <span class="kw">let</span> <span class="ident">msg_att</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+                    <span class="kw">let</span> <span class="ident">attrs</span> <span class="op">=</span> <span class="ident">msg_att</span>.<span class="ident">into_inner</span>().<span class="ident">map</span>(<span class="ident">build_msg_att</span>).<span class="ident">collect</span>();
+                    <span class="ident">Response</span>::<span class="ident">Fetch</span>(<span class="ident">seq</span>, <span class="ident">attrs</span>)
+                }
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
             }
         }
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">build_continue_req</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Response</span> {
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">continue_req</span>));
+    <span class="kw">let</span> (<span class="ident">code</span>, <span class="ident">s</span>) <span class="op">=</span> <span class="ident">build_resp_text</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>));
+    <span class="ident">Response</span>::<span class="ident">Continue</span> {
+        <span class="ident">code</span>,
+        <span class="ident">information</span>: <span class="prelude-val">Some</span>(<span class="ident">s</span>),
     }
 }
 

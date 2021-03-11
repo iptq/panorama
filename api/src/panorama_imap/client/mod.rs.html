@@ -507,13 +507,13 @@
             <span class="ident">mailbox</span>: <span class="ident">mailbox</span>.<span class="ident">as_ref</span>().<span class="ident">to_owned</span>(),
         };
         <span class="kw">let</span> <span class="ident">stream</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="kw">let</span> (<span class="ident">done</span>, <span class="ident">data</span>) <span class="op">=</span> <span class="ident">stream</span>.<span class="ident">wait</span>().<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">data</span>) <span class="op">=</span> <span class="ident">stream</span>.<span class="ident">wait</span>().<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">for</span> <span class="ident">resp</span> <span class="kw">in</span> <span class="ident">data</span> {
             <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;execute called returned: {:?}&quot;</span>, <span class="ident">resp</span>);
         }
 
         <span class="comment">// nuke the capabilities cache</span>
-        <span class="self">self</span>.<span class="ident">nuke_capabilities</span>();
+        <span class="comment">// self.nuke_capabilities();</span>
 
         <span class="prelude-val">Ok</span>(())
     }
@@ -580,12 +580,12 @@
         <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">sender</span>();
         <span class="prelude-val">Ok</span>(<span class="ident">IdleToken</span> { <span class="ident">stream</span>, <span class="ident">sender</span> })
     }
-
-    <span class="kw">fn</span> <span class="ident">nuke_capabilities</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="comment">// TODO: do something here</span>
-    }
 }
 
+<span class="doccomment">/// A token that represents an idling connection.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Dropping this token indicates that the idling should be completed, and the DONE command will be</span>
+<span class="doccomment">/// sent to the server as a result.</span>
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;rfc2177-idle&quot;</span>)]</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;rfc2177-idle&quot;</span>)))]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">IdleToken</span> {
