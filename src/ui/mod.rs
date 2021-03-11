@@ -151,7 +151,6 @@ impl UI {
         let visible = self.window_layout.visible_windows(chunks[0]);
         for (layout_id, area) in visible.into_iter() {
             if let Some(window) = self.windows.get(&layout_id) {
-                debug!("drawing window {:?}", window.name());
                 window.draw(f, area, self);
             }
         }
