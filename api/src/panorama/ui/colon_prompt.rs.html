@@ -55,7 +55,6 @@
 <span id="52">52</span>
 <span id="53">53</span>
 <span id="54">54</span>
-<span id="55">55</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">crossterm</span>::<span class="ident">event</span>::{<span class="ident">KeyCode</span>, <span class="ident">KeyEvent</span>};
@@ -86,7 +85,6 @@
         <span class="kw">let</span> <span class="ident">KeyEvent</span> { <span class="ident">code</span>, .. } <span class="op">=</span> <span class="ident">evt</span>;
         <span class="kw">match</span> <span class="ident">code</span> {
             <span class="ident">KeyCode</span>::<span class="ident">Esc</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">InputResult</span>::<span class="ident">Pop</span>),
-            <span class="comment">// KeyCode::Char(&#39;q&#39;) =&gt; return Ok(InputResult::Pop),</span>
             <span class="ident">KeyCode</span>::<span class="ident">Char</span>(<span class="ident">c</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">b</span> <span class="op">=</span> [<span class="number">0</span>; <span class="number">2</span>];
                 <span class="self">self</span>.<span class="ident">value</span> <span class="op">+</span><span class="op">=</span> <span class="ident">c</span>.<span class="ident">encode_utf8</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">b</span>);

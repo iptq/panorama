@@ -97,7 +97,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Intro</a></li><li class="chapter-item expanded "><a href="config.html"><strong aria-hidden="true">2.</strong> Config</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Intro</a></li><li class="chapter-item expanded "><a href="config.html"><strong aria-hidden="true">2.</strong> Config</a></li><li class="chapter-item expanded "><a href="code.html"><strong aria-hidden="true">3.</strong> Code Structure</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -199,6 +199,25 @@ imap.password = &quot;bar&quot;
 detect changes made to this file after it has started, and automatically
 re-establish the connections required. As a result, there's no UI for editing
 the configuration within the application itself.</p>
+<h1 id="code-structure"><a class="header" href="#code-structure">Code Structure</a></h1>
+<p>The entire application is running on several async threads in a tokio runtime:</p>
+<ul>
+<li><a href="code.html#mail">Mail</a></li>
+<li><a href="code.html#ui">UI</a></li>
+<li><a href="code.html#vm">VM</a></li>
+</ul>
+<p>Each of these communicates with the others via pairs of unbounded async
+channels.</p>
+<h2 id="mail"><a class="header" href="#mail">Mail</a></h2>
+<p>The mail thread is in charge of communicating with mail servers. It keeps a
+single connection alive to each server even if the UI thread has multiple mail
+views open.</p>
+<h2 id="ui"><a class="header" href="#ui">UI</a></h2>
+<p>The UI thread manages everything user-facing. It runs a terminal UI using the
+tui crate. There's a tiny windowing system built in that allows for tiling
+windows, split horizontally or vertically.</p>
+<h2 id="vm"><a class="header" href="#vm">VM</a></h2>
+<p>The VM runs the scripting language that can be used inside the application.</p>
 
                     </main>
 

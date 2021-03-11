@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["Dir",""]],"struct":[["LayoutId",""],["PageGraph",""],["PageId",""],["WindowLayout",""]]});
+initSidebarItems({"enum":[["Dir",""]],"struct":[["LayoutId",""],["PageGraph",""],["PageId",""],["WindowLayout",""]],"trait":[["Window",""]]});
