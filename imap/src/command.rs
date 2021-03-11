@@ -109,7 +109,11 @@ pub enum FetchItems {
     All,
     Fast,
     Full,
+    Items(Vec<FetchAttr>),
 }
+
+#[derive(Clone, Debug)]
+pub enum FetchAttr {}
 
 impl fmt::Display for FetchItems {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -118,6 +122,7 @@ impl fmt::Display for FetchItems {
             All => write!(f, "ALL"),
             Fast => write!(f, "FAST"),
             Full => write!(f, "FULL"),
+            FetchAttr => write!(f, ""),
         }
     }
 }

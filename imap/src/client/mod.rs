@@ -199,13 +199,13 @@ impl ClientAuthenticated {
             mailbox: mailbox.as_ref().to_owned(),
         };
         let stream = self.execute(cmd).await?;
-        let (done, data) = stream.wait().await?;
+        let (_, data) = stream.wait().await?;
         for resp in data {
             debug!("execute called returned: {:?}", resp);
         }
 
         // nuke the capabilities cache
-        self.nuke_capabilities();
+        // self.nuke_capabilities();
 
         Ok(())
     }
@@ -272,12 +272,12 @@ impl ClientAuthenticated {
         let sender = self.sender();
         Ok(IdleToken { stream, sender })
     }
-
-    fn nuke_capabilities(&mut self) {
-        // TODO: do something here
-    }
 }
 
+/// A token that represents an idling connection.
+///
+/// Dropping this token indicates that the idling should be completed, and the DONE command will be
+/// sent to the server as a result.
 #[cfg(feature = "rfc2177-idle")]
 #[cfg_attr(docsrs, doc(cfg(feature = "rfc2177-idle")))]
 pub struct IdleToken {

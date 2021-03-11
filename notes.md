@@ -18,6 +18,8 @@ design ideas
   - for ex: v1 has `{ x: Int }`, v2 has `{ [deprecated] x: Int, x2: Float }` and v3 has `{ x2: Float }`  
     this means v1 -> v2 upgrade can be done automatically but because there are _any_ pending deprecated values being used
     it's not allowed to automatically upgrade to v3
+- imap repl? or more realistically gluon repl that has an imap interface
+  - basically lets me debug imap commands on-the-spot, with the current connection
 
 imap routine
 ---

@@ -4,8 +4,11 @@ mod colon_prompt;
 mod input;
 mod keybinds;
 mod mail_tab;
+mod messages;
+mod windows;
 
 use std::any::Any;
+use std::collections::HashMap;
 use std::io::Stdout;
 use std::mem;
 use std::sync::{
@@ -39,6 +42,8 @@ use crate::mail::{EmailMetadata, MailEvent};
 use self::colon_prompt::ColonPrompt;
 use self::input::{BaseInputHandler, HandlesInput, InputResult};
 use self::mail_tab::MailTabState;
+pub(crate) use self::messages::*;
+use self::windows::*;
 
 pub(crate) type FrameType<'a, 'b> = Frame<'a, CrosstermBackend<&'b mut Stdout>>;
 pub(crate) type TermType<'a, 'b> = &'b mut Terminal<CrosstermBackend<&'a mut Stdout>>;
@@ -65,6 +70,13 @@ pub async fn run_ui(
         mail_tab.change.clone(),
     ))];
 
+    let mut window_layout = WindowLayout::default();
+    let mut page_names = HashMap::new();
+
+    // TODO: have this be configured thru the settings?
+    let (mail_id, mail_page) = window_layout.new_page();
+    page_names.insert(mail_page, "Email");
+
     while !should_exit.load(Ordering::Relaxed) {
         term.draw(|f| {
             let chunks = Layout::default()
@@ -78,7 +90,13 @@ pub async fn run_ui(
                 .split(f.size());
 
             // this is the title bar
-            let titles = vec!["email"].into_iter().map(Spans::from).collect();
+            // let titles = vec!["email"].into_iter().map(Spans::from).collect();
+            let titles = window_layout
+                .list_pages()
+                .iter()
+                .filter_map(|id| page_names.get(id))
+                .map(|s| Spans::from(*s))
+                .collect();
             let tabs = Tabs::new(titles);
             f.render_widget(tabs, chunks[0]);
 

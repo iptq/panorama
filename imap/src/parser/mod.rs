@@ -45,73 +45,80 @@ pub fn parse_response(s: impl AsRef<str>) -> ParseResult<Response> {
 
 fn build_response(pair: Pair<Rule>) -> Response {
     assert!(matches!(pair.as_rule(), Rule::response));
+    let pair = unwrap1(pair);
+    match pair.as_rule() {
+        Rule::response_done => build_response_done(pair),
+        Rule::response_data => build_response_data(pair),
+        Rule::continue_req => build_continue_req(pair),
+        _ => unreachable!("{:#?}", pair),
+    }
+}
 
+fn build_response_done(pair: Pair<Rule>) -> Response {
+    assert!(matches!(pair.as_rule(), Rule::response_done));
     let mut pairs = pair.into_inner();
     let pair = pairs.next().unwrap();
     match pair.as_rule() {
-        Rule::response_done => {
+        Rule::response_tagged => {
             let mut pairs = pair.into_inner();
             let pair = pairs.next().unwrap();
-            match pair.as_rule() {
-                Rule::response_tagged => {
-                    let mut pairs = pair.into_inner();
-                    let pair = pairs.next().unwrap();
-                    let tag = pair.as_str().to_owned();
+            let tag = pair.as_str().to_owned();
 
-                    let pair = pairs.next().unwrap();
-                    let (status, code, information) = build_resp_cond_state(pair);
-                    Response::Done(ResponseDone {
-                        tag,
-                        status,
-                        code,
-                        information,
-                    })
-                }
-                _ => unreachable!("{:#?}", pair),
-            }
-        }
-        Rule::response_data => {
-            let mut pairs = pair.into_inner();
             let pair = pairs.next().unwrap();
-            match pair.as_rule() {
-                Rule::resp_cond_state => {
-                    let (status, code, information) = build_resp_cond_state(pair);
-                    Response::Data(ResponseData {
-                        status,
-                        code,
-                        information,
-                    })
-                }
-                Rule::mailbox_data => Response::MailboxData(build_mailbox_data(pair)),
-                Rule::capability_data => Response::Capabilities(build_capabilities(pair)),
-                Rule::message_data => {
-                    let mut pairs = pair.into_inner();
-                    let pair = pairs.next().unwrap();
-                    let seq: u32 = build_number(pair);
-
-                    let pair = pairs.next().unwrap();
-                    match pair.as_rule() {
-                        Rule::message_data_expunge => Response::Expunge(seq),
-                        Rule::message_data_fetch => {
-                            let mut pairs = pair.into_inner();
-                            let msg_att = pairs.next().unwrap();
-                            let attrs = msg_att.into_inner().map(build_msg_att).collect();
-                            Response::Fetch(seq, attrs)
-                        }
-                        _ => unreachable!("{:#?}", pair),
-                    }
-                }
-                _ => unreachable!("{:#?}", pair),
-            }
-        }
-        Rule::continue_req => {
-            let (code, s) = build_resp_text(unwrap1(pair));
-            Response::Continue {
+            let (status, code, information) = build_resp_cond_state(pair);
+            Response::Done(ResponseDone {
+                tag,
+                status,
                 code,
-                information: Some(s),
+                information,
+            })
+        }
+        _ => unreachable!("{:#?}", pair),
+    }
+}
+
+fn build_response_data(pair: Pair<Rule>) -> Response {
+    assert!(matches!(pair.as_rule(), Rule::response_data));
+    let mut pairs = pair.into_inner();
+    let pair = pairs.next().unwrap();
+    match pair.as_rule() {
+        Rule::resp_cond_state => {
+            let (status, code, information) = build_resp_cond_state(pair);
+            Response::Data(ResponseData {
+                status,
+                code,
+                information,
+            })
+        }
+        Rule::mailbox_data => Response::MailboxData(build_mailbox_data(pair)),
+        Rule::capability_data => Response::Capabilities(build_capabilities(pair)),
+        Rule::message_data => {
+            let mut pairs = pair.into_inner();
+            let pair = pairs.next().unwrap();
+            let seq: u32 = build_number(pair);
+
+            let pair = pairs.next().unwrap();
+            match pair.as_rule() {
+                Rule::message_data_expunge => Response::Expunge(seq),
+                Rule::message_data_fetch => {
+                    let mut pairs = pair.into_inner();
+                    let msg_att = pairs.next().unwrap();
+                    let attrs = msg_att.into_inner().map(build_msg_att).collect();
+                    Response::Fetch(seq, attrs)
+                }
+                _ => unreachable!("{:#?}", pair),
             }
         }
         _ => unreachable!("{:#?}", pair),
+    }
+}
+
+fn build_continue_req(pair: Pair<Rule>) -> Response {
+    assert!(matches!(pair.as_rule(), Rule::continue_req));
+    let (code, s) = build_resp_text(unwrap1(pair));
+    Response::Continue {
+        code,
+        information: Some(s),
     }
 }
 

@@ -59,6 +59,9 @@ async fn run(opt: Opt) -> Result<()> {
     // send messages from the mail thread to the UI thread
     let (mail2ui_tx, mail2ui_rx) = mpsc::unbounded_channel();
 
+    // send messages from the UI thread to the vm thread
+    let (ui2vm_tx, ui2vm_rx) = mpsc::unbounded_channel();
+
     tokio::spawn(async move {
         let config_update = config_update.clone();
         mail::run_mail(config_update, ui2mail_rx, mail2ui_tx)
@@ -67,7 +70,7 @@ async fn run(opt: Opt) -> Result<()> {
     });
 
     if !opt.headless {
-        run_ui(exit_tx, mail2ui_rx);
+        run_ui(exit_tx, mail2ui_rx, ui2vm_tx);
     }
 
     exit_rx.recv().await;
@@ -80,7 +83,11 @@ async fn run(opt: Opt) -> Result<()> {
 }
 
 // Spawns the entire UI in a different thread, since it must be thread-local
-fn run_ui(exit_tx: mpsc::Sender<()>, mail2ui_rx: mpsc::UnboundedReceiver<MailEvent>) {
+fn run_ui(
+    exit_tx: mpsc::Sender<()>,
+    mail2ui_rx: mpsc::UnboundedReceiver<MailEvent>,
+    ui2vm_tx: mpsc::UnboundedSender<()>,
+) {
     let stdout = std::io::stdout();
 
     let rt = RuntimeBuilder::new_current_thread()
