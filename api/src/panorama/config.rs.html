@@ -169,12 +169,14 @@
 <span id="166">166</span>
 <span id="167">167</span>
 <span id="168">168</span>
+<span id="169">169</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Module for setting up config files and watchers.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! One of the primary goals of panorama is to be able to always hot-reload configuration files.</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fs</span>::{<span class="self">self</span>, <span class="ident">File</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Read</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">path</span>::{<span class="ident">Path</span>, <span class="ident">PathBuf</span>};
 
@@ -198,7 +200,7 @@
 
     <span class="doccomment">/// Mail accounts</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;mail&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">mail_accounts</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MailAccountConfig</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">mail_accounts</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">MailAccountConfig</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// Configuration for a single mail account</span>

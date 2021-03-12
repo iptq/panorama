@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["humanize_timestamp",""]],"struct":[["MailView",""]]});
+initSidebarItems({"fn":[["humanize_timestamp","Turn a timestamp into a format that a human might read when viewing it in a table."]],"struct":[["MailView",""]]});
