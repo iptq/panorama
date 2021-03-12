@@ -36,7 +36,4 @@ imap routine
 list of shit to do
 ---
 
-- [x] starttls impl
-- [ ] auth impl
-  - [ ] auth plain impl
-- [ ] fetch impl
+- profile the client to see what needs to be improved?

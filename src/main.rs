@@ -3,7 +3,7 @@ use std::thread;
 
 use anyhow::Result;
 use fern::colors::{Color, ColoredLevelConfig};
-use futures::future::{FutureExt, TryFutureExt};
+use futures::future::{TryFutureExt};
 use panorama::{
     config::spawn_config_watcher_system,
     mail::{self, MailEvent},
@@ -54,13 +54,13 @@ async fn run(opt: Opt) -> Result<()> {
     let (exit_tx, mut exit_rx) = mpsc::channel::<()>(1);
 
     // send messages from the UI thread to the mail thread
-    let (ui2mail_tx, ui2mail_rx) = mpsc::unbounded_channel();
+    let (_ui2mail_tx, ui2mail_rx) = mpsc::unbounded_channel();
 
     // send messages from the mail thread to the UI thread
     let (mail2ui_tx, mail2ui_rx) = mpsc::unbounded_channel();
 
     // send messages from the UI thread to the vm thread
-    let (ui2vm_tx, ui2vm_rx) = mpsc::unbounded_channel();
+    let (ui2vm_tx, _ui2vm_rx) = mpsc::unbounded_channel();
 
     tokio::spawn(async move {
         let config_update = config_update.clone();
@@ -86,7 +86,7 @@ async fn run(opt: Opt) -> Result<()> {
 fn run_ui(
     exit_tx: mpsc::Sender<()>,
     mail2ui_rx: mpsc::UnboundedReceiver<MailEvent>,
-    ui2vm_tx: mpsc::UnboundedSender<()>,
+    _ui2vm_tx: mpsc::UnboundedSender<()>,
 ) {
     let stdout = std::io::stdout();
 

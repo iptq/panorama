@@ -4,9 +4,11 @@ use std::sync::{
     Arc,
 };
 
+use anyhow::Result;
 use chrono::{DateTime, Datelike, Duration, Local};
 use chrono_humanize::HumanTime;
 use panorama_imap::response::Envelope;
+use crossterm::event::{KeyEvent, KeyCode};
 use tui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
@@ -17,7 +19,7 @@ use tui::{
 
 use crate::mail::EmailMetadata;
 
-use super::{FrameType, HandlesInput, Window, UI};
+use super::{FrameType, HandlesInput, TermType, InputResult, Window, UI};
 
 #[derive(Default, Debug)]
 pub struct MailView {
@@ -29,7 +31,23 @@ pub struct MailView {
     pub change: Arc<AtomicI8>,
 }
 
-impl HandlesInput for MailView {}
+impl HandlesInput for MailView {
+    fn handle_key(&mut self, term: TermType, evt: KeyEvent) -> Result<InputResult> {
+        let KeyEvent { code, .. } = evt;
+        match code {
+            // KeyCode::Char('q') => self.0.store(true, Ordering::Relaxed),
+            // KeyCode::Char('j') => self.1.store(1, Ordering::Relaxed),
+            // KeyCode::Char('k') => self.1.store(-1, Ordering::Relaxed),
+            KeyCode::Char(':') => {
+                // let colon_prompt = Box::new(ColonPrompt::init(term));
+                // return Ok(InputResult::Push(colon_prompt));
+            }
+            _ => {}
+        }
+
+        Ok(InputResult::Ok)
+    }
+}
 
 impl Window for MailView {
     fn name(&self) -> String {
@@ -87,7 +105,6 @@ impl Window for MailView {
                 row
             })
             .collect::<Vec<_>>();
-
         let table = Table::new(rows)
             .style(Style::default().fg(Color::White))
             .widths(&[
@@ -108,6 +125,11 @@ impl Window for MailView {
     }
 }
 
+/// Turn a timestamp into a format that a human might read when viewing it in a table.
+///
+/// This means, for dates within the past 24 hours, report it in a relative format.
+///
+/// For dates sent this year, omit the year entirely.
 fn humanize_timestamp(date: DateTime<Local>) -> String {
     let now = Local::now();
     let diff = now - date;

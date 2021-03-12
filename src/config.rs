@@ -3,6 +3,7 @@
 //! One of the primary goals of panorama is to be able to always hot-reload configuration files.
 
 use std::fs::{self, File};
+use std::collections::HashMap;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
@@ -26,7 +27,7 @@ pub struct Config {
 
     /// Mail accounts
     #[serde(rename = "mail")]
-    pub mail_accounts: Vec<MailAccountConfig>,
+    pub mail_accounts: HashMap<String, MailAccountConfig>,
 }
 
 /// Configuration for a single mail account
