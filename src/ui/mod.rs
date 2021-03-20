@@ -286,16 +286,14 @@ pub async fn run_ui(
                 // handle states in the state stack
                 // although this is written in a for loop, every case except one should break
                 let mut should_pop = false;
-                for input_state in input_states.iter_mut().rev() {
+                if let Some(input_state) = input_states.last_mut() {
                     match input_state.handle_key(&mut term, evt)? {
-                        InputResult::Ok => break,
+                        InputResult::Ok => {},
                         InputResult::Push(state) => {
                             input_states.push(state);
-                            break;
                         }
                         InputResult::Pop => {
                             should_pop = true;
-                            break;
                         }
                     }
                 }

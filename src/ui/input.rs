@@ -41,7 +41,7 @@ impl HandlesInput for BaseInputHandler {
             KeyCode::Char('j') => self.1.store(1, Ordering::Relaxed),
             KeyCode::Char('k') => self.1.store(-1, Ordering::Relaxed),
             KeyCode::Char(':') => {
-                let colon_prompt = Box::new(ColonPrompt::init(term));
+                let colon_prompt = Box::new(ColonPrompt::init(term)?);
                 return Ok(InputResult::Push(colon_prompt));
             }
             _ => {}

@@ -10,11 +10,11 @@ pub struct ColonPrompt {
 }
 
 impl ColonPrompt {
-    pub fn init(term: TermType) -> Self {
-        let s = term.size().unwrap();
-        term.set_cursor(1, s.height - 1);
-        term.show_cursor();
-        ColonPrompt::default()
+    pub fn init(term: TermType) -> Result<Self> {
+        let s = term.size()?;
+        term.set_cursor(1, s.height - 1)?;
+        term.show_cursor()?;
+        Ok(ColonPrompt::default())
     }
 }
 

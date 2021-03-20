@@ -9,10 +9,14 @@ readme = "README.md"
 license = "GPL-3.0-or-later"
 
 [workspace]
-members = ["imap", "smtp"]
+members = [
+    "imap",
+    "smtp",
+    "maildir",
+]
 
 [dependencies]
-anyhow = "1.0.38"
+anyhow = "1.0.39"
 async-trait = "0.1.48"
 cfg-if = "1.0.0"
 chrono = "0.4.19"
