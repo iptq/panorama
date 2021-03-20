@@ -288,7 +288,7 @@ pub async fn run_ui(
                 let mut should_pop = false;
                 if let Some(input_state) = input_states.last_mut() {
                     match input_state.handle_key(&mut term, evt)? {
-                        InputResult::Ok => {},
+                        InputResult::Ok => {}
                         InputResult::Push(state) => {
                             input_states.push(state);
                         }

@@ -7,8 +7,8 @@ use std::sync::{
 use anyhow::Result;
 use chrono::{DateTime, Datelike, Duration, Local};
 use chrono_humanize::HumanTime;
+use crossterm::event::{KeyCode, KeyEvent};
 use panorama_imap::response::Envelope;
-use crossterm::event::{KeyEvent, KeyCode};
 use tui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
@@ -19,7 +19,7 @@ use tui::{
 
 use crate::mail::EmailMetadata;
 
-use super::{FrameType, HandlesInput, TermType, InputResult, Window, UI};
+use super::{FrameType, HandlesInput, InputResult, TermType, Window, UI};
 
 #[derive(Default, Debug)]
 pub struct MailView {

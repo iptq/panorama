@@ -3,7 +3,7 @@ use std::thread;
 
 use anyhow::Result;
 use fern::colors::{Color, ColoredLevelConfig};
-use futures::future::{TryFutureExt};
+use futures::future::TryFutureExt;
 use panorama::{
     config::spawn_config_watcher_system,
     mail::{self, MailEvent},

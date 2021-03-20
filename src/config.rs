@@ -2,8 +2,8 @@
 //!
 //! One of the primary goals of panorama is to be able to always hot-reload configuration files.
 
-use std::fs::{self, File};
 use std::collections::HashMap;
+use std::fs::{self, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 

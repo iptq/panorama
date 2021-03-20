@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use tokio::fs::{File, self};
 use anyhow::Result;
 use tempfile::NamedTempFile;
+use tokio::fs::{self, File, OpenOptions};
 
 pub struct Maildir {
     path: PathBuf,
@@ -18,16 +18,19 @@ impl Maildir {
 
     /// Stores a new message into the `new` directory
     // TODO: maybe have a streaming option?
-    pub async fn store(&self) -> Result<()> {
-        let unique_name = "hellosu";
-        let tmp_file = self.tmp_dir().join(unique_name);
+    pub async fn store(&self, opts: StoreOptions) -> Result<PathBuf> {
+        let unique_name = opts.create_unique_name();
+        let tmp_file = self.tmp_dir().join(&unique_name);
         {
-            let mut file = File::create(&tmp_file).await?;
+            let mut file = OpenOptions::new()
+                .create_new(true) // fail if the file already exists, this means we aren't unique!
+                .open(&tmp_file)
+                .await?;
         }
 
-        let new_file = self.new_dir().join(unique_name);
-        fs::rename(tmp_file, new_file).await?;
-        Ok(())
+        let new_file = self.new_dir().join(&unique_name);
+        fs::rename(&tmp_file, &new_file).await?;
+        Ok(new_file)
     }
 
     /// Returns the path to the `tmp` subdirectory
@@ -46,5 +49,14 @@ impl Maildir {
     #[inline]
     pub fn cur_dir(&self) -> PathBuf {
         self.path.join("cur")
+    }
+}
+
+/// Options that will be used to determine the filename it's stored to
+pub struct StoreOptions {}
+
+impl StoreOptions {
+    pub fn create_unique_name(&self) -> String {
+        format!("")
     }
 }
