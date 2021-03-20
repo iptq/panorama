@@ -54,3 +54,6 @@ version = "0"
 
 [features]
 clippy = []
+
+[package.metadata.deb]
+depends = "$auto"
