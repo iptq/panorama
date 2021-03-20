@@ -68,11 +68,11 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ColonPrompt</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">init</span>(<span class="ident">term</span>: <span class="ident">TermType</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">term</span>.<span class="ident">size</span>().<span class="ident">unwrap</span>();
-        <span class="ident">term</span>.<span class="ident">set_cursor</span>(<span class="number">1</span>, <span class="ident">s</span>.<span class="ident">height</span> <span class="op">-</span> <span class="number">1</span>);
-        <span class="ident">term</span>.<span class="ident">show_cursor</span>();
-        <span class="ident">ColonPrompt</span>::<span class="ident">default</span>()
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">init</span>(<span class="ident">term</span>: <span class="ident">TermType</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">term</span>.<span class="ident">size</span>()<span class="question-mark">?</span>;
+        <span class="ident">term</span>.<span class="ident">set_cursor</span>(<span class="number">1</span>, <span class="ident">s</span>.<span class="ident">height</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="ident">term</span>.<span class="ident">show_cursor</span>()<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="ident">ColonPrompt</span>::<span class="ident">default</span>())
     }
 }
 
