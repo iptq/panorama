@@ -18,3 +18,12 @@ jobs:
         run: |
           cargo test --all
 
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo
+
+# vim: set ts=2 tw=2 sw=2 et :
