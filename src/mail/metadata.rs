@@ -4,7 +4,7 @@ use chrono::{DateTime, Local};
 use panorama_imap::response::*;
 
 /// A record that describes the metadata of an email as it appears in the UI list
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct EmailMetadata {
     /// UID if the message has one
     pub uid: Option<u32>,

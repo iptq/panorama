@@ -18,6 +18,9 @@ pub trait Window: HandlesInput {
     fn draw_inactive(&mut self, f: FrameType, area: Rect, ui: &UI) {
         self.draw(f, area, ui);
     }
+
+    /// Update function
+    fn update(&mut self) {}
 }
 
 downcast_rs::impl_downcast!(Window);

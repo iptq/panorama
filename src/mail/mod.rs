@@ -1,6 +1,7 @@
 //! Mail
 
 mod client;
+mod event;
 mod metadata;
 
 use anyhow::Result;
@@ -25,6 +26,7 @@ use tokio_stream::wrappers::WatchStream;
 
 use crate::config::{Config, ConfigWatcher, ImapAuth, MailAccountConfig, TlsMethod};
 
+pub use self::event::MailEvent;
 pub use self::metadata::EmailMetadata;
 
 /// Command sent to the mail thread by something else (i.e. UI)
@@ -36,26 +38,6 @@ pub enum MailCommand {
 
     /// Send a raw command
     Raw(ImapCommand),
-}
-
-/// Possible events returned from the server that should be sent to the UI
-#[derive(Debug)]
-#[non_exhaustive]
-pub enum MailEvent {
-    /// Got the list of folders
-    FolderList(Vec<String>),
-
-    /// Got the current list of messages
-    MessageList(Vec<Envelope>),
-
-    /// A list of the UIDs in the current mail view
-    MessageUids(Vec<u32>),
-
-    /// Update the given UID with the given attribute list
-    UpdateUid(u32, Vec<AttributeValue>),
-
-    /// New message came in with given UID
-    NewUid(u32),
 }
 
 /// Main entrypoint for the mail listener.
@@ -90,7 +72,7 @@ pub async fn run_mail(
 
                 // this loop is to make sure accounts are restarted on error
                 loop {
-                    match client::imap_main(acct.clone(), mail2ui_tx.clone()).await {
+                    match client::imap_main(&acct_name, acct.clone(), mail2ui_tx.clone()).await {
                         Ok(_) => {}
                         Err(err) => {
                             error!("IMAP Error: {}", err);

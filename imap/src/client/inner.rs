@@ -303,9 +303,9 @@ where
                 } else if let Some((tag, cmd, cmd_tx)) = curr_cmd.as_mut() {
                     // we got a response from the server for this command, so send it over the
                     // channel
-                    debug!("sending {:?} to tag {}", resp, tag);
+                    // debug!("sending {:?} to tag {}", resp, tag);
                     let res = cmd_tx.send(resp);
-                    debug!("res1: {:?}", res);
+                    // debug!("res1: {:?}", res);
                 }
             }
         }

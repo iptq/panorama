@@ -4,6 +4,9 @@ use anyhow::Result;
 use tempfile::NamedTempFile;
 use tokio::fs::{self, File, OpenOptions};
 
+/// A Maildir, as defined by [Daniel J. Bernstein][1].
+///
+/// [1]: https://cr.yp.to/proto/maildir.html
 pub struct Maildir {
     path: PathBuf,
 }

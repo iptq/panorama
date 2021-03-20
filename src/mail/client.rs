@@ -23,9 +23,12 @@ use super::{MailCommand, MailEvent};
 
 /// The main sequence of steps for the IMAP thread to follow
 pub async fn imap_main(
+    acct_name: impl AsRef<str>,
     acct: MailAccountConfig,
     mail2ui_tx: UnboundedSender<MailEvent>,
 ) -> Result<()> {
+    let acct_name = acct_name.as_ref().to_owned();
+
     // loop ensures that the connection is retried after it dies
     loop {
         let builder: ClientConfig = ClientBuilder::default()
@@ -68,17 +71,20 @@ pub async fn imap_main(
         loop {
             let folder_list = authed.list().await?;
             debug!("mailbox list: {:?}", folder_list);
-            let _ = mail2ui_tx.send(MailEvent::FolderList(folder_list));
+            let _ = mail2ui_tx.send(MailEvent::FolderList(acct_name.clone(), folder_list));
 
             let message_uids = authed.uid_search().await?;
             let message_uids = message_uids.into_iter().take(30).collect::<Vec<_>>();
-            let _ = mail2ui_tx.send(MailEvent::MessageUids(message_uids.clone()));
+            let _ = mail2ui_tx.send(MailEvent::MessageUids(
+                acct_name.clone(),
+                message_uids.clone(),
+            ));
 
             // TODO: make this happen concurrently with the main loop?
             let mut message_list = authed.uid_fetch(&message_uids).await.unwrap();
             while let Some((uid, attrs)) = message_list.next().await {
-                let evt = MailEvent::UpdateUid(uid, attrs);
-                debug!("sent {:?}", evt);
+                let evt = MailEvent::UpdateUid(acct_name.clone(), uid, attrs);
+                // debug!("sent {:?}", evt);
                 mail2ui_tx.send(evt);
             }
 
@@ -110,13 +116,16 @@ pub async fn imap_main(
                             let message_uids = authed.uid_search().await?;
                             let message_uids =
                                 message_uids.into_iter().take(20).collect::<Vec<_>>();
-                            let _ = mail2ui_tx.send(MailEvent::MessageUids(message_uids.clone()));
+                            let _ = mail2ui_tx.send(MailEvent::MessageUids(
+                                acct_name.clone(),
+                                message_uids.clone(),
+                            ));
 
                             // TODO: make this happen concurrently with the main loop?
                             let mut message_list = authed.uid_fetch(&message_uids).await.unwrap();
                             while let Some((uid, attrs)) = message_list.next().await {
-                                let evt = MailEvent::UpdateUid(uid, attrs);
-                                debug!("sent {:?}", evt);
+                                let evt = MailEvent::UpdateUid(acct_name.clone(), uid, attrs);
+                                // debug!("sent {:?}", evt);
                                 mail2ui_tx.send(evt);
                             }
 

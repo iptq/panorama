@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{
-    atomic::{AtomicI8, Ordering},
+    atomic::{AtomicI8, AtomicU32, Ordering},
     Arc,
 };
 
@@ -19,15 +19,13 @@ use tui::{
 
 use crate::mail::EmailMetadata;
 
-use super::{FrameType, HandlesInput, InputResult, TermType, Window, UI};
+use super::{FrameType, HandlesInput, InputResult, MailStore, TermType, Window, UI};
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct MailView {
-    pub folders: Vec<String>,
-    pub message_uids: Vec<u32>,
-    pub message_map: HashMap<u32, EmailMetadata>,
-    pub messages: Vec<Envelope>,
+    pub mail_store: MailStore,
     pub message_list: TableState,
+    pub selected: Arc<AtomicU32>,
     pub change: Arc<AtomicI8>,
 }
 
@@ -61,16 +59,23 @@ impl Window for MailView {
             .constraints([Constraint::Length(20), Constraint::Max(5000)])
             .split(area);
 
+        let accts = self.mail_store.iter_accts();
+
         // folder list
-        let items = self
-            .folders
-            .iter()
-            .map(|s| ListItem::new(s.to_owned()))
-            .collect::<Vec<_>>();
+        let mut items = vec![];
+        for acct in accts.iter() {
+            let result = self.mail_store.folders_of(acct);
+            if let Some(folders) = result {
+                items.push(ListItem::new(acct.to_owned()));
+                for folder in folders {
+                    items.push(ListItem::new(format!(" {}", folder)));
+                }
+            }
+        }
 
         let dirlist = List::new(items)
             .block(Block::default().borders(Borders::NONE).title(Span::styled(
-                "ur mom",
+                "hellosu",
                 Style::default().add_modifier(Modifier::BOLD),
             )))
             .style(Style::default().fg(Color::White))
@@ -78,33 +83,57 @@ impl Window for MailView {
             .highlight_symbol(">>");
 
         // message list table
-        let mut metas = self
-            .message_uids
-            .iter()
-            .filter_map(|id| self.message_map.get(id))
-            .collect::<Vec<_>>();
-        metas.sort_by_key(|m| m.date);
-        let rows = metas
-            .iter()
-            .rev()
-            .map(|meta| {
-                let mut row = Row::new(vec![
-                    String::from(if meta.unread { "\u{2b24}" } else { "" }),
-                    meta.uid.map(|u| u.to_string()).unwrap_or_default(),
-                    meta.date.map(|d| humanize_timestamp(d)).unwrap_or_default(),
-                    meta.from.clone(),
-                    meta.subject.clone(),
-                ]);
-                if meta.unread {
-                    row = row.style(
-                        Style::default()
-                            .fg(Color::LightCyan)
-                            .add_modifier(Modifier::BOLD),
-                    );
+        // let mut metas = self
+        //     .message_uids
+        //     .iter()
+        //     .filter_map(|id| self.message_map.get(id))
+        //     .collect::<Vec<_>>();
+        // metas.sort_by_key(|m| m.date);
+        // let rows = metas
+        //     .iter()
+        //     .rev()
+        //     .map(|meta| {
+        //         let mut row = Row::new(vec![
+        //             String::from(if meta.unread { "\u{2b24}" } else { "" }),
+        //             meta.uid.map(|u| u.to_string()).unwrap_or_default(),
+        //             meta.date.map(|d| humanize_timestamp(d)).unwrap_or_default(),
+        //             meta.from.clone(),
+        //             meta.subject.clone(),
+        //         ]);
+        //         if meta.unread {
+        //             row = row.style(
+        //                 Style::default()
+        //                     .fg(Color::LightCyan)
+        //                     .add_modifier(Modifier::BOLD),
+        //             );
+        //         }
+        //         row
+        //     })
+        //     .collect::<Vec<_>>();
+
+        let mut rows = vec![];
+        for acct in accts.iter() {
+            let result = self.mail_store.messages_of(acct);
+            if let Some(messages) = result {
+                for meta in messages {
+                    let mut row = Row::new(vec![
+                        String::from(if meta.unread { "\u{2b24}" } else { "" }),
+                        meta.uid.map(|u| u.to_string()).unwrap_or_default(),
+                        meta.date.map(|d| humanize_timestamp(d)).unwrap_or_default(),
+                        meta.from.clone(),
+                        meta.subject.clone(),
+                    ]);
+                    if meta.unread {
+                        row = row.style(
+                            Style::default()
+                                .fg(Color::LightCyan)
+                                .add_modifier(Modifier::BOLD),
+                        );
+                    }
+                    rows.push(row);
                 }
-                row
-            })
-            .collect::<Vec<_>>();
+            }
+        }
         let table = Table::new(rows)
             .style(Style::default().fg(Color::White))
             .widths(&[
@@ -144,32 +173,41 @@ fn humanize_timestamp(date: DateTime<Local>) -> String {
 }
 
 impl MailView {
-    pub fn move_down(&mut self) {
-        if self.message_uids.is_empty() {
-            return;
-        }
-        let len = self.message_uids.len();
-        if let Some(selected) = self.message_list.selected() {
-            if selected + 1 < len {
-                self.message_list.select(Some(selected + 1));
-            }
-        } else {
-            self.message_list.select(Some(0));
+    pub fn new(mail_store: MailStore) -> Self {
+        MailView {
+            mail_store,
+            message_list: TableState::default(),
+            selected: Arc::new(AtomicU32::default()),
+            change: Arc::new(AtomicI8::default()),
         }
     }
 
+    pub fn move_down(&mut self) {
+        // if self.message_uids.is_empty() {
+        //     return;
+        // }
+        // let len = self.message_uids.len();
+        // if let Some(selected) = self.message_list.selected() {
+        //     if selected + 1 < len {
+        //         self.message_list.select(Some(selected + 1));
+        //     }
+        // } else {
+        //     self.message_list.select(Some(0));
+        // }
+    }
+
     pub fn move_up(&mut self) {
-        if self.message_uids.is_empty() {
-            return;
-        }
-        let len = self.message_uids.len();
-        if let Some(selected) = self.message_list.selected() {
-            if selected >= 1 {
-                self.message_list.select(Some(selected - 1));
-            }
-        } else {
-            self.message_list.select(Some(len - 1));
-        }
+        // if self.message_uids.is_empty() {
+        //     return;
+        // }
+        // let len = self.message_uids.len();
+        // if let Some(selected) = self.message_list.selected() {
+        //     if selected >= 1 {
+        //         self.message_list.select(Some(selected - 1));
+        //     }
+        // } else {
+        //     self.message_list.select(Some(len - 1));
+        // }
     }
 
     pub fn update(&mut self) {
