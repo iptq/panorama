@@ -203,8 +203,8 @@
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">chrono</span>::{<span class="ident">DateTime</span>, <span class="ident">Datelike</span>, <span class="ident">Duration</span>, <span class="ident">Local</span>};
 <span class="kw">use</span> <span class="ident">chrono_humanize</span>::<span class="ident">HumanTime</span>;
+<span class="kw">use</span> <span class="ident">crossterm</span>::<span class="ident">event</span>::{<span class="ident">KeyCode</span>, <span class="ident">KeyEvent</span>};
 <span class="kw">use</span> <span class="ident">panorama_imap</span>::<span class="ident">response</span>::<span class="ident">Envelope</span>;
-<span class="kw">use</span> <span class="ident">crossterm</span>::<span class="ident">event</span>::{<span class="ident">KeyEvent</span>, <span class="ident">KeyCode</span>};
 <span class="kw">use</span> <span class="ident">tui</span>::{
     <span class="ident">buffer</span>::<span class="ident">Buffer</span>,
     <span class="ident">layout</span>::{<span class="ident">Constraint</span>, <span class="ident">Direction</span>, <span class="ident">Layout</span>, <span class="ident">Rect</span>},
@@ -215,7 +215,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">mail</span>::<span class="ident">EmailMetadata</span>;
 
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">FrameType</span>, <span class="ident">HandlesInput</span>, <span class="ident">TermType</span>, <span class="ident">InputResult</span>, <span class="ident">Window</span>, <span class="ident">UI</span>};
+<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">FrameType</span>, <span class="ident">HandlesInput</span>, <span class="ident">InputResult</span>, <span class="ident">TermType</span>, <span class="ident">Window</span>, <span class="ident">UI</span>};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MailView</span> {

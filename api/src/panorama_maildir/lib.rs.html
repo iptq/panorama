@@ -51,12 +51,24 @@
 <span id="48">48</span>
 <span id="49">49</span>
 <span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">path</span>::{<span class="ident">Path</span>, <span class="ident">PathBuf</span>};
 
-<span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">fs</span>::{<span class="ident">File</span>, <span class="self">self</span>};
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">tempfile</span>::<span class="ident">NamedTempFile</span>;
+<span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">fs</span>::{<span class="self">self</span>, <span class="ident">File</span>, <span class="ident">OpenOptions</span>};
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Maildir</span> {
     <span class="ident">path</span>: <span class="ident">PathBuf</span>,
@@ -72,16 +84,19 @@
 
     <span class="doccomment">/// Stores a new message into the `new` directory</span>
     <span class="comment">// TODO: maybe have a streaming option?</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">store</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">unique_name</span> <span class="op">=</span> <span class="string">&quot;hellosu&quot;</span>;
-        <span class="kw">let</span> <span class="ident">tmp_file</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">tmp_dir</span>().<span class="ident">join</span>(<span class="ident">unique_name</span>);
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">store</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">opts</span>: <span class="ident">StoreOptions</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">PathBuf</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">unique_name</span> <span class="op">=</span> <span class="ident">opts</span>.<span class="ident">create_unique_name</span>();
+        <span class="kw">let</span> <span class="ident">tmp_file</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">tmp_dir</span>().<span class="ident">join</span>(<span class="kw-2">&amp;</span><span class="ident">unique_name</span>);
         {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">File</span>::<span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_file</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">OpenOptions</span>::<span class="ident">new</span>()
+                .<span class="ident">create_new</span>(<span class="bool-val">true</span>) <span class="comment">// fail if the file already exists, this means we aren&#39;t unique!</span>
+                .<span class="ident">open</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_file</span>)
+                .<span class="kw">await</span><span class="question-mark">?</span>;
         }
 
-        <span class="kw">let</span> <span class="ident">new_file</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">new_dir</span>().<span class="ident">join</span>(<span class="ident">unique_name</span>);
-        <span class="ident">fs</span>::<span class="ident">rename</span>(<span class="ident">tmp_file</span>, <span class="ident">new_file</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(())
+        <span class="kw">let</span> <span class="ident">new_file</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">new_dir</span>().<span class="ident">join</span>(<span class="kw-2">&amp;</span><span class="ident">unique_name</span>);
+        <span class="ident">fs</span>::<span class="ident">rename</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_file</span>, <span class="kw-2">&amp;</span><span class="ident">new_file</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="ident">new_file</span>)
     }
 
     <span class="doccomment">/// Returns the path to the `tmp` subdirectory</span>
@@ -100,6 +115,15 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cur_dir</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">PathBuf</span> {
         <span class="self">self</span>.<span class="ident">path</span>.<span class="ident">join</span>(<span class="string">&quot;cur&quot;</span>)
+    }
+}
+
+<span class="doccomment">/// Options that will be used to determine the filename it&#39;s stored to</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">StoreOptions</span> {}
+
+<span class="kw">impl</span> <span class="ident">StoreOptions</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_unique_name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+        <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;&quot;</span>)
     }
 }
 </pre></div>

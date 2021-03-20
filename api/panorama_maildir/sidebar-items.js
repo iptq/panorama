@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["Maildir",""]]});
+initSidebarItems({"struct":[["Maildir",""],["StoreOptions","Options that will be used to determine the filename it's stored to"]]});
