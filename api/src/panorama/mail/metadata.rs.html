@@ -81,7 +81,7 @@
 <span class="kw">use</span> <span class="ident">panorama_imap</span>::<span class="ident">response</span>::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// A record that describes the metadata of an email as it appears in the UI list</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EmailMetadata</span> {
     <span class="doccomment">/// UID if the message has one</span>
     <span class="kw">pub</span> <span class="ident">uid</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,

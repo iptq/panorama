@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["MailEvent","Possible events returned from the server that should be sent to the UI"]]});

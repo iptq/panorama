@@ -63,6 +63,9 @@
 <span id="60">60</span>
 <span id="61">61</span>
 <span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">path</span>::{<span class="ident">Path</span>, <span class="ident">PathBuf</span>};
 
@@ -70,6 +73,9 @@
 <span class="kw">use</span> <span class="ident">tempfile</span>::<span class="ident">NamedTempFile</span>;
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">fs</span>::{<span class="self">self</span>, <span class="ident">File</span>, <span class="ident">OpenOptions</span>};
 
+<span class="doccomment">/// A Maildir, as defined by [Daniel J. Bernstein][1].</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// [1]: https://cr.yp.to/proto/maildir.html</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Maildir</span> {
     <span class="ident">path</span>: <span class="ident">PathBuf</span>,
 }

@@ -148,6 +148,15 @@
 <span id="145">145</span>
 <span id="146">146</span>
 <span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">futures</span>::{
@@ -174,9 +183,12 @@
 
 <span class="doccomment">/// The main sequence of steps for the IMAP thread to follow</span>
 <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">imap_main</span>(
+    <span class="ident">acct_name</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>,
     <span class="ident">acct</span>: <span class="ident">MailAccountConfig</span>,
     <span class="ident">mail2ui_tx</span>: <span class="ident">UnboundedSender</span><span class="op">&lt;</span><span class="ident">MailEvent</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">acct_name</span> <span class="op">=</span> <span class="ident">acct_name</span>.<span class="ident">as_ref</span>().<span class="ident">to_owned</span>();
+
     <span class="comment">// loop ensures that the connection is retried after it dies</span>
     <span class="kw">loop</span> {
         <span class="kw">let</span> <span class="ident">builder</span>: <span class="ident">ClientConfig</span> <span class="op">=</span> <span class="ident">ClientBuilder</span>::<span class="ident">default</span>()
@@ -219,17 +231,20 @@
         <span class="kw">loop</span> {
             <span class="kw">let</span> <span class="ident">folder_list</span> <span class="op">=</span> <span class="ident">authed</span>.<span class="ident">list</span>().<span class="kw">await</span><span class="question-mark">?</span>;
             <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;mailbox list: {:?}&quot;</span>, <span class="ident">folder_list</span>);
-            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">mail2ui_tx</span>.<span class="ident">send</span>(<span class="ident">MailEvent</span>::<span class="ident">FolderList</span>(<span class="ident">folder_list</span>));
+            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">mail2ui_tx</span>.<span class="ident">send</span>(<span class="ident">MailEvent</span>::<span class="ident">FolderList</span>(<span class="ident">acct_name</span>.<span class="ident">clone</span>(), <span class="ident">folder_list</span>));
 
             <span class="kw">let</span> <span class="ident">message_uids</span> <span class="op">=</span> <span class="ident">authed</span>.<span class="ident">uid_search</span>().<span class="kw">await</span><span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">message_uids</span> <span class="op">=</span> <span class="ident">message_uids</span>.<span class="ident">into_iter</span>().<span class="ident">take</span>(<span class="number">30</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">mail2ui_tx</span>.<span class="ident">send</span>(<span class="ident">MailEvent</span>::<span class="ident">MessageUids</span>(<span class="ident">message_uids</span>.<span class="ident">clone</span>()));
+            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">mail2ui_tx</span>.<span class="ident">send</span>(<span class="ident">MailEvent</span>::<span class="ident">MessageUids</span>(
+                <span class="ident">acct_name</span>.<span class="ident">clone</span>(),
+                <span class="ident">message_uids</span>.<span class="ident">clone</span>(),
+            ));
 
             <span class="comment">// TODO: make this happen concurrently with the main loop?</span>
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">message_list</span> <span class="op">=</span> <span class="ident">authed</span>.<span class="ident">uid_fetch</span>(<span class="kw-2">&amp;</span><span class="ident">message_uids</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
             <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">uid</span>, <span class="ident">attrs</span>)) <span class="op">=</span> <span class="ident">message_list</span>.<span class="ident">next</span>().<span class="kw">await</span> {
-                <span class="kw">let</span> <span class="ident">evt</span> <span class="op">=</span> <span class="ident">MailEvent</span>::<span class="ident">UpdateUid</span>(<span class="ident">uid</span>, <span class="ident">attrs</span>);
-                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;sent {:?}&quot;</span>, <span class="ident">evt</span>);
+                <span class="kw">let</span> <span class="ident">evt</span> <span class="op">=</span> <span class="ident">MailEvent</span>::<span class="ident">UpdateUid</span>(<span class="ident">acct_name</span>.<span class="ident">clone</span>(), <span class="ident">uid</span>, <span class="ident">attrs</span>);
+                <span class="comment">// debug!(&quot;sent {:?}&quot;, evt);</span>
                 <span class="ident">mail2ui_tx</span>.<span class="ident">send</span>(<span class="ident">evt</span>);
             }
 
@@ -261,13 +276,16 @@
                             <span class="kw">let</span> <span class="ident">message_uids</span> <span class="op">=</span> <span class="ident">authed</span>.<span class="ident">uid_search</span>().<span class="kw">await</span><span class="question-mark">?</span>;
                             <span class="kw">let</span> <span class="ident">message_uids</span> <span class="op">=</span>
                                 <span class="ident">message_uids</span>.<span class="ident">into_iter</span>().<span class="ident">take</span>(<span class="number">20</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-                            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">mail2ui_tx</span>.<span class="ident">send</span>(<span class="ident">MailEvent</span>::<span class="ident">MessageUids</span>(<span class="ident">message_uids</span>.<span class="ident">clone</span>()));
+                            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">mail2ui_tx</span>.<span class="ident">send</span>(<span class="ident">MailEvent</span>::<span class="ident">MessageUids</span>(
+                                <span class="ident">acct_name</span>.<span class="ident">clone</span>(),
+                                <span class="ident">message_uids</span>.<span class="ident">clone</span>(),
+                            ));
 
                             <span class="comment">// TODO: make this happen concurrently with the main loop?</span>
                             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">message_list</span> <span class="op">=</span> <span class="ident">authed</span>.<span class="ident">uid_fetch</span>(<span class="kw-2">&amp;</span><span class="ident">message_uids</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
                             <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">uid</span>, <span class="ident">attrs</span>)) <span class="op">=</span> <span class="ident">message_list</span>.<span class="ident">next</span>().<span class="kw">await</span> {
-                                <span class="kw">let</span> <span class="ident">evt</span> <span class="op">=</span> <span class="ident">MailEvent</span>::<span class="ident">UpdateUid</span>(<span class="ident">uid</span>, <span class="ident">attrs</span>);
-                                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;sent {:?}&quot;</span>, <span class="ident">evt</span>);
+                                <span class="kw">let</span> <span class="ident">evt</span> <span class="op">=</span> <span class="ident">MailEvent</span>::<span class="ident">UpdateUid</span>(<span class="ident">acct_name</span>.<span class="ident">clone</span>(), <span class="ident">uid</span>, <span class="ident">attrs</span>);
+                                <span class="comment">// debug!(&quot;sent {:?}&quot;, evt);</span>
                                 <span class="ident">mail2ui_tx</span>.<span class="ident">send</span>(<span class="ident">evt</span>);
                             }
 

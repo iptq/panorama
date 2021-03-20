@@ -45,7 +45,7 @@
 
     <span class="kw">fn</span> <span class="ident">decode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">src</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BytesMut</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Item</span><span class="op">&gt;</span>, <span class="self">Self</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">from_utf8</span>(<span class="ident">src</span>)<span class="question-mark">?</span>;
-        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;codec parsing {:?}&quot;</span>, <span class="ident">s</span>);
+        <span class="comment">// trace!(&quot;codec parsing {:?}&quot;, s);</span>
         <span class="kw">match</span> <span class="ident">parse_streamed_response</span>(<span class="ident">s</span>) {
             <span class="prelude-val">Ok</span>((<span class="ident">resp</span>, <span class="ident">len</span>)) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">src</span>.<span class="ident">advance</span>(<span class="ident">len</span>);

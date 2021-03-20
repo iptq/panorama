@@ -623,9 +623,9 @@
                 } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">tag</span>, <span class="ident">cmd</span>, <span class="ident">cmd_tx</span>)) <span class="op">=</span> <span class="ident">curr_cmd</span>.<span class="ident">as_mut</span>() {
                     <span class="comment">// we got a response from the server for this command, so send it over the</span>
                     <span class="comment">// channel</span>
-                    <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;sending {:?} to tag {}&quot;</span>, <span class="ident">resp</span>, <span class="ident">tag</span>);
+                    <span class="comment">// debug!(&quot;sending {:?} to tag {}&quot;, resp, tag);</span>
                     <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">cmd_tx</span>.<span class="ident">send</span>(<span class="ident">resp</span>);
-                    <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;res1: {:?}&quot;</span>, <span class="ident">res</span>);
+                    <span class="comment">// debug!(&quot;res1: {:?}&quot;, res);</span>
                 }
             }
         }
