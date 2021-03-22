@@ -1861,16 +1861,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "panorama-maildir"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "futures 0.3.13",
- "tempfile",
- "tokio 1.3.0",
-]
-
-[[package]]
 name = "panorama-smtp"
 version = "0.1.0"
 

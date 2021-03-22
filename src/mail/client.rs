@@ -84,7 +84,6 @@ pub async fn imap_main(
             let mut message_list = authed.uid_fetch(&message_uids).await.unwrap();
             while let Some((uid, attrs)) = message_list.next().await {
                 let evt = MailEvent::UpdateUid(acct_name.clone(), uid, attrs);
-                // debug!("sent {:?}", evt);
                 mail2ui_tx.send(evt);
             }
 
