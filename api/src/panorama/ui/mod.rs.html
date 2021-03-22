@@ -213,6 +213,7 @@
 <span id="210">210</span>
 <span id="211">211</span>
 <span id="212">212</span>
+<span id="213">213</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! UI library</span>
 
@@ -238,7 +239,7 @@
 <span class="kw">use</span> <span class="ident">chrono</span>::{<span class="ident">Local</span>, <span class="ident">TimeZone</span>};
 <span class="kw">use</span> <span class="ident">crossterm</span>::{
     <span class="ident">cursor</span>,
-    <span class="ident">event</span>::{<span class="self">self</span>, <span class="ident">Event</span>, <span class="ident">KeyCode</span>, <span class="ident">KeyEvent</span>},
+    <span class="ident">event</span>::{<span class="self">self</span>, <span class="ident">Event</span>, <span class="ident">KeyCode</span>, <span class="ident">KeyEvent</span>, <span class="ident">EventStream</span>},
     <span class="ident">style</span>, <span class="ident">terminal</span>,
 };
 <span class="kw">use</span> <span class="ident">downcast_rs</span>::<span class="ident">Downcast</span>;
@@ -279,6 +280,7 @@
 
     <span class="kw">let</span> <span class="ident">backend</span> <span class="op">=</span> <span class="ident">CrosstermBackend</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">stdout</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">term</span> <span class="op">=</span> <span class="ident">Terminal</span>::<span class="ident">new</span>(<span class="ident">backend</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ui_events</span> <span class="op">=</span> <span class="ident">EventStream</span>::<span class="ident">new</span>();
 
     <span class="kw">let</span> <span class="ident">should_exit</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">AtomicBool</span>::<span class="ident">new</span>(<span class="bool-val">false</span>));
 
@@ -301,20 +303,20 @@
             <span class="ident">ui</span>.<span class="ident">draw</span>(<span class="ident">f</span>);
         })<span class="question-mark">?</span>;
 
-        <span class="comment">// handle events coming from the UI</span>
-        <span class="kw">if</span> <span class="ident">event</span>::<span class="ident">poll</span>(<span class="ident">FRAME_DURATION</span>)<span class="question-mark">?</span> {
-            <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="ident">event</span>::<span class="ident">read</span>()<span class="question-mark">?</span>;
-            <span class="ident">ui</span>.<span class="ident">process_event</span>(<span class="ident">event</span>)<span class="question-mark">?</span>;
-        }
-
         <span class="macro">select</span><span class="macro">!</span> {
             <span class="comment">// got an event from the mail thread</span>
             <span class="ident">evt</span> <span class="op">=</span> <span class="ident">mail2ui_rx</span>.<span class="ident">recv</span>().<span class="ident">fuse</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">evt</span>) <span class="op">=</span> <span class="ident">evt</span> {
                 <span class="ident">ui</span>.<span class="ident">process_mail_event</span>(<span class="ident">evt</span>);
             },
 
+            <span class="comment">// got an event from the ui thread</span>
+            <span class="ident">evt</span> <span class="op">=</span> <span class="ident">ui_events</span>.<span class="ident">next</span>().<span class="ident">fuse</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">evt</span>) <span class="op">=</span> <span class="ident">evt</span> {
+                <span class="kw">let</span> <span class="ident">evt</span> <span class="op">=</span> <span class="ident">evt</span><span class="question-mark">?</span>;
+                <span class="ident">ui</span>.<span class="ident">process_event</span>(<span class="ident">evt</span>)<span class="question-mark">?</span>;
+            }
+
             <span class="comment">// wait for approx 60fps</span>
-            <span class="kw">_</span> <span class="op">=</span> <span class="ident">time</span>::<span class="ident">sleep</span>(<span class="ident">FRAME_DURATION</span>).<span class="ident">fuse</span>() <span class="op">=</span><span class="op">&gt;</span> {},
+            <span class="comment">// _ = time::sleep(FRAME_DURATION).fuse() =&gt; {},</span>
         }
     }
 
