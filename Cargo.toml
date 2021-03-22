@@ -20,7 +20,7 @@ async-trait = "0.1.48"
 cfg-if = "1.0.0"
 chrono = "0.4.19"
 chrono-humanize = "0.1.2"
-crossterm = "0.19.0"
+crossterm = { version = "0.19.0", features = ["event-stream"] }
 fern = { version = "0.6.0", features = ["colored"] }
 format-bytes = "0.2.2"
 futures = "0.3.13"

@@ -22,7 +22,7 @@ use anyhow::Result;
 use chrono::{Local, TimeZone};
 use crossterm::{
     cursor,
-    event::{self, Event, KeyCode, KeyEvent},
+    event::{self, Event, KeyCode, KeyEvent, EventStream},
     style, terminal,
 };
 use downcast_rs::Downcast;
@@ -63,6 +63,7 @@ pub async fn run_ui2(
 
     let backend = CrosstermBackend::new(&mut stdout);
     let mut term = Terminal::new(backend)?;
+    let mut ui_events = EventStream::new();
 
     let should_exit = Arc::new(AtomicBool::new(false));
 
@@ -85,20 +86,20 @@ pub async fn run_ui2(
             ui.draw(f);
         })?;
 
-        // handle events coming from the UI
-        if event::poll(FRAME_DURATION)? {
-            let event = event::read()?;
-            ui.process_event(event)?;
-        }
-
         select! {
             // got an event from the mail thread
             evt = mail2ui_rx.recv().fuse() => if let Some(evt) = evt {
                 ui.process_mail_event(evt);
             },
 
+            // got an event from the ui thread
+            evt = ui_events.next().fuse() => if let Some(evt) = evt {
+                let evt = evt?;
+                ui.process_event(evt)?;
+            }
+
             // wait for approx 60fps
-            _ = time::sleep(FRAME_DURATION).fuse() => {},
+            // _ = time::sleep(FRAME_DURATION).fuse() => {},
         }
     }
 
