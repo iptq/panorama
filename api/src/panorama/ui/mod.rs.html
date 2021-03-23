@@ -214,6 +214,16 @@
 <span id="211">211</span>
 <span id="212">212</span>
 <span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! UI library</span>
 
@@ -239,7 +249,7 @@
 <span class="kw">use</span> <span class="ident">chrono</span>::{<span class="ident">Local</span>, <span class="ident">TimeZone</span>};
 <span class="kw">use</span> <span class="ident">crossterm</span>::{
     <span class="ident">cursor</span>,
-    <span class="ident">event</span>::{<span class="self">self</span>, <span class="ident">Event</span>, <span class="ident">KeyCode</span>, <span class="ident">KeyEvent</span>, <span class="ident">EventStream</span>},
+    <span class="ident">event</span>::{<span class="self">self</span>, <span class="ident">Event</span>, <span class="ident">EventStream</span>, <span class="ident">KeyCode</span>, <span class="ident">KeyEvent</span>},
     <span class="ident">style</span>, <span class="ident">terminal</span>,
 };
 <span class="kw">use</span> <span class="ident">downcast_rs</span>::<span class="ident">Downcast</span>;
@@ -267,14 +277,24 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type</span> <span class="ident">FrameType</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;c</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;c</span> <span class="kw-2">mut</span> <span class="ident">Frame</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">CrosstermBackend</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="kw-2">mut</span> <span class="ident">Stdout</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type</span> <span class="ident">TermType</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="kw-2">mut</span> <span class="ident">Terminal</span><span class="op">&lt;</span><span class="ident">CrosstermBackend</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">Stdout</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
-<span class="kw">const</span> <span class="ident">FRAME_DURATION</span>: <span class="ident">Duration</span> <span class="op">=</span> <span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">17</span>);
+<span class="doccomment">/// Parameters for passing to the UI thread</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UiParams</span> {
+    <span class="doccomment">/// Handle to the screen</span>
+    <span class="kw">pub</span> <span class="ident">stdout</span>: <span class="ident">Stdout</span>,
+
+    <span class="doccomment">/// A channel for telling the UI to quit</span>
+    <span class="kw">pub</span> <span class="ident">exit_tx</span>: <span class="ident">mpsc</span>::<span class="ident">Sender</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+
+    <span class="doccomment">/// All the events coming in from the mail thread</span>
+    <span class="kw">pub</span> <span class="ident">mail2ui_rx</span>: <span class="ident">mpsc</span>::<span class="ident">UnboundedReceiver</span><span class="op">&lt;</span><span class="ident">MailEvent</span><span class="op">&gt;</span>,
+}
 
 <span class="doccomment">/// Main entrypoint for the UI</span>
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run_ui2</span>(
-    <span class="kw-2">mut</span> <span class="ident">stdout</span>: <span class="ident">Stdout</span>,
-    <span class="ident">exit_tx</span>: <span class="ident">mpsc</span>::<span class="ident">Sender</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
-    <span class="kw-2">mut</span> <span class="ident">mail2ui_rx</span>: <span class="ident">mpsc</span>::<span class="ident">UnboundedReceiver</span><span class="op">&lt;</span><span class="ident">MailEvent</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run_ui2</span>(<span class="ident">params</span>: <span class="ident">UiParams</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stdout</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">stdout</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mail2ui_rx</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">mail2ui_rx</span>;
+    <span class="kw">let</span> <span class="ident">exit_tx</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">exit_tx</span>;
+
     <span class="macro">execute</span><span class="macro">!</span>(<span class="ident">stdout</span>, <span class="ident">cursor</span>::<span class="ident">Hide</span>, <span class="ident">terminal</span>::<span class="ident">EnterAlternateScreen</span>)<span class="question-mark">?</span>;
     <span class="ident">terminal</span>::<span class="ident">enable_raw_mode</span>()<span class="question-mark">?</span>;
 
