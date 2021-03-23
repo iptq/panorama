@@ -15,6 +15,8 @@ extern crate format_bytes;
 #[macro_use]
 extern crate serde;
 #[macro_use]
+extern crate sqlx;
+#[macro_use]
 extern crate log;
 
 pub mod config;

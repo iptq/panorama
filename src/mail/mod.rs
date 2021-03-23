@@ -3,6 +3,7 @@
 mod client;
 mod event;
 mod metadata;
+mod store;
 
 use anyhow::Result;
 use futures::{

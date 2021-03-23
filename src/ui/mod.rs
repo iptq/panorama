@@ -22,7 +22,7 @@ use anyhow::Result;
 use chrono::{Local, TimeZone};
 use crossterm::{
     cursor,
-    event::{self, Event, KeyCode, KeyEvent, EventStream},
+    event::{self, Event, EventStream, KeyCode, KeyEvent},
     style, terminal,
 };
 use downcast_rs::Downcast;
@@ -50,14 +50,24 @@ use self::windows::*;
 pub(crate) type FrameType<'a, 'b, 'c> = &'c mut Frame<'a, CrosstermBackend<&'b mut Stdout>>;
 pub(crate) type TermType<'a, 'b> = &'b mut Terminal<CrosstermBackend<&'a mut Stdout>>;
 
-const FRAME_DURATION: Duration = Duration::from_millis(17);
+/// Parameters for passing to the UI thread
+pub struct UiParams {
+    /// Handle to the screen
+    pub stdout: Stdout,
+
+    /// A channel for telling the UI to quit
+    pub exit_tx: mpsc::Sender<()>,
+
+    /// All the events coming in from the mail thread
+    pub mail2ui_rx: mpsc::UnboundedReceiver<MailEvent>,
+}
 
 /// Main entrypoint for the UI
-pub async fn run_ui2(
-    mut stdout: Stdout,
-    exit_tx: mpsc::Sender<()>,
-    mut mail2ui_rx: mpsc::UnboundedReceiver<MailEvent>,
-) -> Result<()> {
+pub async fn run_ui2(params: UiParams) -> Result<()> {
+    let mut stdout = params.stdout;
+    let mut mail2ui_rx = params.mail2ui_rx;
+    let exit_tx = params.exit_tx;
+
     execute!(stdout, cursor::Hide, terminal::EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
 

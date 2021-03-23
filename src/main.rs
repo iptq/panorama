@@ -7,7 +7,8 @@ use futures::future::TryFutureExt;
 use panorama::{
     config::spawn_config_watcher_system,
     mail::{self, MailEvent},
-    report_err, ui,
+    report_err,
+    ui::{self, UiParams},
 };
 use structopt::StructOpt;
 use tokio::{
@@ -97,11 +98,14 @@ fn run_ui(
 
     thread::spawn(move || {
         let localset = LocalSet::new();
+        let params = UiParams {
+            stdout,
+            exit_tx,
+            mail2ui_rx,
+        };
 
         localset.spawn_local(async {
-            ui::run_ui2(stdout, exit_tx, mail2ui_rx)
-                .unwrap_or_else(report_err)
-                .await;
+            ui::run_ui2(params).unwrap_or_else(report_err).await;
         });
 
         rt.block_on(localset);
