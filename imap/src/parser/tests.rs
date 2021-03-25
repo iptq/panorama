@@ -198,11 +198,11 @@ fn test_section_8() {
                     in_reply_to: None,
                     message_id: Some("<B27397-0100000@cac.washington.edu>".to_owned()),
                 }),
-                AttributeValue::BodySection {
+                AttributeValue::BodySection(BodySection {
                     section: None,
                     index: None,
                     data: None,
-                },
+                }),
             ]
         ))
     );
