@@ -205,7 +205,6 @@ impl ClientAuthenticated {
 
         let mut select = SelectResponse::default();
         for resp in data {
-            debug!("execute called returned: {:?}", resp);
             match resp {
                 Response::MailboxData(MailboxData::Flags(flags)) => select.flags = flags,
                 Response::MailboxData(MailboxData::Exists(exists)) => select.exists = Some(exists),
@@ -246,10 +245,11 @@ impl ClientAuthenticated {
     pub async fn fetch(
         &mut self,
         uids: &[u32],
+        items: FetchItems,
     ) -> Result<impl Stream<Item = (u32, Vec<AttributeValue>)>> {
         let cmd = Command::Fetch {
             uids: uids.to_vec(),
-            items: FetchItems::All,
+            items,
         };
         debug!("fetch: {}", cmd);
         let stream = self.execute(cmd).await?;
@@ -265,10 +265,11 @@ impl ClientAuthenticated {
     pub async fn uid_fetch(
         &mut self,
         uids: &[u32],
+        items: FetchItems,
     ) -> Result<impl Stream<Item = (u32, Vec<AttributeValue>)>> {
         let cmd = Command::UidFetch {
             uids: uids.to_vec(),
-            items: FetchItems::All,
+            items,
         };
         debug!("uid fetch: {}", cmd);
         let stream = self.execute(cmd).await?;
@@ -293,12 +294,12 @@ impl ClientAuthenticated {
 
 #[derive(Debug, Default)]
 pub struct SelectResponse {
-    flags: Vec<MailboxFlag>,
-    exists: Option<u32>,
-    recent: Option<u32>,
-    uid_next: Option<u32>,
-    uid_validity: Option<u32>,
-    unseen: Option<u32>,
+    pub flags: Vec<MailboxFlag>,
+    pub exists: Option<u32>,
+    pub recent: Option<u32>,
+    pub uid_next: Option<u32>,
+    pub uid_validity: Option<u32>,
+    pub unseen: Option<u32>,
 }
 
 /// A token that represents an idling connection.

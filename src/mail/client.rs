@@ -9,7 +9,7 @@ use panorama_imap::{
         auth::{self, Auth},
         ClientBuilder, ClientConfig,
     },
-    command::Command as ImapCommand,
+    command::{Command as ImapCommand, FetchItems},
     response::{AttributeValue, Envelope, MailboxData, Response},
 };
 use tokio::{
@@ -65,16 +65,39 @@ pub async fn sync_main(
 
         debug!("authentication successful!");
 
+        let folder_list = authed.list().await?;
+        debug!("mailbox list: {:?}", folder_list);
+
+        for folder in folder_list.iter() {
+            debug!("folder: {}", folder);
+            let select = authed.select(folder).await?;
+            debug!("select response: {:?}", select);
+
+            if let Some(exists) = select.exists {
+                if exists < 10 {
+                    let mut fetched = authed
+                        .uid_fetch(&(1..=exists).collect::<Vec<_>>(), FetchItems::PanoramaAll)
+                        .await?;
+                    while let Some((uid, attrs)) = fetched.next().await {
+                        debug!("- {} : {:?}", uid, attrs);
+                        mail_store.store_email();
+                    }
+                }
+            }
+        }
+
+        let _ = mail2ui_tx.send(MailEvent::FolderList(acct_name.clone(), folder_list));
+        tokio::time::sleep(std::time::Duration::from_secs(50)).await;
+
+        // TODO: remove this later
+        continue;
+
         // let's just select INBOX for now, maybe have a config for default mailbox later?
         debug!("selecting the INBOX mailbox");
         let select = authed.select("INBOX").await?;
         debug!("select result: {:?}", select);
 
         loop {
-            let folder_list = authed.list().await?;
-            debug!("mailbox list: {:?}", folder_list);
-            let _ = mail2ui_tx.send(MailEvent::FolderList(acct_name.clone(), folder_list));
-
             let message_uids = authed.uid_search().await?;
             let message_uids = message_uids.into_iter().take(30).collect::<Vec<_>>();
             let _ = mail2ui_tx.send(MailEvent::MessageUids(
@@ -83,7 +106,10 @@ pub async fn sync_main(
             ));
 
             // TODO: make this happen concurrently with the main loop?
-            let mut message_list = authed.uid_fetch(&message_uids).await.unwrap();
+            let mut message_list = authed
+                .uid_fetch(&message_uids, FetchItems::All)
+                .await
+                .unwrap();
             while let Some((uid, attrs)) = message_list.next().await {
                 let evt = MailEvent::UpdateUid(acct_name.clone(), uid, attrs);
                 mail2ui_tx.send(evt);
@@ -123,7 +149,10 @@ pub async fn sync_main(
                             ));
 
                             // TODO: make this happen concurrently with the main loop?
-                            let mut message_list = authed.uid_fetch(&message_uids).await.unwrap();
+                            let mut message_list = authed
+                                .uid_fetch(&message_uids, FetchItems::All)
+                                .await
+                                .unwrap();
                             while let Some((uid, attrs)) = message_list.next().await {
                                 let evt = MailEvent::UpdateUid(acct_name.clone(), uid, attrs);
                                 // debug!("sent {:?}", evt);

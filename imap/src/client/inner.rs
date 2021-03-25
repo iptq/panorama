@@ -221,7 +221,6 @@ where
 
             line = write_fut => {
                 if let Some(line) = line {
-                    trace!("got line {:?}", line);
                     conn.write_all(line.as_bytes()).await?;
                     conn.flush().await?;
                     trace!("C>>>S: {:?}", line);
@@ -288,6 +287,7 @@ where
                     Some(Ok(v)) => v,
                     a => { error!("failed: {:?}", a); bail!("fuck"); },
                 };
+                trace!("S>>>C: {:?}", resp);
 
                 // if this is the very first response, then it's a greeting
                 if let Some(greeting_tx) = greeting_tx.take() {
@@ -298,7 +298,7 @@ where
                     // since this is the DONE message, clear curr_cmd so another one can be sent
                     if let Some((_, _, cmd_tx)) = curr_cmd.take() {
                         let res = cmd_tx.send(resp);
-                        debug!("res0: {:?}", res);
+                        // debug!("res0: {:?}", res);
                     }
                 } else if let Some((tag, cmd, cmd_tx)) = curr_cmd.as_mut() {
                     // we got a response from the server for this command, so send it over the

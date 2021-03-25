@@ -11,7 +11,7 @@ use tokio::fs;
 
 static MIGRATOR: Migrator = sqlx::migrate!();
 
-/// SQLite email manager
+/// Manages email storage on disk, for both database and caches
 ///
 /// This struct is clone-safe: cloning it will just return a reference to the same data structure
 #[derive(Clone)]
@@ -43,7 +43,8 @@ impl MailStore {
     }
 
     /// Gets the list of all the UIDs in the given folder that need to be updated
-    pub fn get_new_uids(&self, exists: u32) {
+    pub fn get_new_uids(&self, exists: u32) {}
 
-    }
+    /// Stores the given email
+    pub fn store_email(&self) {}
 }

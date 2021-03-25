@@ -109,7 +109,11 @@ pub enum FetchItems {
     All,
     Fast,
     Full,
+    BodyPeek,
     Items(Vec<FetchAttr>),
+
+    /// item set that panorama uses, TODO: remove when FetchItems has a builder
+    PanoramaAll,
 }
 
 #[derive(Clone, Debug)]
@@ -122,7 +126,9 @@ impl fmt::Display for FetchItems {
             All => write!(f, "ALL"),
             Fast => write!(f, "FAST"),
             Full => write!(f, "FULL"),
-            FetchAttr => write!(f, ""),
+            BodyPeek => write!(f, "(BODY.PEEK[])"),
+            PanoramaAll => write!(f, "(FLAGS INTERNALDATE RFC822.SIZE ENVELOPE BODY.PEEK[])"),
+            Items(attrs) => write!(f, ""),
         }
     }
 }

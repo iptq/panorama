@@ -22,6 +22,12 @@ struct Rfc3501;
 
 pub type ParseResult<T, E = Error<Rule>> = Result<T, E>;
 
+macro_rules! parse_fail {
+    ($($tt:tt)*) => {
+        { error!($($tt)*); panic!(); }
+    };
+}
+
 pub fn parse_capability(s: impl AsRef<str>) -> ParseResult<Capability> {
     let mut pairs = Rfc3501::parse(Rule::capability, s.as_ref())?;
     let pair = pairs.next().unwrap();
@@ -29,6 +35,7 @@ pub fn parse_capability(s: impl AsRef<str>) -> ParseResult<Capability> {
 }
 
 pub fn parse_streamed_response(s: impl AsRef<str>) -> ParseResult<(Response, usize)> {
+    // trace!("parsing streamed reponse: {:?}", s.as_ref());
     let mut pairs = Rfc3501::parse(Rule::streamed_response, s.as_ref())?;
     let pair = unwrap1(pairs.next().unwrap());
     let span = pair.as_span();
@@ -152,9 +159,7 @@ fn build_msg_att(pair: Pair<Rule>) -> AttributeValue {
 }
 
 fn build_msg_att_static(pair: Pair<Rule>) -> AttributeValue {
-    if !matches!(pair.as_rule(), Rule::msg_att_static) {
-        unreachable!("{:#?}", pair);
-    }
+    assert!(matches!(pair.as_rule(), Rule::msg_att_static));
 
     let mut pairs = pair.into_inner();
     let pair = pairs.next().unwrap();
@@ -166,14 +171,28 @@ fn build_msg_att_static(pair: Pair<Rule>) -> AttributeValue {
         Rule::msg_att_static_rfc822_size => AttributeValue::Rfc822Size(build_number(unwrap1(pair))),
         Rule::msg_att_static_envelope => AttributeValue::Envelope(build_envelope(unwrap1(pair))),
         // TODO: do this
-        Rule::msg_att_static_body => AttributeValue::BodySection {
+        Rule::msg_att_static_body_structure => AttributeValue::BodySection {
             section: None,
             index: None,
             data: None,
         },
+        Rule::msg_att_static_body_section => {
+            let section = None;
+            let index = None;
+            let data = None;
+            AttributeValue::BodySection {
+                section,
+                index,
+                data,
+            }
+        }
         Rule::msg_att_static_uid => AttributeValue::Uid(build_number(unwrap1(unwrap1(pair)))),
-        _ => unreachable!("{:#?}", pair),
+        _ => parse_fail!("{:#?}", pair),
     }
+}
+
+fn build_section(pair: Pair<Rule>) -> () {
+    assert!(matches!(pair.as_rule(), Rule::section));
 }
 
 fn build_envelope(pair: Pair<Rule>) -> Envelope {
