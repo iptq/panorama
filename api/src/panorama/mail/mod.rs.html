@@ -111,6 +111,9 @@
 <span id="108">108</span>
 <span id="109">109</span>
 <span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Mail</span>
 
@@ -202,7 +205,10 @@
                     {
                         <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {}
                         <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;IMAP Error: {}&quot;</span>, <span class="ident">err</span>);
+                            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;error from sync_main: {}&quot;</span>, <span class="ident">err</span>);
+                            <span class="kw">for</span> <span class="ident">err</span> <span class="kw">in</span> <span class="ident">err</span>.<span class="ident">chain</span>() {
+                                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;cause: {}&quot;</span>, <span class="ident">err</span>);
+                            }
                         }
                     }
 
@@ -223,4 +229,5 @@
     <span class="prelude-val">Ok</span>(())
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "panorama";</script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="panorama"></div>
+    <script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

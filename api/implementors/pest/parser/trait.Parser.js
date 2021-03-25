@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["panorama_imap"] = [{"text":"impl Parser&lt;Rule&gt; for Rfc3501","synthetic":false,"types":[]}];
+implementors["panorama_imap"] = [{"text":"impl <a class=\"trait\" href=\"https://docs.rs/pest/pest/parser/trait.Parser.html\" title=\"trait pest::parser::Parser\">Parser</a>&lt;<a class=\"enum\" href=\"panorama_imap/parser/enum.Rule.html\" title=\"enum panorama_imap::parser::Rule\">Rule</a>&gt; for <a class=\"struct\" href=\"panorama_imap/parser/struct.Rfc3501.html\" title=\"struct panorama_imap::parser::Rfc3501\">Rfc3501</a>","synthetic":false,"types":["panorama_imap::parser::Rfc3501"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

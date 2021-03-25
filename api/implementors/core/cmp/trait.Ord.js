@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["panorama_imap"] = [{"text":"impl Ord for Rule","synthetic":false,"types":[]}];
+implementors["panorama_imap"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/cmp/trait.Ord.html\" title=\"trait core::cmp::Ord\">Ord</a> for <a class=\"enum\" href=\"panorama_imap/parser/enum.Rule.html\" title=\"enum panorama_imap::parser::Rule\">Rule</a>","synthetic":false,"types":["panorama_imap::parser::Rule"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

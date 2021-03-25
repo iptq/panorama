@@ -173,9 +173,6 @@
 <span id="170">170</span>
 <span id="171">171</span>
 <span id="172">172</span>
-<span id="173">173</span>
-<span id="174">174</span>
-<span id="175">175</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Module for setting up config files and watchers.</span>
 <span class="doccomment">//!</span>
@@ -204,11 +201,8 @@
     <span class="doccomment">/// (potentially for migration later?)</span>
     <span class="kw">pub</span> <span class="ident">version</span>: <span class="ident">String</span>,
 
-    <span class="doccomment">/// Directory to store mail in</span>
-    <span class="kw">pub</span> <span class="ident">mail_dir</span>: <span class="ident">PathBuf</span>,
-
-    <span class="doccomment">/// SQLite database path</span>
-    <span class="kw">pub</span> <span class="ident">db_path</span>: <span class="ident">PathBuf</span>,
+    <span class="doccomment">/// Directory to store panorama-related data in</span>
+    <span class="kw">pub</span> <span class="ident">data_dir</span>: <span class="ident">PathBuf</span>,
 
     <span class="doccomment">/// Mail accounts</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;mail&quot;</span>)]</span>
@@ -353,4 +347,5 @@
     <span class="prelude-val">Ok</span>((<span class="ident">handle</span>, <span class="ident">config_update</span>))
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "panorama";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="panorama"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

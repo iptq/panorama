@@ -1,4 +1,4 @@
 (function() {var implementors = {};
-implementors["panorama"] = [{"text":"impl Drop for ColonPrompt","synthetic":false,"types":[]}];
-implementors["panorama_imap"] = [{"text":"impl Drop for IdleToken","synthetic":false,"types":[]}];
+implementors["panorama"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"panorama/ui/colon_prompt/struct.ColonPrompt.html\" title=\"struct panorama::ui::colon_prompt::ColonPrompt\">ColonPrompt</a>","synthetic":false,"types":["panorama::ui::colon_prompt::ColonPrompt"]}];
+implementors["panorama_imap"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"panorama_imap/client/struct.IdleToken.html\" title=\"struct panorama_imap::client::IdleToken\">IdleToken</a>","synthetic":false,"types":["panorama_imap::client::IdleToken"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
