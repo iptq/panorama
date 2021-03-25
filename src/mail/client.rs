@@ -80,7 +80,7 @@ pub async fn sync_main(
                         .await?;
                     while let Some((uid, attrs)) = fetched.next().await {
                         debug!("- {} : {:?}", uid, attrs);
-                        mail_store.store_email();
+                        mail_store.store_email(&acct_name, &folder, uid).await?;
                     }
                 }
             }

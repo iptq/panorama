@@ -171,20 +171,25 @@ fn build_msg_att_static(pair: Pair<Rule>) -> AttributeValue {
         Rule::msg_att_static_rfc822_size => AttributeValue::Rfc822Size(build_number(unwrap1(pair))),
         Rule::msg_att_static_envelope => AttributeValue::Envelope(build_envelope(unwrap1(pair))),
         // TODO: do this
-        Rule::msg_att_static_body_structure => AttributeValue::BodySection {
+        Rule::msg_att_static_body_structure => AttributeValue::BodySection(BodySection {
             section: None,
             index: None,
             data: None,
-        },
+        }),
         Rule::msg_att_static_body_section => {
+            let mut pairs = pair.into_inner();
             let section = None;
-            let index = None;
-            let data = None;
-            AttributeValue::BodySection {
+            pairs.next();
+            let index = match pairs.peek().unwrap().as_rule() {
+                Rule::number => Some(build_number(unwrap1(pairs.next().unwrap()))),
+                _ => None,
+            };
+            let data = Some(pairs.next().unwrap().as_str().to_owned());
+            AttributeValue::BodySection(BodySection {
                 section,
                 index,
                 data,
-            }
+            })
         }
         Rule::msg_att_static_uid => AttributeValue::Uid(build_number(unwrap1(unwrap1(pair)))),
         _ => parse_fail!("{:#?}", pair),

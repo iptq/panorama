@@ -1,15 +1,12 @@
 CREATE TABLE IF NOT EXISTS "accounts" (
-    "id" INTEGER PRIMARY KEY,
+    "name" TEXT PRIMARY KEY,
     -- hash of the account details, used to check if accounts have changed
-    "checksum" TEXT,
-    "name" TEXT NOT NULL
+    "checksum" TEXT
 );
 
 CREATE TABLE IF NOT EXISTS "mail" (
     "id" INTEGER PRIMARY KEY,
-    "account_id" INTEGER,
+    "account" TEXT,
     "folder" TEXT,
-    "uid" INTEGER,
-
-    FOREIGN KEY ("account_id") REFERENCES "accounts" ("id")
+    "uid" INTEGER
 );

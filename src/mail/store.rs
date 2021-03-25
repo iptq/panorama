@@ -46,5 +46,24 @@ impl MailStore {
     pub fn get_new_uids(&self, exists: u32) {}
 
     /// Stores the given email
-    pub fn store_email(&self) {}
+    pub async fn store_email(
+        &self,
+        acct: impl AsRef<str>,
+        folder: impl AsRef<str>,
+        uid: u32,
+    ) -> Result<()> {
+        let id = sqlx::query(STORE_EMAIL_SQL)
+            .bind(acct.as_ref())
+            .bind(folder.as_ref())
+            .bind(uid)
+            .execute(&self.pool)
+            .await?
+            .last_insert_rowid();
+        Ok(())
+    }
 }
+
+const STORE_EMAIL_SQL: &str = r#"
+INSERT INTO "mail" (account, folder, uid)
+VALUES (?, ?, ?)
+"#;

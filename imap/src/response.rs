@@ -1,5 +1,6 @@
 //! Structs and enums that have to do with responses.
 
+use std::fmt;
 use std::ops::RangeInclusive;
 
 use chrono::{DateTime, FixedOffset};
@@ -72,11 +73,7 @@ pub enum UidSetMember {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AttributeValue {
-    BodySection {
-        section: Option<SectionPath>,
-        index: Option<u32>,
-        data: Option<String>,
-    },
+    BodySection(BodySection),
     BodyStructure(BodyStructure),
     Envelope(Envelope),
     Flags(Vec<MailboxFlag>),
@@ -87,6 +84,25 @@ pub enum AttributeValue {
     Rfc822Size(u32),
     Rfc822Text(Option<String>),
     Uid(u32),
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct BodySection {
+    pub section: Option<SectionPath>,
+    pub index: Option<u32>,
+    pub data: Option<String>,
+}
+
+impl fmt::Debug for BodySection {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "BodySection(section={:?} index={:?} data=<{}>",
+            self.section,
+            self.index,
+            self.data.as_ref().map(|s| s.len()).unwrap_or(0)
+        )
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
