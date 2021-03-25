@@ -184,7 +184,7 @@ fn build_msg_att_static(pair: Pair<Rule>) -> AttributeValue {
                 Rule::number => Some(build_number(unwrap1(pairs.next().unwrap()))),
                 _ => None,
             };
-            let data = Some(pairs.next().unwrap().as_str().to_owned());
+            let data = build_nstring(pairs.next().unwrap());
             AttributeValue::BodySection(BodySection {
                 section,
                 index,

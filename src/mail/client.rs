@@ -73,14 +73,16 @@ pub async fn sync_main(
             let select = authed.select(folder).await?;
             debug!("select response: {:?}", select);
 
-            if let Some(exists) = select.exists {
+            if let (Some(exists), Some(uidvalidity)) = (select.exists, select.uid_validity) {
                 if exists < 10 {
                     let mut fetched = authed
                         .uid_fetch(&(1..=exists).collect::<Vec<_>>(), FetchItems::PanoramaAll)
                         .await?;
                     while let Some((uid, attrs)) = fetched.next().await {
                         debug!("- {} : {:?}", uid, attrs);
-                        mail_store.store_email(&acct_name, &folder, uid).await?;
+                        mail_store
+                            .store_email(&acct_name, &folder, uid, uidvalidity, attrs)
+                            .await?;
                     }
                 }
             }

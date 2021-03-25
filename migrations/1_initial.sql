@@ -8,5 +8,7 @@ CREATE TABLE IF NOT EXISTS "mail" (
     "id" INTEGER PRIMARY KEY,
     "account" TEXT,
     "folder" TEXT,
-    "uid" INTEGER
+    "uidvalidity" INTEGER,
+    "uid" INTEGER,
+    "filename" TEXT
 );

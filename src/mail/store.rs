@@ -3,9 +3,12 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
+use panorama_imap::response::AttributeValue;
+use sha2::{Digest, Sha256, Sha512};
 use sqlx::{
     migrate::{MigrateDatabase, Migrator},
     sqlite::{Sqlite, SqlitePool},
+    Error,
 };
 use tokio::fs;
 
@@ -51,19 +54,65 @@ impl MailStore {
         acct: impl AsRef<str>,
         folder: impl AsRef<str>,
         uid: u32,
+        uidvalidity: u32,
+        attrs: Vec<AttributeValue>,
     ) -> Result<()> {
-        let id = sqlx::query(STORE_EMAIL_SQL)
+        let mut body = None;
+        for attr in attrs {
+            if let AttributeValue::BodySection(body_attr) = attr {
+                body = body_attr.data;
+            }
+        }
+
+        let body = match body {
+            Some(v) => v,
+            None => return Ok(()),
+        };
+
+        let mut hasher = Sha256::new();
+        hasher.update(body.as_bytes());
+        let hash = hasher.finalize();
+        let filename = format!("{}.mail", hex::encode(hash));
+        let path = self.mail_dir.join(&filename);
+        fs::write(path, body).await?;
+
+        let existing = sqlx::query(
+            r#"
+            SELECT FROM "mail"
+            WHERE account = ? AND folder = ?
+                AND uid = ? AND uidvalidity = ?
+            "#,
+        )
+        .bind(acct.as_ref())
+        .bind(folder.as_ref())
+        .bind(uid)
+        .bind(uidvalidity)
+        .fetch_one(&self.pool)
+        .await;
+
+        let exists = match existing {
+            Ok(_) => true,
+            Err(Error::RowNotFound) => true,
+            _ => false,
+        };
+
+        if !exists {
+            let id = sqlx::query(
+                r#"
+                INSERT INTO "mail" (account, folder, uid, uidvalidity, filename)
+                VALUES (?, ?, ?, ?, ?)
+                "#,
+            )
             .bind(acct.as_ref())
             .bind(folder.as_ref())
             .bind(uid)
+            .bind(uidvalidity)
+            .bind(filename)
             .execute(&self.pool)
             .await?
             .last_insert_rowid();
+        }
+
         Ok(())
     }
 }
-
-const STORE_EMAIL_SQL: &str = r#"
-INSERT INTO "mail" (account, folder, uid)
-VALUES (?, ?, ?)
-"#;
