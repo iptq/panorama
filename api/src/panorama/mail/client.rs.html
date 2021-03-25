@@ -189,6 +189,7 @@
 <span id="186">186</span>
 <span id="187">187</span>
 <span id="188">188</span>
+<span id="189">189</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">futures</span>::{
@@ -215,6 +216,7 @@
 
 <span class="doccomment">/// The main function for the IMAP syncing thread</span>
 <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">sync_main</span>(
+    <span class="ident">config</span>: <span class="ident">Config</span>,
     <span class="ident">acct_name</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>,
     <span class="ident">acct</span>: <span class="ident">MailAccountConfig</span>,
     <span class="ident">mail2ui_tx</span>: <span class="ident">UnboundedSender</span><span class="op">&lt;</span><span class="ident">MailEvent</span><span class="op">&gt;</span>,

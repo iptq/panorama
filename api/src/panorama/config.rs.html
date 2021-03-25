@@ -170,6 +170,12 @@
 <span id="167">167</span>
 <span id="168">168</span>
 <span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Module for setting up config files and watchers.</span>
 <span class="doccomment">//!</span>
@@ -197,6 +203,12 @@
     <span class="doccomment">/// Version of the config to use</span>
     <span class="doccomment">/// (potentially for migration later?)</span>
     <span class="kw">pub</span> <span class="ident">version</span>: <span class="ident">String</span>,
+
+    <span class="doccomment">/// Directory to store mail in</span>
+    <span class="kw">pub</span> <span class="ident">mail_dir</span>: <span class="ident">PathBuf</span>,
+
+    <span class="doccomment">/// SQLite database path</span>
+    <span class="kw">pub</span> <span class="ident">db_path</span>: <span class="ident">PathBuf</span>,
 
     <span class="doccomment">/// Mail accounts</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;mail&quot;</span>)]</span>

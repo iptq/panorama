@@ -224,6 +224,10 @@
 <span id="221">221</span>
 <span id="222">222</span>
 <span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! UI library</span>
 
@@ -265,6 +269,7 @@
     <span class="ident">Frame</span>, <span class="ident">Terminal</span>,
 };
 
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">config</span>::<span class="ident">ConfigWatcher</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">mail</span>::{<span class="ident">EmailMetadata</span>, <span class="ident">MailEvent</span>};
 
 <span class="kw">use</span> <span class="self">self</span>::<span class="ident">colon_prompt</span>::<span class="ident">ColonPrompt</span>;
@@ -279,6 +284,9 @@
 
 <span class="doccomment">/// Parameters for passing to the UI thread</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UiParams</span> {
+    <span class="doccomment">/// Config updates</span>
+    <span class="kw">pub</span> <span class="ident">config_update</span>: <span class="ident">ConfigWatcher</span>,
+
     <span class="doccomment">/// Handle to the screen</span>
     <span class="kw">pub</span> <span class="ident">stdout</span>: <span class="ident">Stdout</span>,
 
