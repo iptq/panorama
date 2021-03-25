@@ -36,10 +36,11 @@ pub fn parse_capability(s: impl AsRef<str>) -> ParseResult<Capability> {
 
 pub fn parse_streamed_response(s: impl AsRef<str>) -> ParseResult<(Response, usize)> {
     let s = s.as_ref();
+    let len = s.len();
     let mut pairs = match Rfc3501::parse(Rule::streamed_response, s) {
         Ok(v) => v,
         Err(e) => {
-            // error!("stream failed: {}", e);
+            // error!("stream failed with len {}: {}", len ,e);
             return Err(e);
         }
     };

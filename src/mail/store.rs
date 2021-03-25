@@ -127,13 +127,20 @@ impl MailStore {
         attrs: Vec<AttributeValue>,
     ) -> Result<()> {
         let mut body = None;
+        let mut internaldate = None;
         for attr in attrs {
-            if let AttributeValue::BodySection(body_attr) = attr {
-                body = body_attr.data;
+            match attr {
+                AttributeValue::BodySection(body_attr) => body = body_attr.data,
+                AttributeValue::InternalDate(date) => internaldate = Some(date),
+                _ => {}
             }
         }
 
         let body = match body {
+            Some(v) => v,
+            None => return Ok(()),
+        };
+        let internaldate = match internaldate {
             Some(v) => v,
             None => return Ok(()),
         };
@@ -149,14 +156,16 @@ impl MailStore {
 
         // parse email
         let mut message_id = None;
+        let mut subject = None;
         let mail = mailparse::parse_mail(body.as_bytes())
             .with_context(|| format!("error parsing email with uid {}", uid))?;
         for header in mail.headers.iter() {
             let key = header.get_key_ref();
-            let key = key.to_ascii_lowercase();
             let value = header.get_value();
-            if key == "message-id" {
-                message_id = Some(value);
+            match key.to_ascii_lowercase().as_str() {
+                "message-id" => message_id = Some(value),
+                "subject" => subject = Some(value),
+                _ => {}
             }
         }
 
@@ -181,16 +190,20 @@ impl MailStore {
         if existing.is_none() {
             let id = sqlx::query(
                 r#"
-                INSERT INTO "mail" (account, message_id, folder, uid, uidvalidity, filename)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO "mail" (
+                    account, subject, message_id, folder, uid, uidvalidity,
+                    filename, internaldate
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 "#,
             )
             .bind(acct.as_ref())
+            .bind(subject)
             .bind(message_id)
             .bind(folder.as_ref())
             .bind(uid)
             .bind(uidvalidity)
             .bind(filename)
+            .bind(internaldate.to_rfc3339())
             .execute(&self.pool)
             .await
             .context("error inserting email into db")?
