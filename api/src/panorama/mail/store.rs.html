@@ -24,29 +24,81 @@
 <span id="21">21</span>
 <span id="22">22</span>
 <span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Package for managing the offline storage of emails</span>
 
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">PathBuf</span>;
+
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
-<span class="kw">use</span> <span class="ident">sqlx</span>::<span class="ident">sqlite</span>::<span class="ident">SqlitePool</span>;
+<span class="kw">use</span> <span class="ident">sqlx</span>::{
+    <span class="ident">migrate</span>::{<span class="ident">MigrateDatabase</span>, <span class="ident">Migrator</span>},
+    <span class="ident">sqlite</span>::{<span class="ident">Sqlite</span>, <span class="ident">SqlitePool</span>},
+};
+<span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">fs</span>;
+
+<span class="kw">static</span> <span class="ident">MIGRATOR</span>: <span class="ident">Migrator</span> <span class="op">=</span> <span class="ident">sqlx</span>::<span class="macro">migrate</span><span class="macro">!</span>();
 
 <span class="doccomment">/// SQLite email manager</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This struct is clone-safe: cloning it will just return a reference to the same data structure</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MailStore</span> {
+    <span class="ident">mail_dir</span>: <span class="ident">PathBuf</span>,
     <span class="ident">pool</span>: <span class="ident">SqlitePool</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">MailStore</span> {
+    <span class="doccomment">/// Creates a new MailStore</span>
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">pool</span> <span class="op">=</span> <span class="ident">SqlitePool</span>::<span class="ident">connect</span>(<span class="string">&quot;hellosu.db&quot;</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">db_path</span> <span class="op">=</span> <span class="string">&quot;sqlite:hellosu.db&quot;</span>;
 
-        <span class="kw">let</span> <span class="ident">run</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">spawn</span>(<span class="ident">listen_loop</span>(<span class="ident">pool</span>.<span class="ident">clone</span>()));
+        <span class="comment">// create the database file if it doesn&#39;t already exist -_ -</span>
+        <span class="kw">if</span> <span class="op">!</span><span class="ident">Sqlite</span>::<span class="ident">database_exists</span>(<span class="ident">db_path</span>).<span class="kw">await</span><span class="question-mark">?</span> {
+            <span class="ident">Sqlite</span>::<span class="ident">create_database</span>(<span class="ident">db_path</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        }
 
-        <span class="prelude-val">Ok</span>(<span class="ident">MailStore</span> { <span class="ident">pool</span> })
+        <span class="kw">let</span> <span class="ident">pool</span> <span class="op">=</span> <span class="ident">SqlitePool</span>::<span class="ident">connect</span>(<span class="ident">db_path</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="ident">MIGRATOR</span>.<span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="ident">pool</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;run migrations : {:?}&quot;</span>, <span class="ident">MIGRATOR</span>);
+
+        <span class="kw">let</span> <span class="ident">mail_dir</span> <span class="op">=</span> <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="string">&quot;hellosu/&quot;</span>);
+        <span class="kw">if</span> <span class="op">!</span><span class="ident">mail_dir</span>.<span class="ident">exists</span>() {
+            <span class="ident">fs</span>::<span class="ident">create_dir_all</span>(<span class="kw-2">&amp;</span><span class="ident">mail_dir</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        }
+
+        <span class="prelude-val">Ok</span>(<span class="ident">MailStore</span> { <span class="ident">mail_dir</span>, <span class="ident">pool</span> })
     }
-}
 
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">listen_loop</span>(<span class="ident">pool</span>: <span class="ident">SqlitePool</span>) {
+    <span class="doccomment">/// Gets the list of all the UIDs in the given folder that need to be updated</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_new_uids</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">exists</span>: <span class="ident">u32</span>) {
+
+    }
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "panorama";</script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

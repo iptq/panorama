@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["imap_main","The main sequence of steps for the IMAP thread to follow"]]});
+initSidebarItems({"fn":[["sync_main","The main function for the IMAP syncing thread"]]});

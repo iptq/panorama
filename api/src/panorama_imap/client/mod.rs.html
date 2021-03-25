@@ -305,6 +305,34 @@
 <span id="302">302</span>
 <span id="303">303</span>
 <span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! IMAP Client</span>
 <span class="doccomment">//! ===</span>
@@ -364,7 +392,8 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">command</span>::{<span class="ident">Command</span>, <span class="ident">FetchItems</span>, <span class="ident">SearchCriteria</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">response</span>::{
-    <span class="ident">AttributeValue</span>, <span class="ident">Envelope</span>, <span class="ident">MailboxData</span>, <span class="ident">Response</span>, <span class="ident">ResponseData</span>, <span class="ident">ResponseDone</span>,
+    <span class="ident">AttributeValue</span>, <span class="ident">Envelope</span>, <span class="ident">MailboxData</span>, <span class="ident">MailboxFlag</span>, <span class="ident">Response</span>, <span class="ident">ResponseCode</span>, <span class="ident">ResponseData</span>,
+    <span class="ident">ResponseDone</span>, <span class="ident">Status</span>,
 };
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">inner</span>::{<span class="ident">Client</span>, <span class="ident">ResponseStream</span>};
@@ -375,7 +404,7 @@
 <span class="doccomment">/// the connection to the server.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// [1]: self::ClientConfigBuilder::build</span>
-<span class="doccomment">/// [2]: self::ClientConfig::connect</span>
+<span class="doccomment">/// [2]: self::ClientConfig::open</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">ClientBuilder</span> <span class="op">=</span> <span class="ident">ClientConfigBuilder</span>;
 
 <span class="doccomment">/// An IMAP client that hasn&#39;t been connected yet.</span>
@@ -502,20 +531,36 @@
     }
 
     <span class="doccomment">/// Runs the SELECT command</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">select</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">mailbox</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">select</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">mailbox</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SelectResponse</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="ident">Command</span>::<span class="ident">Select</span> {
             <span class="ident">mailbox</span>: <span class="ident">mailbox</span>.<span class="ident">as_ref</span>().<span class="ident">to_owned</span>(),
         };
+
         <span class="kw">let</span> <span class="ident">stream</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">data</span>) <span class="op">=</span> <span class="ident">stream</span>.<span class="ident">wait</span>().<span class="kw">await</span><span class="question-mark">?</span>;
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">select</span> <span class="op">=</span> <span class="ident">SelectResponse</span>::<span class="ident">default</span>();
         <span class="kw">for</span> <span class="ident">resp</span> <span class="kw">in</span> <span class="ident">data</span> {
             <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;execute called returned: {:?}&quot;</span>, <span class="ident">resp</span>);
+            <span class="kw">match</span> <span class="ident">resp</span> {
+                <span class="ident">Response</span>::<span class="ident">MailboxData</span>(<span class="ident">MailboxData</span>::<span class="ident">Flags</span>(<span class="ident">flags</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">select</span>.<span class="ident">flags</span> <span class="op">=</span> <span class="ident">flags</span>,
+                <span class="ident">Response</span>::<span class="ident">MailboxData</span>(<span class="ident">MailboxData</span>::<span class="ident">Exists</span>(<span class="ident">exists</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">select</span>.<span class="ident">exists</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">exists</span>),
+                <span class="ident">Response</span>::<span class="ident">MailboxData</span>(<span class="ident">MailboxData</span>::<span class="ident">Recent</span>(<span class="ident">recent</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">select</span>.<span class="ident">recent</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">recent</span>),
+                <span class="ident">Response</span>::<span class="ident">Data</span>(<span class="ident">ResponseData</span> {
+                    <span class="ident">status</span>: <span class="ident">Status</span>::<span class="prelude-val">Ok</span>,
+                    <span class="ident">code</span>: <span class="prelude-val">Some</span>(<span class="ident">code</span>),
+                    ..
+                }) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">code</span> {
+                    <span class="ident">ResponseCode</span>::<span class="ident">Unseen</span>(<span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">select</span>.<span class="ident">unseen</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>),
+                    <span class="ident">ResponseCode</span>::<span class="ident">UidNext</span>(<span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">select</span>.<span class="ident">uid_next</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>),
+                    <span class="ident">ResponseCode</span>::<span class="ident">UidValidity</span>(<span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">select</span>.<span class="ident">uid_validity</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>),
+                    <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {}
+                },
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {}
+            }
         }
 
-        <span class="comment">// nuke the capabilities cache</span>
-        <span class="comment">// self.nuke_capabilities();</span>
-
-        <span class="prelude-val">Ok</span>(())
+        <span class="prelude-val">Ok</span>(<span class="ident">select</span>)
     }
 
     <span class="doccomment">/// Runs the SEARCH command</span>
@@ -582,6 +627,16 @@
     }
 }
 
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SelectResponse</span> {
+    <span class="ident">flags</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MailboxFlag</span><span class="op">&gt;</span>,
+    <span class="ident">exists</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+    <span class="ident">recent</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+    <span class="ident">uid_next</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+    <span class="ident">uid_validity</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+    <span class="ident">unseen</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+}
+
 <span class="doccomment">/// A token that represents an idling connection.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Dropping this token indicates that the idling should be completed, and the DONE command will be</span>
@@ -597,7 +652,8 @@
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;rfc2177-idle&quot;</span>)))]</span>
 <span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">IdleToken</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">sender</span>.<span class="ident">send</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;DONE\r\n&quot;</span>));
+        <span class="comment">// TODO: should ignore this?</span>
+        <span class="self">self</span>.<span class="ident">sender</span>.<span class="ident">send</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;DONE\r\n&quot;</span>)).<span class="ident">unwrap</span>();
     }
 }
 

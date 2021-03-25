@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["listen_loop",""]],"struct":[["MailStore","SQLite email manager"]]});
+initSidebarItems({"static":[["MIGRATOR",""]],"struct":[["MailStore","SQLite email manager"]]});
