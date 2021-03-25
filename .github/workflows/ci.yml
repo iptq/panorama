@@ -1,15 +1,14 @@
-on:
-  push:
-    branches:
-      - master
+on: [push]
 
-name: publish-documentation
+name: workflow
 
 jobs:
-  doc:
-    name: panorama
+  workflow:
     runs-on: ubuntu-latest
+
     steps:
+      # Setup
+
       - name: checkout
         uses: actions/checkout@v2
 
@@ -22,6 +21,14 @@ jobs:
         uses: peaceiris/actions-mdbook@v1
         with:
           mdbook-version: 'latest'
+
+      # Run tests
+
+      - name: run tests
+        run: |
+          cargo test --all
+
+      # Generate documentation
 
       - name: build mdbook
         run: |
@@ -38,6 +45,19 @@ jobs:
           branch: gh-pages
           folder: public
 
+      # Build debian package
+
+      - name: build-deb
+        run: |
+          cargo install cargo-deb
+          cargo deb
+      - uses: actions/upload-artifact@v2
+        with:
+          name: panorama.deb
+          path: target/debian/panorama*.deb
+
+      # Cache massively
+
       - uses: actions/cache@v2
         with:
           path: |
@@ -46,4 +66,4 @@ jobs:
             target
           key: ${{ runner.os }}-cargo
 
-# vim: set ts=2 tw=2 sw=2 et :
+# vim: set sw=2 et :
