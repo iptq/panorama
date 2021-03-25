@@ -1,1 +1,1 @@
-initSidebarItems({"static":[["MIGRATOR",""]],"struct":[["MailStore","SQLite email manager"]]});
+initSidebarItems({"static":[["MIGRATOR",""]],"struct":[["MailStore","Manages email storage on disk, for both database and caches"]]});

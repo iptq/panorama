@@ -50,6 +50,7 @@
 <span id="47">47</span>
 <span id="48">48</span>
 <span id="49">49</span>
+<span id="50">50</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Package for managing the offline storage of emails</span>
 
@@ -64,7 +65,7 @@
 
 <span class="kw">static</span> <span class="ident">MIGRATOR</span>: <span class="ident">Migrator</span> <span class="op">=</span> <span class="ident">sqlx</span>::<span class="macro">migrate</span><span class="macro">!</span>();
 
-<span class="doccomment">/// SQLite email manager</span>
+<span class="doccomment">/// Manages email storage on disk, for both database and caches</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// This struct is clone-safe: cloning it will just return a reference to the same data structure</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
@@ -96,9 +97,10 @@
     }
 
     <span class="doccomment">/// Gets the list of all the UIDs in the given folder that need to be updated</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_new_uids</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">exists</span>: <span class="ident">u32</span>) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_new_uids</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">exists</span>: <span class="ident">u32</span>) {}
 
-    }
+    <span class="doccomment">/// Stores the given email</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">store_email</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {}
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "panorama";</script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

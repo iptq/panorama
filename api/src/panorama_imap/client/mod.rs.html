@@ -333,6 +333,7 @@
 <span id="330">330</span>
 <span id="331">331</span>
 <span id="332">332</span>
+<span id="333">333</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! IMAP Client</span>
 <span class="doccomment">//! ===</span>
@@ -541,7 +542,6 @@
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">select</span> <span class="op">=</span> <span class="ident">SelectResponse</span>::<span class="ident">default</span>();
         <span class="kw">for</span> <span class="ident">resp</span> <span class="kw">in</span> <span class="ident">data</span> {
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;execute called returned: {:?}&quot;</span>, <span class="ident">resp</span>);
             <span class="kw">match</span> <span class="ident">resp</span> {
                 <span class="ident">Response</span>::<span class="ident">MailboxData</span>(<span class="ident">MailboxData</span>::<span class="ident">Flags</span>(<span class="ident">flags</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">select</span>.<span class="ident">flags</span> <span class="op">=</span> <span class="ident">flags</span>,
                 <span class="ident">Response</span>::<span class="ident">MailboxData</span>(<span class="ident">MailboxData</span>::<span class="ident">Exists</span>(<span class="ident">exists</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">select</span>.<span class="ident">exists</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">exists</span>),
@@ -582,10 +582,11 @@
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">fetch</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">uids</span>: <span class="kw-2">&amp;</span>[<span class="ident">u32</span>],
+        <span class="ident">items</span>: <span class="ident">FetchItems</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">impl</span> <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">u32</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AttributeValue</span><span class="op">&gt;</span>)<span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="ident">Command</span>::<span class="ident">Fetch</span> {
             <span class="ident">uids</span>: <span class="ident">uids</span>.<span class="ident">to_vec</span>(),
-            <span class="ident">items</span>: <span class="ident">FetchItems</span>::<span class="ident">All</span>,
+            <span class="ident">items</span>,
         };
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;fetch: {}&quot;</span>, <span class="ident">cmd</span>);
         <span class="kw">let</span> <span class="ident">stream</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span><span class="question-mark">?</span>;
@@ -601,10 +602,11 @@
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">uid_fetch</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">uids</span>: <span class="kw-2">&amp;</span>[<span class="ident">u32</span>],
+        <span class="ident">items</span>: <span class="ident">FetchItems</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">impl</span> <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">u32</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AttributeValue</span><span class="op">&gt;</span>)<span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="ident">Command</span>::<span class="ident">UidFetch</span> {
             <span class="ident">uids</span>: <span class="ident">uids</span>.<span class="ident">to_vec</span>(),
-            <span class="ident">items</span>: <span class="ident">FetchItems</span>::<span class="ident">All</span>,
+            <span class="ident">items</span>,
         };
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;uid fetch: {}&quot;</span>, <span class="ident">cmd</span>);
         <span class="kw">let</span> <span class="ident">stream</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute</span>(<span class="ident">cmd</span>).<span class="kw">await</span><span class="question-mark">?</span>;
@@ -629,12 +631,12 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SelectResponse</span> {
-    <span class="ident">flags</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MailboxFlag</span><span class="op">&gt;</span>,
-    <span class="ident">exists</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    <span class="ident">recent</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    <span class="ident">uid_next</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    <span class="ident">uid_validity</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    <span class="ident">unseen</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">flags</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MailboxFlag</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">exists</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">recent</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">uid_next</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">uid_validity</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">unseen</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// A token that represents an idling connection.</span>

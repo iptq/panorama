@@ -541,7 +541,6 @@
 
             <span class="ident">line</span> <span class="op">=</span> <span class="ident">write_fut</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">line</span>) <span class="op">=</span> <span class="ident">line</span> {
-                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;got line {:?}&quot;</span>, <span class="ident">line</span>);
                     <span class="ident">conn</span>.<span class="ident">write_all</span>(<span class="ident">line</span>.<span class="ident">as_bytes</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
                     <span class="ident">conn</span>.<span class="ident">flush</span>().<span class="kw">await</span><span class="question-mark">?</span>;
                     <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;C&gt;&gt;&gt;S: {:?}&quot;</span>, <span class="ident">line</span>);
@@ -608,6 +607,7 @@
                     <span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(<span class="ident">v</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>,
                     <span class="ident">a</span> <span class="op">=</span><span class="op">&gt;</span> { <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;failed: {:?}&quot;</span>, <span class="ident">a</span>); <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;fuck&quot;</span>); },
                 };
+                <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;S&gt;&gt;&gt;C: {:?}&quot;</span>, <span class="ident">resp</span>);
 
                 <span class="comment">// if this is the very first response, then it&#39;s a greeting</span>
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">greeting_tx</span>) <span class="op">=</span> <span class="ident">greeting_tx</span>.<span class="ident">take</span>() {
@@ -618,7 +618,7 @@
                     <span class="comment">// since this is the DONE message, clear curr_cmd so another one can be sent</span>
                     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">cmd_tx</span>)) <span class="op">=</span> <span class="ident">curr_cmd</span>.<span class="ident">take</span>() {
                         <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">cmd_tx</span>.<span class="ident">send</span>(<span class="ident">resp</span>);
-                        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;res0: {:?}&quot;</span>, <span class="ident">res</span>);
+                        <span class="comment">// debug!(&quot;res0: {:?}&quot;, res);</span>
                     }
                 } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">tag</span>, <span class="ident">cmd</span>, <span class="ident">cmd_tx</span>)) <span class="op">=</span> <span class="ident">curr_cmd</span>.<span class="ident">as_mut</span>() {
                     <span class="comment">// we got a response from the server for this command, so send it over the</span>

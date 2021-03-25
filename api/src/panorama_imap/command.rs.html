@@ -129,6 +129,12 @@
 <span id="126">126</span>
 <span id="127">127</span>
 <span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>;
 
@@ -241,7 +247,11 @@
     <span class="ident">All</span>,
     <span class="ident">Fast</span>,
     <span class="ident">Full</span>,
+    <span class="ident">BodyPeek</span>,
     <span class="ident">Items</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">FetchAttr</span><span class="op">&gt;</span>),
+
+    <span class="doccomment">/// item set that panorama uses, TODO: remove when FetchItems has a builder</span>
+    <span class="ident">PanoramaAll</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
@@ -254,7 +264,9 @@
             <span class="ident">All</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;ALL&quot;</span>),
             <span class="ident">Fast</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;FAST&quot;</span>),
             <span class="ident">Full</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;FULL&quot;</span>),
-            <span class="ident">FetchAttr</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;&quot;</span>),
+            <span class="ident">BodyPeek</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;(BODY.PEEK[])&quot;</span>),
+            <span class="ident">PanoramaAll</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;(FLAGS INTERNALDATE RFC822.SIZE ENVELOPE BODY.PEEK[])&quot;</span>),
+            <span class="ident">Items</span>(<span class="ident">attrs</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;&quot;</span>),
         }
     }
 }

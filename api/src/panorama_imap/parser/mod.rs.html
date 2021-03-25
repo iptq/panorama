@@ -574,6 +574,25 @@
 <span id="571">571</span>
 <span id="572">572</span>
 <span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
+<span id="576">576</span>
+<span id="577">577</span>
+<span id="578">578</span>
+<span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Module that implements parsers for all of the IMAP types.</span>
 
@@ -599,6 +618,12 @@
 
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">ParseResult</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">E</span> <span class="op">=</span> <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">E</span><span class="op">&gt;</span>;
 
+<span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">parse_fail</span> {
+    ($(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">tt</span>:<span class="ident">tt</span>)<span class="kw-2">*</span>) <span class="op">=</span><span class="op">&gt;</span> {
+        { <span class="macro">error</span><span class="macro">!</span>($(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">tt</span>)<span class="kw-2">*</span>); <span class="macro">panic</span><span class="macro">!</span>(); }
+    };
+}
+
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse_capability</span>(<span class="ident">s</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ParseResult</span><span class="op">&lt;</span><span class="ident">Capability</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">Rfc3501</span>::<span class="ident">parse</span>(<span class="ident">Rule</span>::<span class="ident">capability</span>, <span class="ident">s</span>.<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
@@ -606,6 +631,7 @@
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse_streamed_response</span>(<span class="ident">s</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ParseResult</span><span class="op">&lt;</span>(<span class="ident">Response</span>, <span class="ident">usize</span>)<span class="op">&gt;</span> {
+    <span class="comment">// trace!(&quot;parsing streamed reponse: {:?}&quot;, s.as_ref());</span>
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">Rfc3501</span>::<span class="ident">parse</span>(<span class="ident">Rule</span>::<span class="ident">streamed_response</span>, <span class="ident">s</span>.<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">unwrap1</span>(<span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>());
     <span class="kw">let</span> <span class="ident">span</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">as_span</span>();
@@ -729,9 +755,7 @@
 }
 
 <span class="kw">fn</span> <span class="ident">build_msg_att_static</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AttributeValue</span> {
-    <span class="kw">if</span> <span class="op">!</span><span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">msg_att_static</span>) {
-        <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>);
-    }
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">msg_att_static</span>));
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pairs</span> <span class="op">=</span> <span class="ident">pair</span>.<span class="ident">into_inner</span>();
     <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">pairs</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
@@ -743,14 +767,28 @@
         <span class="ident">Rule</span>::<span class="ident">msg_att_static_rfc822_size</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AttributeValue</span>::<span class="ident">Rfc822Size</span>(<span class="ident">build_number</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>))),
         <span class="ident">Rule</span>::<span class="ident">msg_att_static_envelope</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AttributeValue</span>::<span class="ident">Envelope</span>(<span class="ident">build_envelope</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>))),
         <span class="comment">// TODO: do this</span>
-        <span class="ident">Rule</span>::<span class="ident">msg_att_static_body</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AttributeValue</span>::<span class="ident">BodySection</span> {
+        <span class="ident">Rule</span>::<span class="ident">msg_att_static_body_structure</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AttributeValue</span>::<span class="ident">BodySection</span> {
             <span class="ident">section</span>: <span class="prelude-val">None</span>,
             <span class="ident">index</span>: <span class="prelude-val">None</span>,
             <span class="ident">data</span>: <span class="prelude-val">None</span>,
         },
+        <span class="ident">Rule</span>::<span class="ident">msg_att_static_body_section</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">section</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+            <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+            <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+            <span class="ident">AttributeValue</span>::<span class="ident">BodySection</span> {
+                <span class="ident">section</span>,
+                <span class="ident">index</span>,
+                <span class="ident">data</span>,
+            }
+        }
         <span class="ident">Rule</span>::<span class="ident">msg_att_static_uid</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AttributeValue</span>::<span class="ident">Uid</span>(<span class="ident">build_number</span>(<span class="ident">unwrap1</span>(<span class="ident">unwrap1</span>(<span class="ident">pair</span>)))),
-        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">parse_fail</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">pair</span>),
     }
+}
+
+<span class="kw">fn</span> <span class="ident">build_section</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> () {
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">pair</span>.<span class="ident">as_rule</span>(), <span class="ident">Rule</span>::<span class="ident">section</span>));
 }
 
 <span class="kw">fn</span> <span class="ident">build_envelope</span>(<span class="ident">pair</span>: <span class="ident">Pair</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Envelope</span> {
