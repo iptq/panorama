@@ -29,6 +29,7 @@ use crate::config::{Config, ConfigWatcher, ImapAuth, MailAccountConfig, TlsMetho
 
 pub use self::event::MailEvent;
 pub use self::metadata::EmailMetadata;
+pub use self::store::MailStore;
 
 /// Command sent to the mail thread by something else (i.e. UI)
 #[derive(Debug)]
@@ -66,14 +67,23 @@ pub async fn run_mail(
             conn.abort();
         }
 
+        let mail_store = MailStore::new().await?;
         for (acct_name, acct) in config.mail_accounts.into_iter() {
             let mail2ui_tx = mail2ui_tx.clone();
+            let mail_store = mail_store.clone();
             let handle = tokio::spawn(async move {
                 // debug!("opening imap connection for {:?}", acct);
 
                 // this loop is to make sure accounts are restarted on error
                 loop {
-                    match client::imap_main(&acct_name, acct.clone(), mail2ui_tx.clone()).await {
+                    match client::sync_main(
+                        &acct_name,
+                        acct.clone(),
+                        mail2ui_tx.clone(),
+                        mail_store.clone(),
+                    )
+                    .await
+                    {
                         Ok(_) => {}
                         Err(err) => {
                             error!("IMAP Error: {}", err);

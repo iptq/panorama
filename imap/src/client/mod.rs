@@ -56,7 +56,8 @@ use tokio_rustls::{
 
 use crate::command::{Command, FetchItems, SearchCriteria};
 use crate::response::{
-    AttributeValue, Envelope, MailboxData, Response, ResponseData, ResponseDone,
+    AttributeValue, Envelope, MailboxData, MailboxFlag, Response, ResponseCode, ResponseData,
+    ResponseDone, Status,
 };
 
 pub use self::inner::{Client, ResponseStream};
@@ -67,7 +68,7 @@ pub use self::inner::{Client, ResponseStream};
 /// the connection to the server.
 ///
 /// [1]: self::ClientConfigBuilder::build
-/// [2]: self::ClientConfig::connect
+/// [2]: self::ClientConfig::open
 pub type ClientBuilder = ClientConfigBuilder;
 
 /// An IMAP client that hasn't been connected yet.
@@ -194,20 +195,36 @@ impl ClientAuthenticated {
     }
 
     /// Runs the SELECT command
-    pub async fn select(&mut self, mailbox: impl AsRef<str>) -> Result<()> {
+    pub async fn select(&mut self, mailbox: impl AsRef<str>) -> Result<SelectResponse> {
         let cmd = Command::Select {
             mailbox: mailbox.as_ref().to_owned(),
         };
+
         let stream = self.execute(cmd).await?;
         let (_, data) = stream.wait().await?;
+
+        let mut select = SelectResponse::default();
         for resp in data {
             debug!("execute called returned: {:?}", resp);
+            match resp {
+                Response::MailboxData(MailboxData::Flags(flags)) => select.flags = flags,
+                Response::MailboxData(MailboxData::Exists(exists)) => select.exists = Some(exists),
+                Response::MailboxData(MailboxData::Recent(recent)) => select.recent = Some(recent),
+                Response::Data(ResponseData {
+                    status: Status::Ok,
+                    code: Some(code),
+                    ..
+                }) => match code {
+                    ResponseCode::Unseen(value) => select.unseen = Some(value),
+                    ResponseCode::UidNext(value) => select.uid_next = Some(value),
+                    ResponseCode::UidValidity(value) => select.uid_validity = Some(value),
+                    _ => {}
+                },
+                _ => {}
+            }
         }
 
-        // nuke the capabilities cache
-        // self.nuke_capabilities();
-
-        Ok(())
+        Ok(select)
     }
 
     /// Runs the SEARCH command
@@ -274,6 +291,16 @@ impl ClientAuthenticated {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct SelectResponse {
+    flags: Vec<MailboxFlag>,
+    exists: Option<u32>,
+    recent: Option<u32>,
+    uid_next: Option<u32>,
+    uid_validity: Option<u32>,
+    unseen: Option<u32>,
+}
+
 /// A token that represents an idling connection.
 ///
 /// Dropping this token indicates that the idling should be completed, and the DONE command will be
@@ -289,7 +316,8 @@ pub struct IdleToken {
 #[cfg_attr(docsrs, doc(cfg(feature = "rfc2177-idle")))]
 impl Drop for IdleToken {
     fn drop(&mut self) {
-        self.sender.send(format!("DONE\r\n"));
+        // TODO: should ignore this?
+        self.sender.send(format!("DONE\r\n")).unwrap();
     }
 }
 

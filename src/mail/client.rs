@@ -19,13 +19,14 @@ use tokio::{
 
 use crate::config::{Config, ConfigWatcher, ImapAuth, MailAccountConfig, TlsMethod};
 
-use super::{MailCommand, MailEvent};
+use super::{MailCommand, MailEvent, MailStore};
 
-/// The main sequence of steps for the IMAP thread to follow
-pub async fn imap_main(
+/// The main function for the IMAP syncing thread
+pub async fn sync_main(
     acct_name: impl AsRef<str>,
     acct: MailAccountConfig,
     mail2ui_tx: UnboundedSender<MailEvent>,
+    mail_store: MailStore,
 ) -> Result<()> {
     let acct_name = acct_name.as_ref().to_owned();
 
@@ -66,7 +67,8 @@ pub async fn imap_main(
 
         // let's just select INBOX for now, maybe have a config for default mailbox later?
         debug!("selecting the INBOX mailbox");
-        authed.select("INBOX").await?;
+        let select = authed.select("INBOX").await?;
+        debug!("select result: {:?}", select);
 
         loop {
             let folder_list = authed.list().await?;

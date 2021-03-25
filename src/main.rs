@@ -127,7 +127,7 @@ fn setup_logger(log_file: Option<impl AsRef<Path>>) -> Result<()> {
         .format(move |out, message, record| {
             out.finish(format_args!(
                 "{}[{}][{}] {}",
-                now,
+                chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
                 record.target(),
                 colors.color(record.level()),
                 message
