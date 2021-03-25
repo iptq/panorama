@@ -1,16 +1,18 @@
 //! Package for managing the offline storage of emails
 
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 
 use anyhow::Result;
 use panorama_imap::response::AttributeValue;
-use sha2::{Digest, Sha256, Sha512};
+use sha2::{Digest, Sha256};
 use sqlx::{
     migrate::{MigrateDatabase, Migrator},
     sqlite::{Sqlite, SqlitePool},
     Error,
 };
 use tokio::fs;
+
+use crate::config::Config;
 
 static MIGRATOR: Migrator = sqlx::migrate!();
 
@@ -19,30 +21,45 @@ static MIGRATOR: Migrator = sqlx::migrate!();
 /// This struct is clone-safe: cloning it will just return a reference to the same data structure
 #[derive(Clone)]
 pub struct MailStore {
+    config: Config,
     mail_dir: PathBuf,
     pool: SqlitePool,
 }
 
 impl MailStore {
     /// Creates a new MailStore
-    pub async fn new() -> Result<Self> {
-        let db_path = "sqlite:hellosu.db";
-
-        // create the database file if it doesn't already exist -_ -
-        if !Sqlite::database_exists(db_path).await? {
-            Sqlite::create_database(db_path).await?;
-        }
-
-        let pool = SqlitePool::connect(db_path).await?;
-        MIGRATOR.run(&pool).await?;
-        debug!("run migrations : {:?}", MIGRATOR);
-
-        let mail_dir = PathBuf::from("hellosu/");
+    pub async fn new(config: Config) -> Result<Self> {
+        let mail_dir = config.mail_dir.to_string_lossy();
+        let mail_dir_str = shellexpand::tilde(mail_dir.as_ref());
+        let mail_dir = PathBuf::from(mail_dir_str.as_ref());
         if !mail_dir.exists() {
             fs::create_dir_all(&mail_dir).await?;
         }
+        info!("using mail dir: {:?}", mail_dir);
 
-        Ok(MailStore { mail_dir, pool })
+        // create database parent
+        let db_path = config.db_path.to_string_lossy();
+        let db_path_str = shellexpand::tilde(db_path.as_ref());
+
+        let db_path = PathBuf::from(db_path_str.as_ref());
+        let db_parent = db_path.parent();
+        if let Some(path) = db_parent {
+            fs::create_dir_all(path).await?;
+        }
+
+        let db_path = format!("sqlite:{}", db_path_str);
+        info!("using database path: {}", db_path_str);
+
+        // create the database file if it doesn't already exist -_ -
+        if !Sqlite::database_exists(&db_path_str).await? {
+            Sqlite::create_database(&db_path_str).await?;
+        }
+
+        let pool = SqlitePool::connect(&db_path_str).await?;
+        MIGRATOR.run(&pool).await?;
+        debug!("run migrations : {:?}", MIGRATOR);
+
+        Ok(MailStore { config, mail_dir, pool })
     }
 
     /// Gets the list of all the UIDs in the given folder that need to be updated

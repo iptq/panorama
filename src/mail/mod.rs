@@ -67,16 +67,18 @@ pub async fn run_mail(
             conn.abort();
         }
 
-        let mail_store = MailStore::new().await?;
-        for (acct_name, acct) in config.mail_accounts.into_iter() {
+        let mail_store = MailStore::new(config.clone()).await?;
+        for (acct_name, acct) in config.mail_accounts.clone().into_iter() {
             let mail2ui_tx = mail2ui_tx.clone();
             let mail_store = mail_store.clone();
+            let config2 = config.clone();
             let handle = tokio::spawn(async move {
                 // debug!("opening imap connection for {:?}", acct);
 
                 // this loop is to make sure accounts are restarted on error
                 loop {
                     match client::sync_main(
+                        config2.clone(),
                         &acct_name,
                         acct.clone(),
                         mail2ui_tx.clone(),

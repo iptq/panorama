@@ -23,6 +23,7 @@ use super::{MailCommand, MailEvent, MailStore};
 
 /// The main function for the IMAP syncing thread
 pub async fn sync_main(
+    config: Config,
     acct_name: impl AsRef<str>,
     acct: MailAccountConfig,
     mail2ui_tx: UnboundedSender<MailEvent>,

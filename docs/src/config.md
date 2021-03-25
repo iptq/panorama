@@ -10,6 +10,9 @@ Example configuration:
 ```toml
 version = "0.1"
 
+mail_dir = "~/.local/share/panorama/mail"
+db_path = "~/.local/share/panorama/panorama.db"
+
 [[mail]]
 imap.server = "mail.example.com"
 imap.port = 143

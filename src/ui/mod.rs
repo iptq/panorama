@@ -38,6 +38,7 @@ use tui::{
     Frame, Terminal,
 };
 
+use crate::config::ConfigWatcher;
 use crate::mail::{EmailMetadata, MailEvent};
 
 use self::colon_prompt::ColonPrompt;
@@ -52,6 +53,9 @@ pub(crate) type TermType<'a, 'b> = &'b mut Terminal<CrosstermBackend<&'a mut Std
 
 /// Parameters for passing to the UI thread
 pub struct UiParams {
+    /// Config updates
+    pub config_update: ConfigWatcher,
+
     /// Handle to the screen
     pub stdout: Stdout,
 

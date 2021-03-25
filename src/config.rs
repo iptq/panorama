@@ -25,6 +25,12 @@ pub struct Config {
     /// (potentially for migration later?)
     pub version: String,
 
+    /// Directory to store mail in
+    pub mail_dir: PathBuf,
+
+    /// SQLite database path
+    pub db_path: PathBuf,
+
     /// Mail accounts
     #[serde(rename = "mail")]
     pub mail_accounts: HashMap<String, MailAccountConfig>,

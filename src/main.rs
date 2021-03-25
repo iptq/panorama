@@ -5,7 +5,7 @@ use anyhow::Result;
 use fern::colors::{Color, ColoredLevelConfig};
 use futures::future::TryFutureExt;
 use panorama::{
-    config::spawn_config_watcher_system,
+    config::{spawn_config_watcher_system, ConfigWatcher},
     mail::{self, MailEvent},
     report_err,
     ui::{self, UiParams},
@@ -63,15 +63,16 @@ async fn run(opt: Opt) -> Result<()> {
     // send messages from the UI thread to the vm thread
     let (ui2vm_tx, _ui2vm_rx) = mpsc::unbounded_channel();
 
+    let config_update2 = config_update.clone();
     tokio::spawn(async move {
-        let config_update = config_update.clone();
-        mail::run_mail(config_update, ui2mail_rx, mail2ui_tx)
+        mail::run_mail(config_update2, ui2mail_rx, mail2ui_tx)
             .unwrap_or_else(report_err)
             .await;
     });
 
     if !opt.headless {
-        run_ui(exit_tx, mail2ui_rx, ui2vm_tx);
+        let config_update2 = config_update.clone();
+        run_ui(config_update2, exit_tx, mail2ui_rx, ui2vm_tx);
     }
 
     exit_rx.recv().await;
@@ -85,6 +86,7 @@ async fn run(opt: Opt) -> Result<()> {
 
 // Spawns the entire UI in a different thread, since it must be thread-local
 fn run_ui(
+    config_update: ConfigWatcher,
     exit_tx: mpsc::Sender<()>,
     mail2ui_rx: mpsc::UnboundedReceiver<MailEvent>,
     _ui2vm_tx: mpsc::UnboundedSender<()>,
@@ -99,6 +101,7 @@ fn run_ui(
     thread::spawn(move || {
         let localset = LocalSet::new();
         let params = UiParams {
+            config_update,
             stdout,
             exit_tx,
             mail2ui_rx,
@@ -123,6 +126,7 @@ fn setup_logger(log_file: Option<impl AsRef<Path>>) -> Result<()> {
         .filter(|meta| {
             meta.target() != "tokio_util::codec::framed_impl"
                 && !meta.target().starts_with("rustls::client")
+                && !meta.target().starts_with("sqlx::query")
         })
         .format(move |out, message, record| {
             out.finish(format_args!(
