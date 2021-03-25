@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS "accounts" (
 
 CREATE TABLE IF NOT EXISTS "mail" (
     "id" INTEGER PRIMARY KEY,
+    "message_id" TEXT,
     "account" TEXT,
     "folder" TEXT,
     "uidvalidity" INTEGER,

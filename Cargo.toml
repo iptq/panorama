@@ -45,6 +45,7 @@ sqlx = { version = "0.5.1", features = ["runtime-tokio-rustls", "sqlite"] }
 sha2 = "0.9.3"
 hex = "0.4.3"
 shellexpand = "2.1.0"
+mailparse = "0.13.2"
 
 [dependencies.panorama-imap]
 path = "imap"

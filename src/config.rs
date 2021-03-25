@@ -25,11 +25,8 @@ pub struct Config {
     /// (potentially for migration later?)
     pub version: String,
 
-    /// Directory to store mail in
-    pub mail_dir: PathBuf,
-
-    /// SQLite database path
-    pub db_path: PathBuf,
+    /// Directory to store panorama-related data in
+    pub data_dir: PathBuf,
 
     /// Mail accounts
     #[serde(rename = "mail")]

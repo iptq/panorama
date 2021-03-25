@@ -1,8 +1,9 @@
 //! Package for managing the offline storage of emails
 
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use panorama_imap::response::AttributeValue;
 use sha2::{Digest, Sha256};
 use sqlx::{
@@ -10,7 +11,7 @@ use sqlx::{
     sqlite::{Sqlite, SqlitePool},
     Error,
 };
-use tokio::fs;
+use tokio::{fs, sync::broadcast};
 
 use crate::config::Config;
 
@@ -24,29 +25,32 @@ pub struct MailStore {
     config: Config,
     mail_dir: PathBuf,
     pool: SqlitePool,
+    // email_events: broadcast::Sender<EmailUpdateInfo>,
 }
+
+#[derive(Clone, Debug)]
+pub struct EmailUpdateInfo {}
 
 impl MailStore {
     /// Creates a new MailStore
     pub async fn new(config: Config) -> Result<Self> {
-        let mail_dir = config.mail_dir.to_string_lossy();
-        let mail_dir_str = shellexpand::tilde(mail_dir.as_ref());
-        let mail_dir = PathBuf::from(mail_dir_str.as_ref());
+        let data_dir = config.data_dir.to_string_lossy();
+        let data_dir = PathBuf::from(shellexpand::tilde(data_dir.as_ref()).as_ref());
+
+        let mail_dir = data_dir.join("mail");
         if !mail_dir.exists() {
             fs::create_dir_all(&mail_dir).await?;
         }
         info!("using mail dir: {:?}", mail_dir);
 
         // create database parent
-        let db_path = config.db_path.to_string_lossy();
-        let db_path_str = shellexpand::tilde(db_path.as_ref());
-
-        let db_path = PathBuf::from(db_path_str.as_ref());
+        let db_path = data_dir.join("panorama.db");
         let db_parent = db_path.parent();
         if let Some(path) = db_parent {
             fs::create_dir_all(path).await?;
         }
 
+        let db_path_str = db_path.to_string_lossy();
         let db_path = format!("sqlite:{}", db_path_str);
         info!("using database path: {}", db_path_str);
 
@@ -59,11 +63,25 @@ impl MailStore {
         MIGRATOR.run(&pool).await?;
         debug!("run migrations : {:?}", MIGRATOR);
 
-        Ok(MailStore { config, mail_dir, pool })
+        // let (new_email_tx, new_email_rx) = broadcast::channel(100);
+
+        Ok(MailStore {
+            config,
+            mail_dir,
+            pool,
+            // email_events: new_email_tx,
+        })
     }
 
-    /// Gets the list of all the UIDs in the given folder that need to be updated
-    pub fn get_new_uids(&self, exists: u32) {}
+    // /// Subscribes to the email updates
+    // pub fn subscribe(&self) -> broadcast::Receiver<EmailUpdateInfo> {
+    //     self.email_events.subscribe()
+    // }
+
+    /// Try to identify an email based on the UID, message-id, and other heuristics
+    pub async fn try_identify_email() {
+
+    }
 
     /// Stores the given email
     pub async fn store_email(
@@ -91,7 +109,24 @@ impl MailStore {
         let hash = hasher.finalize();
         let filename = format!("{}.mail", hex::encode(hash));
         let path = self.mail_dir.join(&filename);
-        fs::write(path, body).await?;
+        fs::write(path, &body)
+            .await
+            .context("error writing email to file")?;
+
+        // parse email
+        let mut message_id = None;
+        let mail = mailparse::parse_mail(body.as_bytes())
+            .with_context(|| format!("error parsing email with uid {}", uid))?;
+        for header in mail.headers.iter() {
+            let key = header.get_key_ref();
+            let key = key.to_ascii_lowercase();
+            let value = header.get_value();
+            if key == "message-id" {
+                message_id = Some(value);
+            }
+        }
+
+        debug!("message-id: {:?}", message_id);
 
         let existing = sqlx::query(
             r#"
@@ -116,19 +151,25 @@ impl MailStore {
         if !exists {
             let id = sqlx::query(
                 r#"
-                INSERT INTO "mail" (account, folder, uid, uidvalidity, filename)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO "mail" (account, message_id, folder, uid, uidvalidity, filename)
+                VALUES (?, ?, ?, ?, ?, ?)
                 "#,
             )
             .bind(acct.as_ref())
+            .bind(message_id)
             .bind(folder.as_ref())
             .bind(uid)
             .bind(uidvalidity)
             .bind(filename)
             .execute(&self.pool)
-            .await?
+            .await
+            .context("error inserting email into db")?
             .last_insert_rowid();
         }
+
+        // self.email_events
+        //     .send(EmailUpdateInfo {})
+        //     .context("error sending email update info to the broadcast channel")?;
 
         Ok(())
     }

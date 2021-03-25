@@ -88,7 +88,10 @@ pub async fn run_mail(
                     {
                         Ok(_) => {}
                         Err(err) => {
-                            error!("IMAP Error: {}", err);
+                            error!("error from sync_main: {}", err);
+                            for err in err.chain() {
+                                error!("cause: {}", err);
+                            }
                         }
                     }
 

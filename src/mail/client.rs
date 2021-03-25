@@ -1,7 +1,7 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use futures::{
     future::FutureExt,
-    stream::{Stream, StreamExt},
+    stream::{Stream, StreamExt, TryStreamExt},
 };
 use notify_rust::{Notification, Timeout};
 use panorama_imap::{
@@ -76,15 +76,19 @@ pub async fn sync_main(
 
             if let (Some(exists), Some(uidvalidity)) = (select.exists, select.uid_validity) {
                 if exists < 10 {
-                    let mut fetched = authed
-                        .uid_fetch(&(1..=exists).collect::<Vec<_>>(), FetchItems::PanoramaAll)
-                        .await?;
-                    while let Some((uid, attrs)) = fetched.next().await {
-                        debug!("- {} : {:?}", uid, attrs);
-                        mail_store
-                            .store_email(&acct_name, &folder, uid, uidvalidity, attrs)
-                            .await?;
-                    }
+                    let uids = (1..=exists).collect::<Vec<_>>();
+                    let fetched = authed
+                        .uid_fetch(&uids, FetchItems::PanoramaAll)
+                        .await
+                        .context("error fetching uids")?;
+
+                    fetched
+                        .map(Ok)
+                        .try_for_each_concurrent(None, |(uid, attrs)| {
+                            mail_store.store_email(&acct_name, &folder, uid, uidvalidity, attrs)
+                        })
+                        .await
+                        .context("error during fetch-store")?;
                 }
             }
         }
