@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["SearchIndex","A search index manager"]]});

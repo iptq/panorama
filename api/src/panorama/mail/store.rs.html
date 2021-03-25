@@ -177,6 +177,44 @@
 <span id="174">174</span>
 <span id="175">175</span>
 <span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Package for managing the offline storage of emails</span>
 
@@ -189,7 +227,7 @@
 <span class="kw">use</span> <span class="ident">sqlx</span>::{
     <span class="ident">migrate</span>::{<span class="ident">MigrateDatabase</span>, <span class="ident">Migrator</span>},
     <span class="ident">sqlite</span>::{<span class="ident">Sqlite</span>, <span class="ident">SqlitePool</span>},
-    <span class="ident">Error</span>,
+    <span class="ident">Error</span> <span class="kw">as</span> <span class="ident">SqlxError</span>, <span class="ident">Row</span>,
 };
 <span class="kw">use</span> <span class="ident">tokio</span>::{<span class="ident">fs</span>, <span class="ident">sync</span>::<span class="ident">broadcast</span>};
 
@@ -258,9 +296,43 @@
     <span class="comment">//     self.email_events.subscribe()</span>
     <span class="comment">// }</span>
 
-    <span class="doccomment">/// Try to identify an email based on the UID, message-id, and other heuristics</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">try_identify_email</span>() {
+    <span class="doccomment">/// Given a UID and optional message-id try to identify a particular message</span>
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">try_identify_email</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">acct</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>,
+        <span class="ident">folder</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>,
+        <span class="ident">uid</span>: <span class="ident">u32</span>,
+        <span class="ident">uidvalidity</span>: <span class="ident">u32</span>,
+        <span class="ident">message_id</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">existing</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">u32</span>,)<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">into_opt</span>(
+            <span class="ident">sqlx</span>::<span class="ident">query_as</span>(
+                <span class="string">r#&quot;
+            SELECT rowid FROM &quot;mail&quot;
+            WHERE account = ? AND folder = ?
+                AND uid = ? AND uidvalidity = ?
+            &quot;#</span>,
+            )
+            .<span class="ident">bind</span>(<span class="ident">acct</span>.<span class="ident">as_ref</span>())
+            .<span class="ident">bind</span>(<span class="ident">folder</span>.<span class="ident">as_ref</span>())
+            .<span class="ident">bind</span>(<span class="ident">uid</span>)
+            .<span class="ident">bind</span>(<span class="ident">uidvalidity</span>)
+            .<span class="ident">fetch_one</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">pool</span>)
+            .<span class="kw">await</span>,
+        )<span class="question-mark">?</span>;
 
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">existing</span>) <span class="op">=</span> <span class="ident">existing</span> {
+            <span class="kw">let</span> <span class="ident">rowid</span> <span class="op">=</span> <span class="ident">existing</span>.<span class="number">0</span>;
+            <span class="macro">debug</span><span class="macro">!</span>(
+                <span class="string">&quot;folder: {:?} uid: {:?} rowid: {:?}&quot;</span>,
+                <span class="ident">folder</span>.<span class="ident">as_ref</span>(),
+                <span class="ident">uid</span>,
+                <span class="ident">rowid</span>,
+            );
+            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">rowid</span>));
+        }
+
+        <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
     }
 
     <span class="doccomment">/// Stores the given email</span>
@@ -308,27 +380,23 @@
 
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;message-id: {:?}&quot;</span>, <span class="ident">message_id</span>);
 
-        <span class="kw">let</span> <span class="ident">existing</span> <span class="op">=</span> <span class="ident">sqlx</span>::<span class="ident">query</span>(
-            <span class="string">r#&quot;
-            SELECT FROM &quot;mail&quot;
+        <span class="kw">let</span> <span class="ident">existing</span> <span class="op">=</span> <span class="ident">into_opt</span>(
+            <span class="ident">sqlx</span>::<span class="ident">query</span>(
+                <span class="string">r#&quot;
+            SELECT * FROM &quot;mail&quot;
             WHERE account = ? AND folder = ?
                 AND uid = ? AND uidvalidity = ?
             &quot;#</span>,
-        )
-        .<span class="ident">bind</span>(<span class="ident">acct</span>.<span class="ident">as_ref</span>())
-        .<span class="ident">bind</span>(<span class="ident">folder</span>.<span class="ident">as_ref</span>())
-        .<span class="ident">bind</span>(<span class="ident">uid</span>)
-        .<span class="ident">bind</span>(<span class="ident">uidvalidity</span>)
-        .<span class="ident">fetch_one</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">pool</span>)
-        .<span class="kw">await</span>;
+            )
+            .<span class="ident">bind</span>(<span class="ident">acct</span>.<span class="ident">as_ref</span>())
+            .<span class="ident">bind</span>(<span class="ident">folder</span>.<span class="ident">as_ref</span>())
+            .<span class="ident">bind</span>(<span class="ident">uid</span>)
+            .<span class="ident">bind</span>(<span class="ident">uidvalidity</span>)
+            .<span class="ident">fetch_one</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">pool</span>)
+            .<span class="kw">await</span>,
+        )<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">exists</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">existing</span> {
-            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">RowNotFound</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
-        };
-
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">exists</span> {
+        <span class="kw">if</span> <span class="ident">existing</span>.<span class="ident">is_none</span>() {
             <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">sqlx</span>::<span class="ident">query</span>(
                 <span class="string">r#&quot;
                 INSERT INTO &quot;mail&quot; (account, message_id, folder, uid, uidvalidity, filename)
@@ -352,6 +420,14 @@
         <span class="comment">//     .context(&quot;error sending email update info to the broadcast channel&quot;)?;</span>
 
         <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">into_opt</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">res</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">SqlxError</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">match</span> <span class="ident">res</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">v</span>)),
+        <span class="prelude-val">Err</span>(<span class="ident">SqlxError</span>::<span class="ident">RowNotFound</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+        <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>.<span class="ident">into</span>()),
     }
 }
 </pre></div>

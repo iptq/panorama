@@ -1,1 +1,1 @@
-initSidebarItems({"static":[["MIGRATOR",""]],"struct":[["EmailUpdateInfo",""],["MailStore","Manages email storage on disk, for both database and caches"]]});
+initSidebarItems({"fn":[["into_opt",""]],"static":[["MIGRATOR",""]],"struct":[["EmailUpdateInfo",""],["MailStore","Manages email storage on disk, for both database and caches"]]});
