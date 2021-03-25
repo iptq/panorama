@@ -215,6 +215,19 @@
 <span id="212">212</span>
 <span id="213">213</span>
 <span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Package for managing the offline storage of emails</span>
 
@@ -345,13 +358,20 @@
         <span class="ident">attrs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AttributeValue</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">body</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">internaldate</span> <span class="op">=</span> <span class="prelude-val">None</span>;
         <span class="kw">for</span> <span class="ident">attr</span> <span class="kw">in</span> <span class="ident">attrs</span> {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="ident">AttributeValue</span>::<span class="ident">BodySection</span>(<span class="ident">body_attr</span>) <span class="op">=</span> <span class="ident">attr</span> {
-                <span class="ident">body</span> <span class="op">=</span> <span class="ident">body_attr</span>.<span class="ident">data</span>;
+            <span class="kw">match</span> <span class="ident">attr</span> {
+                <span class="ident">AttributeValue</span>::<span class="ident">BodySection</span>(<span class="ident">body_attr</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">body_attr</span>.<span class="ident">data</span>,
+                <span class="ident">AttributeValue</span>::<span class="ident">InternalDate</span>(<span class="ident">date</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">internaldate</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">date</span>),
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {}
             }
         }
 
         <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">body</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>,
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(()),
+        };
+        <span class="kw">let</span> <span class="ident">internaldate</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">internaldate</span> {
             <span class="prelude-val">Some</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>,
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(()),
         };
@@ -367,14 +387,16 @@
 
         <span class="comment">// parse email</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">message_id</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">subject</span> <span class="op">=</span> <span class="prelude-val">None</span>;
         <span class="kw">let</span> <span class="ident">mail</span> <span class="op">=</span> <span class="ident">mailparse</span>::<span class="ident">parse_mail</span>(<span class="ident">body</span>.<span class="ident">as_bytes</span>())
             .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;error parsing email with uid {}&quot;</span>, <span class="ident">uid</span>))<span class="question-mark">?</span>;
         <span class="kw">for</span> <span class="ident">header</span> <span class="kw">in</span> <span class="ident">mail</span>.<span class="ident">headers</span>.<span class="ident">iter</span>() {
             <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">header</span>.<span class="ident">get_key_ref</span>();
-            <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">key</span>.<span class="ident">to_ascii_lowercase</span>();
             <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">header</span>.<span class="ident">get_value</span>();
-            <span class="kw">if</span> <span class="ident">key</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;message-id&quot;</span> {
-                <span class="ident">message_id</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>);
+            <span class="kw">match</span> <span class="ident">key</span>.<span class="ident">to_ascii_lowercase</span>().<span class="ident">as_str</span>() {
+                <span class="string">&quot;message-id&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">message_id</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>),
+                <span class="string">&quot;subject&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">subject</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>),
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {}
             }
         }
 
@@ -399,16 +421,20 @@
         <span class="kw">if</span> <span class="ident">existing</span>.<span class="ident">is_none</span>() {
             <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">sqlx</span>::<span class="ident">query</span>(
                 <span class="string">r#&quot;
-                INSERT INTO &quot;mail&quot; (account, message_id, folder, uid, uidvalidity, filename)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO &quot;mail&quot; (
+                    account, subject, message_id, folder, uid, uidvalidity,
+                    filename, internaldate
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 &quot;#</span>,
             )
             .<span class="ident">bind</span>(<span class="ident">acct</span>.<span class="ident">as_ref</span>())
+            .<span class="ident">bind</span>(<span class="ident">subject</span>)
             .<span class="ident">bind</span>(<span class="ident">message_id</span>)
             .<span class="ident">bind</span>(<span class="ident">folder</span>.<span class="ident">as_ref</span>())
             .<span class="ident">bind</span>(<span class="ident">uid</span>)
             .<span class="ident">bind</span>(<span class="ident">uidvalidity</span>)
             .<span class="ident">bind</span>(<span class="ident">filename</span>)
+            .<span class="ident">bind</span>(<span class="ident">internaldate</span>.<span class="ident">to_rfc3339</span>())
             .<span class="ident">execute</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">pool</span>)
             .<span class="kw">await</span>
             .<span class="ident">context</span>(<span class="string">&quot;error inserting email into db&quot;</span>)<span class="question-mark">?</span>
