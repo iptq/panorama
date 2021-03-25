@@ -9,7 +9,7 @@ use sha2::{Digest, Sha256};
 use sqlx::{
     migrate::{MigrateDatabase, Migrator},
     sqlite::{Sqlite, SqlitePool},
-    Error,
+    Error as SqlxError, Row,
 };
 use tokio::{fs, sync::broadcast};
 
@@ -78,9 +78,43 @@ impl MailStore {
     //     self.email_events.subscribe()
     // }
 
-    /// Try to identify an email based on the UID, message-id, and other heuristics
-    pub async fn try_identify_email() {
+    /// Given a UID and optional message-id try to identify a particular message
+    pub async fn try_identify_email(
+        &self,
+        acct: impl AsRef<str>,
+        folder: impl AsRef<str>,
+        uid: u32,
+        uidvalidity: u32,
+        message_id: Option<&str>,
+    ) -> Result<Option<u32>> {
+        let existing: Option<(u32,)> = into_opt(
+            sqlx::query_as(
+                r#"
+            SELECT rowid FROM "mail"
+            WHERE account = ? AND folder = ?
+                AND uid = ? AND uidvalidity = ?
+            "#,
+            )
+            .bind(acct.as_ref())
+            .bind(folder.as_ref())
+            .bind(uid)
+            .bind(uidvalidity)
+            .fetch_one(&self.pool)
+            .await,
+        )?;
 
+        if let Some(existing) = existing {
+            let rowid = existing.0;
+            debug!(
+                "folder: {:?} uid: {:?} rowid: {:?}",
+                folder.as_ref(),
+                uid,
+                rowid,
+            );
+            return Ok(Some(rowid));
+        }
+
+        Ok(None)
     }
 
     /// Stores the given email
@@ -128,27 +162,23 @@ impl MailStore {
 
         debug!("message-id: {:?}", message_id);
 
-        let existing = sqlx::query(
-            r#"
-            SELECT FROM "mail"
+        let existing = into_opt(
+            sqlx::query(
+                r#"
+            SELECT * FROM "mail"
             WHERE account = ? AND folder = ?
                 AND uid = ? AND uidvalidity = ?
             "#,
-        )
-        .bind(acct.as_ref())
-        .bind(folder.as_ref())
-        .bind(uid)
-        .bind(uidvalidity)
-        .fetch_one(&self.pool)
-        .await;
+            )
+            .bind(acct.as_ref())
+            .bind(folder.as_ref())
+            .bind(uid)
+            .bind(uidvalidity)
+            .fetch_one(&self.pool)
+            .await,
+        )?;
 
-        let exists = match existing {
-            Ok(_) => true,
-            Err(Error::RowNotFound) => true,
-            _ => false,
-        };
-
-        if !exists {
+        if existing.is_none() {
             let id = sqlx::query(
                 r#"
                 INSERT INTO "mail" (account, message_id, folder, uid, uidvalidity, filename)
@@ -172,5 +202,13 @@ impl MailStore {
         //     .context("error sending email update info to the broadcast channel")?;
 
         Ok(())
+    }
+}
+
+fn into_opt<T>(res: Result<T, SqlxError>) -> Result<Option<T>> {
+    match res {
+        Ok(v) => Ok(Some(v)),
+        Err(SqlxError::RowNotFound) => Ok(None),
+        Err(e) => Err(e.into()),
     }
 }

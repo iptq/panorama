@@ -22,6 +22,7 @@ extern crate log;
 pub mod config;
 pub mod mail;
 pub mod script;
+pub mod search;
 pub mod ui;
 
 /// Consumes any error and dumps it to the logger.

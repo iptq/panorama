@@ -35,8 +35,14 @@ pub fn parse_capability(s: impl AsRef<str>) -> ParseResult<Capability> {
 }
 
 pub fn parse_streamed_response(s: impl AsRef<str>) -> ParseResult<(Response, usize)> {
-    // trace!("parsing streamed reponse: {:?}", s.as_ref());
-    let mut pairs = Rfc3501::parse(Rule::streamed_response, s.as_ref())?;
+    let s = s.as_ref();
+    let mut pairs = match Rfc3501::parse(Rule::streamed_response, s) {
+        Ok(v) => v,
+        Err(e) => {
+            // error!("stream failed: {}", e);
+            return Err(e);
+        }
+    };
     let pair = unwrap1(pairs.next().unwrap());
     let span = pair.as_span();
     let range = span.end() - span.start();

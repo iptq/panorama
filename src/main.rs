@@ -116,7 +116,6 @@ fn run_ui(
 }
 
 fn setup_logger(log_file: Option<impl AsRef<Path>>) -> Result<()> {
-    let now = chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]");
     let colors = ColoredLevelConfig::new()
         .info(Color::Blue)
         .debug(Color::BrightBlack)
@@ -137,7 +136,7 @@ fn setup_logger(log_file: Option<impl AsRef<Path>>) -> Result<()> {
                 message
             ))
         })
-        .level(log::LevelFilter::Debug);
+        .level(log::LevelFilter::Trace);
     if let Some(log_file) = log_file {
         logger = logger.chain(fern::log_file(log_file)?);
     }
