@@ -1,23 +1,19 @@
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::rc::Rc;
 
+use futures::future::Future;
 use tui::layout::Rect;
 
 use super::{FrameType, HandlesInput, UI};
 
+#[async_trait(?Send)]
 pub trait Window: HandlesInput {
-    // Return some kind of name
+    /// Return some kind of name
     fn name(&self) -> String;
 
-    // Main draw function
-    fn draw(&self, f: FrameType, area: Rect, ui: &UI);
-
-    /// Draw function, except the window is not the actively focused one
-    ///
-    /// By default, this just calls the regular draw function but the window may choose to perform
-    /// a less intensive draw if it's known to not be active
-    fn draw_inactive(&mut self, f: FrameType, area: Rect, ui: &UI) {
-        self.draw(f, area, ui);
-    }
+    /// Main draw function
+    async fn draw(&self);
+    // async fn draw(&self, f: FrameType, area: Rect, ui: Rc<UI>);
 
     /// Update function
     fn update(&mut self) {}

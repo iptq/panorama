@@ -1,5 +1,7 @@
-//! Package for managing the offline storage of emails
+//! Module for managing the offline storage of emails
 
+use std::collections::HashMap;
+use std::mem;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -11,21 +13,34 @@ use sqlx::{
     sqlite::{Sqlite, SqlitePool},
     Error as SqlxError, Row,
 };
-use tokio::{fs, sync::broadcast};
+use tokio::{
+    fs,
+    sync::{broadcast, RwLock},
+    task::JoinHandle,
+};
 
-use crate::config::Config;
+use crate::config::{Config, ConfigWatcher};
+
+use super::MailEvent;
 
 static MIGRATOR: Migrator = sqlx::migrate!();
 
 /// Manages email storage on disk, for both database and caches
 ///
 /// This struct is clone-safe: cloning it will just return a reference to the same data structure
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MailStore {
-    config: Config,
-    mail_dir: PathBuf,
+    config: Arc<RwLock<Option<Config>>>,
+    inner: Arc<RwLock<Option<MailStoreInner>>>,
+    handle: Arc<JoinHandle<()>>,
+}
+
+#[derive(Debug)]
+/// This is associated with a particular config. When the config is updated, this gets replaced
+struct MailStoreInner {
     pool: SqlitePool,
-    // email_events: broadcast::Sender<EmailUpdateInfo>,
+    mail_dir: PathBuf,
+    accounts: HashMap<String, Arc<AccountRef>>,
 }
 
 #[derive(Clone, Debug)]
@@ -33,7 +48,33 @@ pub struct EmailUpdateInfo {}
 
 impl MailStore {
     /// Creates a new MailStore
-    pub async fn new(config: Config) -> Result<Self> {
+    pub fn new(mut config_watcher: ConfigWatcher) -> Self {
+        let config = Arc::new(RwLock::new(None));
+        let config2 = config.clone();
+
+        let listener = async move {
+            while let Ok(()) = config_watcher.changed().await {
+                let new_config = config_watcher.borrow().clone();
+                let mut write = config2.write().await;
+
+                // drop old config
+                if let Some(old_config) = write.take() {
+                    mem::drop(old_config);
+                }
+
+                *write = Some(new_config);
+            }
+        };
+        let handle = tokio::spawn(listener);
+
+        MailStore {
+            config,
+            inner: Arc::new(RwLock::new(None)),
+            handle: Arc::new(handle),
+        }
+    }
+
+    async fn init_with_config(&self, config: Config) -> Result<()> {
         let data_dir = config.data_dir.to_string_lossy();
         let data_dir = PathBuf::from(shellexpand::tilde(data_dir.as_ref()).as_ref());
 
@@ -63,20 +104,26 @@ impl MailStore {
         MIGRATOR.run(&pool).await?;
         debug!("run migrations : {:?}", MIGRATOR);
 
+        let accounts = config
+            .mail_accounts
+            .keys()
+            .map(|acct| {
+                let folders = RwLock::new(Vec::new());
+                (acct.to_owned(), Arc::new(AccountRef { folders }))
+            })
+            .collect();
+
         // let (new_email_tx, new_email_rx) = broadcast::channel(100);
-
-        Ok(MailStore {
-            config,
-            mail_dir,
-            pool,
-            // email_events: new_email_tx,
-        })
+        {
+            let mut write = self.inner.write().await;
+            *write = Some(MailStoreInner {
+                mail_dir,
+                pool,
+                accounts,
+            });
+        }
+        Ok(())
     }
-
-    // /// Subscribes to the email updates
-    // pub fn subscribe(&self) -> broadcast::Receiver<EmailUpdateInfo> {
-    //     self.email_events.subscribe()
-    // }
 
     /// Given a UID and optional message-id try to identify a particular message
     pub async fn try_identify_email(
@@ -87,6 +134,11 @@ impl MailStore {
         uidvalidity: u32,
         message_id: Option<&str>,
     ) -> Result<Option<u32>> {
+        let read = self.inner.read().await;
+        let inner = match &*read {
+            Some(v) => v,
+            None => return Ok(None),
+        };
         let existing: Option<(u32,)> = into_opt(
             sqlx::query_as(
                 r#"
@@ -99,9 +151,10 @@ impl MailStore {
             .bind(folder.as_ref())
             .bind(uid)
             .bind(uidvalidity)
-            .fetch_one(&self.pool)
+            .fetch_one(&inner.pool)
             .await,
         )?;
+        mem::drop(inner);
 
         if let Some(existing) = existing {
             let rowid = existing.0;
@@ -149,7 +202,12 @@ impl MailStore {
         hasher.update(body.as_bytes());
         let hash = hasher.finalize();
         let filename = format!("{}.mail", hex::encode(hash));
-        let path = self.mail_dir.join(&filename);
+        let path = {
+            match &*self.inner.read().await {
+                Some(inner) => inner.mail_dir.join(&filename),
+                None => return Ok(()),
+            }
+        };
         fs::write(path, &body)
             .await
             .context("error writing email to file")?;
@@ -171,6 +229,11 @@ impl MailStore {
 
         debug!("message-id: {:?}", message_id);
 
+        let read = self.inner.read().await;
+        let inner = match &*read {
+            Some(v) => v,
+            None => return Ok(()),
+        };
         let existing = into_opt(
             sqlx::query(
                 r#"
@@ -183,7 +246,7 @@ impl MailStore {
             .bind(folder.as_ref())
             .bind(uid)
             .bind(uidvalidity)
-            .fetch_one(&self.pool)
+            .fetch_one(&inner.pool)
             .await,
         )?;
 
@@ -204,17 +267,46 @@ impl MailStore {
             .bind(uidvalidity)
             .bind(filename)
             .bind(internaldate.to_rfc3339())
-            .execute(&self.pool)
+            .execute(&inner.pool)
             .await
             .context("error inserting email into db")?
             .last_insert_rowid();
         }
+        mem::drop(inner);
 
         // self.email_events
         //     .send(EmailUpdateInfo {})
         //     .context("error sending email update info to the broadcast channel")?;
 
         Ok(())
+    }
+
+    /// Event handerl
+    pub fn handle_mail_event(&self, evt: MailEvent) {
+        debug!("TODO: handle {:?}", evt);
+    }
+
+    /// Return a map of the accounts that are currently being tracked as well as a reference to the
+    /// account handles themselves
+    pub async fn list_accounts(&self) -> HashMap<String, Arc<AccountRef>> {
+        let read = self.inner.read().await;
+        let inner = match &*read {
+            Some(v) => v,
+            None => return HashMap::new(),
+        };
+
+        inner.accounts.clone()
+    }
+}
+
+#[derive(Debug)]
+pub struct AccountRef {
+    folders: RwLock<Vec<String>>,
+}
+
+impl AccountRef {
+    pub async fn folders(&self) -> Vec<String> {
+        self.folders.read().await.clone()
     }
 }
 

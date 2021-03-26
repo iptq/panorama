@@ -44,6 +44,7 @@ pub enum MailCommand {
 
 /// Main entrypoint for the mail listener.
 pub async fn run_mail(
+    mail_store: MailStore,
     mut config_watcher: ConfigWatcher,
     ui2mail_rx: UnboundedReceiver<MailCommand>,
     mail2ui_tx: UnboundedSender<MailEvent>,
@@ -67,7 +68,6 @@ pub async fn run_mail(
             conn.abort();
         }
 
-        let mail_store = MailStore::new(config.clone()).await?;
         for (acct_name, acct) in config.mail_accounts.clone().into_iter() {
             let mail2ui_tx = mail2ui_tx.clone();
             let mail_store = mail_store.clone();

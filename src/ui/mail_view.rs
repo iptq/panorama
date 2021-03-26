@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::sync::{
     atomic::{AtomicI8, AtomicU32, Ordering},
     Arc,
@@ -47,110 +48,83 @@ impl HandlesInput for MailView {
     }
 }
 
+#[async_trait(?Send)]
 impl Window for MailView {
     fn name(&self) -> String {
         String::from("email")
     }
 
-    fn draw(&self, f: FrameType, area: Rect, ui: &UI) {
-        let chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .margin(0)
-            .constraints([Constraint::Length(20), Constraint::Max(5000)])
-            .split(area);
+    async fn draw(&self) {
+        // let chunks = Layout::default()
+        //     .direction(Direction::Horizontal)
+        //     .margin(0)
+        //     .constraints([Constraint::Length(20), Constraint::Max(5000)])
+        //     .split(area);
 
-        let accts = self.mail_store.iter_accts();
+        // let accts = self.mail_store.list_accounts().await;
 
-        // folder list
-        let mut items = vec![];
-        for acct in accts.iter() {
-            let result = self.mail_store.folders_of(acct);
-            if let Some(folders) = result {
-                items.push(ListItem::new(acct.to_owned()));
-                for folder in folders {
-                    items.push(ListItem::new(format!(" {}", folder)));
-                }
-            }
-        }
+        // // folder list
+        // let mut items = vec![];
+        // for (acct_name, acct_ref) in accts.iter() {
+        //     let folders = acct_ref.folders().await;
 
-        let dirlist = List::new(items)
-            .block(Block::default().borders(Borders::NONE).title(Span::styled(
-                "hellosu",
-                Style::default().add_modifier(Modifier::BOLD),
-            )))
-            .style(Style::default().fg(Color::White))
-            .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-            .highlight_symbol(">>");
+        //     items.push(ListItem::new(acct_name.to_owned()));
+        //     for folder in folders {
+        //         items.push(ListItem::new(format!(" {}", folder)));
+        //     }
+        // }
 
-        // message list table
-        // let mut metas = self
-        //     .message_uids
-        //     .iter()
-        //     .filter_map(|id| self.message_map.get(id))
-        //     .collect::<Vec<_>>();
-        // metas.sort_by_key(|m| m.date);
-        // let rows = metas
-        //     .iter()
-        //     .rev()
-        //     .map(|meta| {
-        //         let mut row = Row::new(vec![
-        //             String::from(if meta.unread { "\u{2b24}" } else { "" }),
-        //             meta.uid.map(|u| u.to_string()).unwrap_or_default(),
-        //             meta.date.map(|d| humanize_timestamp(d)).unwrap_or_default(),
-        //             meta.from.clone(),
-        //             meta.subject.clone(),
-        //         ]);
-        //         if meta.unread {
-        //             row = row.style(
-        //                 Style::default()
-        //                     .fg(Color::LightCyan)
-        //                     .add_modifier(Modifier::BOLD),
-        //             );
+        // let dirlist = List::new(items)
+        //     .block(Block::default().borders(Borders::NONE).title(Span::styled(
+        //         "hellosu",
+        //         Style::default().add_modifier(Modifier::BOLD),
+        //     )))
+        //     .style(Style::default().fg(Color::White))
+        //     .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
+        //     .highlight_symbol(">>");
+
+        // let mut rows = vec![];
+        // for acct in accts.iter() {
+        //     // TODO: messages
+        //     let result: Option<Vec<EmailMetadata>> = None; // self.mail_store.messages_of(acct);
+        //     if let Some(messages) = result {
+        //         for meta in messages {
+        //             let mut row = Row::new(vec![
+        //                 String::from(if meta.unread { "\u{2b24}" } else { "" }),
+        //                 meta.uid.map(|u| u.to_string()).unwrap_or_default(),
+        //                 meta.date.map(|d| humanize_timestamp(d)).unwrap_or_default(),
+        //                 meta.from.clone(),
+        //                 meta.subject.clone(),
+        //             ]);
+        //             if meta.unread {
+        //                 row = row.style(
+        //                     Style::default()
+        //                         .fg(Color::LightCyan)
+        //                         .add_modifier(Modifier::BOLD),
+        //                 );
+        //             }
+        //             rows.push(row);
         //         }
-        //         row
-        //     })
-        //     .collect::<Vec<_>>();
+        //     }
+        // }
 
-        let mut rows = vec![];
-        for acct in accts.iter() {
-            let result = self.mail_store.messages_of(acct);
-            if let Some(messages) = result {
-                for meta in messages {
-                    let mut row = Row::new(vec![
-                        String::from(if meta.unread { "\u{2b24}" } else { "" }),
-                        meta.uid.map(|u| u.to_string()).unwrap_or_default(),
-                        meta.date.map(|d| humanize_timestamp(d)).unwrap_or_default(),
-                        meta.from.clone(),
-                        meta.subject.clone(),
-                    ]);
-                    if meta.unread {
-                        row = row.style(
-                            Style::default()
-                                .fg(Color::LightCyan)
-                                .add_modifier(Modifier::BOLD),
-                        );
-                    }
-                    rows.push(row);
-                }
-            }
-        }
-        let table = Table::new(rows)
-            .style(Style::default().fg(Color::White))
-            .widths(&[
-                Constraint::Length(1),
-                Constraint::Max(3),
-                Constraint::Min(20),
-                Constraint::Min(35),
-                Constraint::Max(5000),
-            ])
-            .header(
-                Row::new(vec!["", "UID", "Date", "From", "Subject"])
-                    .style(Style::default().add_modifier(Modifier::BOLD)),
-            )
-            .highlight_style(Style::default().bg(Color::DarkGray));
+        // let table = Table::new(rows)
+        //     .style(Style::default().fg(Color::White))
+        //     .widths(&[
+        //         Constraint::Length(1),
+        //         Constraint::Max(3),
+        //         Constraint::Min(20),
+        //         Constraint::Min(35),
+        //         Constraint::Max(5000),
+        //     ])
+        //     .header(
+        //         Row::new(vec!["", "UID", "Date", "From", "Subject"])
+        //             .style(Style::default().add_modifier(Modifier::BOLD)),
+        //     )
+        //     .highlight_style(Style::default().bg(Color::DarkGray));
 
-        f.render_widget(dirlist, chunks[0]);
-        f.render_widget(table, chunks[1]);
+        // f.render_widget(dirlist, chunks[0]);
+        // f.render_widget(table, chunks[1]);
     }
 }
 

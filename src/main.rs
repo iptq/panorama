@@ -6,7 +6,7 @@ use fern::colors::{Color, ColoredLevelConfig};
 use futures::future::TryFutureExt;
 use panorama::{
     config::{spawn_config_watcher_system, ConfigWatcher},
-    mail::{self, MailEvent},
+    mail::{self, MailEvent, MailStore},
     report_err,
     ui::{self, UiParams},
 };
@@ -50,6 +50,7 @@ fn main() -> Result<()> {
 async fn run(opt: Opt) -> Result<()> {
     let _xdg = BaseDirectories::new()?;
     let (_config_thread, config_update) = spawn_config_watcher_system()?;
+    let mail_store = MailStore::new(config_update.clone());
 
     // used to notify the runtime that the process should exit
     let (exit_tx, mut exit_rx) = mpsc::channel::<()>(1);
@@ -64,15 +65,16 @@ async fn run(opt: Opt) -> Result<()> {
     let (ui2vm_tx, _ui2vm_rx) = mpsc::unbounded_channel();
 
     let config_update2 = config_update.clone();
+    let mail_store2 = mail_store.clone();
     tokio::spawn(async move {
-        mail::run_mail(config_update2, ui2mail_rx, mail2ui_tx)
+        mail::run_mail(mail_store2, config_update2, ui2mail_rx, mail2ui_tx)
             .unwrap_or_else(report_err)
             .await;
     });
 
     if !opt.headless {
         let config_update2 = config_update.clone();
-        run_ui(config_update2, exit_tx, mail2ui_rx, ui2vm_tx);
+        run_ui(config_update2, mail_store.clone(), exit_tx, mail2ui_rx, ui2vm_tx);
     }
 
     exit_rx.recv().await;
@@ -87,6 +89,7 @@ async fn run(opt: Opt) -> Result<()> {
 // Spawns the entire UI in a different thread, since it must be thread-local
 fn run_ui(
     config_update: ConfigWatcher,
+    mail_store: MailStore,
     exit_tx: mpsc::Sender<()>,
     mail2ui_rx: mpsc::UnboundedReceiver<MailEvent>,
     _ui2vm_tx: mpsc::UnboundedSender<()>,
@@ -102,6 +105,7 @@ fn run_ui(
         let localset = LocalSet::new();
         let params = UiParams {
             config_update,
+            mail_store,
             stdout,
             exit_tx,
             mail2ui_rx,

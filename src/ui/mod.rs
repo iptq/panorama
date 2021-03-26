@@ -3,7 +3,6 @@
 mod colon_prompt;
 mod input;
 mod keybinds;
-mod mail_store;
 mod mail_view;
 mod messages;
 mod windows;
@@ -39,11 +38,10 @@ use tui::{
 };
 
 use crate::config::ConfigWatcher;
-use crate::mail::{EmailMetadata, MailEvent};
+use crate::mail::{EmailMetadata, MailEvent, MailStore};
 
 use self::colon_prompt::ColonPrompt;
 use self::input::{BaseInputHandler, HandlesInput, InputResult};
-use self::mail_store::MailStore;
 use self::mail_view::MailView;
 pub(crate) use self::messages::*;
 use self::windows::*;
@@ -55,6 +53,9 @@ pub(crate) type TermType<'a, 'b> = &'b mut Terminal<CrosstermBackend<&'a mut Std
 pub struct UiParams {
     /// Config updates
     pub config_update: ConfigWatcher,
+
+    /// Mail store
+    pub mail_store: MailStore,
 
     /// Handle to the screen
     pub stdout: Stdout,
@@ -81,8 +82,7 @@ pub async fn run_ui2(params: UiParams) -> Result<()> {
 
     let should_exit = Arc::new(AtomicBool::new(false));
 
-    let mail_store = MailStore::default();
-
+    let mail_store = params.mail_store;
     let mut ui = UI {
         should_exit: should_exit.clone(),
         window_layout: WindowLayout::default(),
@@ -172,7 +172,7 @@ impl UI {
         let visible = self.window_layout.visible_windows(chunks[0]);
         for (layout_id, area) in visible.into_iter() {
             if let Some(window) = self.windows.get(&layout_id) {
-                window.draw(f, area, self);
+                window.draw();
             }
         }
     }
