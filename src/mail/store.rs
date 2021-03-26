@@ -154,7 +154,7 @@ impl MailStore {
             .fetch_one(&inner.pool)
             .await,
         )?;
-        mem::drop(inner);
+        mem::drop(read);
 
         if let Some(existing) = existing {
             let rowid = existing.0;
@@ -272,7 +272,7 @@ impl MailStore {
             .context("error inserting email into db")?
             .last_insert_rowid();
         }
-        mem::drop(inner);
+        mem::drop(read);
 
         // self.email_events
         //     .send(EmailUpdateInfo {})

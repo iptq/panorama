@@ -19,23 +19,25 @@ use std::time::Duration;
 
 use anyhow::Result;
 use chrono::{Local, TimeZone};
-use crossterm::{
-    cursor,
-    event::{self, Event, EventStream, KeyCode, KeyEvent},
-    style, terminal,
-};
 use downcast_rs::Downcast;
 use futures::{future::FutureExt, select, stream::StreamExt};
 use panorama_imap::response::{AttributeValue, Envelope};
-use tokio::{sync::mpsc, time};
-use tui::{
-    backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
-    text::{Span, Spans},
-    widgets::*,
+use panorama_tui::{
+    crossterm::{
+        cursor,
+        event::{self, Event, EventStream, KeyCode, KeyEvent},
+        execute, queue, style, terminal,
+    },
+    tui::{
+        backend::CrosstermBackend,
+        layout::{Constraint, Direction, Layout},
+        style::{Color, Modifier, Style},
+        text::{Span, Spans},
+        widgets::*,
+    },
     Frame, Terminal,
 };
+use tokio::{sync::mpsc, time};
 
 use crate::config::ConfigWatcher;
 use crate::mail::{EmailMetadata, MailEvent, MailStore};
@@ -46,8 +48,9 @@ use self::mail_view::MailView;
 pub(crate) use self::messages::*;
 use self::windows::*;
 
-pub(crate) type FrameType<'a, 'b, 'c> = &'c mut Frame<'a, CrosstermBackend<&'b mut Stdout>>;
-pub(crate) type TermType<'a, 'b> = &'b mut Terminal<CrosstermBackend<&'a mut Stdout>>;
+pub(crate) type FrameType<'a, 'b> = Frame<'a, &'b mut Stdout>;
+// pub(crate) type FrameType<'a, 'b, 'c> = &'c mut Frame<'a, CrosstermBackend<&'b mut Stdout>>;
+pub(crate) type TermType<'b> = &'b mut Terminal<Stdout>;
 
 /// Parameters for passing to the UI thread
 pub struct UiParams {
@@ -76,8 +79,8 @@ pub async fn run_ui2(params: UiParams) -> Result<()> {
     execute!(stdout, cursor::Hide, terminal::EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
 
-    let backend = CrosstermBackend::new(&mut stdout);
-    let mut term = Terminal::new(backend)?;
+    // let backend = CrosstermBackend::new(&mut stdout);
+    let mut term = Terminal::new(&mut stdout)?;
     let mut ui_events = EventStream::new();
 
     let should_exit = Arc::new(AtomicBool::new(false));
@@ -96,9 +99,12 @@ pub async fn run_ui2(params: UiParams) -> Result<()> {
     // let mut input_states: Vec<Box<dyn HandlesInput>> = vec![];
 
     while !should_exit.load(Ordering::Relaxed) {
-        term.draw(|f| {
-            ui.draw(f);
-        })?;
+        term.pre_draw()?;
+        {
+            let mut frame = term.get_frame();
+            ui.draw(&mut frame).await;
+        }
+        term.post_draw()?;
 
         select! {
             // got an event from the mail thread
@@ -117,8 +123,8 @@ pub async fn run_ui2(params: UiParams) -> Result<()> {
         }
     }
 
-    mem::drop(term);
     mem::drop(ui);
+    mem::drop(term);
 
     execute!(
         stdout,
@@ -142,7 +148,7 @@ pub struct UI {
 }
 
 impl UI {
-    fn draw(&mut self, f: FrameType) {
+    async fn draw(&mut self, f: &mut FrameType<'_, '_>) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(0)
@@ -167,12 +173,14 @@ impl UI {
             .collect();
         let tabs = Tabs::new(titles).style(Style::default().bg(Color::DarkGray));
         f.render_widget(tabs, chunks[1]);
+        debug!("drew chunks");
 
         // render all other windows
         let visible = self.window_layout.visible_windows(chunks[0]);
         for (layout_id, area) in visible.into_iter() {
             if let Some(window) = self.windows.get(&layout_id) {
-                window.draw();
+                window.draw(f, area, self).await;
+                debug!("drew {:?} {:?}", layout_id, area);
             }
         }
     }

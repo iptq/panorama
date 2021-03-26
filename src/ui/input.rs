@@ -6,8 +6,8 @@ use std::sync::{
 };
 
 use anyhow::Result;
-use crossterm::event::{self, Event, KeyCode, KeyEvent};
 use downcast_rs::Downcast;
+use panorama_tui::crossterm::event::{self, Event, KeyCode, KeyEvent};
 
 use super::colon_prompt::ColonPrompt;
 use super::TermType;

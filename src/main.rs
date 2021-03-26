@@ -74,7 +74,13 @@ async fn run(opt: Opt) -> Result<()> {
 
     if !opt.headless {
         let config_update2 = config_update.clone();
-        run_ui(config_update2, mail_store.clone(), exit_tx, mail2ui_rx, ui2vm_tx);
+        run_ui(
+            config_update2,
+            mail_store.clone(),
+            exit_tx,
+            mail2ui_rx,
+            ui2vm_tx,
+        );
     }
 
     exit_rx.recv().await;

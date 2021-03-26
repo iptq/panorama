@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::rc::Rc;
 
 use futures::future::Future;
-use tui::layout::Rect;
+use panorama_tui::tui::layout::Rect;
 
 use super::{FrameType, HandlesInput, UI};
 
@@ -12,7 +12,7 @@ pub trait Window: HandlesInput {
     fn name(&self) -> String;
 
     /// Main draw function
-    async fn draw(&self);
+    async fn draw(&self, f: &mut FrameType<'_, '_>, area: Rect, ui: &UI);
     // async fn draw(&self, f: FrameType, area: Rect, ui: Rc<UI>);
 
     /// Update function

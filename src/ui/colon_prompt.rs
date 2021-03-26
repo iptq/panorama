@@ -1,5 +1,5 @@
 use anyhow::Result;
-use crossterm::event::{KeyCode, KeyEvent};
+use panorama_tui::crossterm::event::{KeyCode, KeyEvent};
 
 use super::input::{HandlesInput, InputResult};
 use super::TermType;

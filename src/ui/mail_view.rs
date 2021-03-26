@@ -8,14 +8,16 @@ use std::sync::{
 use anyhow::Result;
 use chrono::{DateTime, Datelike, Duration, Local};
 use chrono_humanize::HumanTime;
-use crossterm::event::{KeyCode, KeyEvent};
 use panorama_imap::response::Envelope;
-use tui::{
-    buffer::Buffer,
-    layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
-    text::{Span, Spans},
-    widgets::*,
+use panorama_tui::{
+    crossterm::event::{KeyCode, KeyEvent},
+    tui::{
+        buffer::Buffer,
+        layout::{Constraint, Direction, Layout, Rect},
+        style::{Color, Modifier, Style},
+        text::{Span, Spans},
+        widgets::*,
+    },
 };
 
 use crate::mail::EmailMetadata;
@@ -54,36 +56,36 @@ impl Window for MailView {
         String::from("email")
     }
 
-    async fn draw(&self) {
-        // let chunks = Layout::default()
-        //     .direction(Direction::Horizontal)
-        //     .margin(0)
-        //     .constraints([Constraint::Length(20), Constraint::Max(5000)])
-        //     .split(area);
+    async fn draw(&self, f: &mut FrameType<'_, '_>, area: Rect, ui: &UI) {
+        let chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .margin(0)
+            .constraints([Constraint::Length(20), Constraint::Max(5000)])
+            .split(area);
 
-        // let accts = self.mail_store.list_accounts().await;
+        let accts = self.mail_store.list_accounts().await;
 
-        // // folder list
-        // let mut items = vec![];
-        // for (acct_name, acct_ref) in accts.iter() {
-        //     let folders = acct_ref.folders().await;
+        // folder list
+        let mut items = vec![];
+        for (acct_name, acct_ref) in accts.iter() {
+            let folders = acct_ref.folders().await;
 
-        //     items.push(ListItem::new(acct_name.to_owned()));
-        //     for folder in folders {
-        //         items.push(ListItem::new(format!(" {}", folder)));
-        //     }
-        // }
+            items.push(ListItem::new(acct_name.to_owned()));
+            for folder in folders {
+                items.push(ListItem::new(format!(" {}", folder)));
+            }
+        }
 
-        // let dirlist = List::new(items)
-        //     .block(Block::default().borders(Borders::NONE).title(Span::styled(
-        //         "hellosu",
-        //         Style::default().add_modifier(Modifier::BOLD),
-        //     )))
-        //     .style(Style::default().fg(Color::White))
-        //     .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-        //     .highlight_symbol(">>");
+        let dirlist = List::new(items)
+            .block(Block::default().borders(Borders::NONE).title(Span::styled(
+                "hellosu",
+                Style::default().add_modifier(Modifier::BOLD),
+            )))
+            .style(Style::default().fg(Color::White))
+            .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
+            .highlight_symbol(">>");
 
-        // let mut rows = vec![];
+        let mut rows = vec![];
         // for acct in accts.iter() {
         //     // TODO: messages
         //     let result: Option<Vec<EmailMetadata>> = None; // self.mail_store.messages_of(acct);
@@ -108,23 +110,23 @@ impl Window for MailView {
         //     }
         // }
 
-        // let table = Table::new(rows)
-        //     .style(Style::default().fg(Color::White))
-        //     .widths(&[
-        //         Constraint::Length(1),
-        //         Constraint::Max(3),
-        //         Constraint::Min(20),
-        //         Constraint::Min(35),
-        //         Constraint::Max(5000),
-        //     ])
-        //     .header(
-        //         Row::new(vec!["", "UID", "Date", "From", "Subject"])
-        //             .style(Style::default().add_modifier(Modifier::BOLD)),
-        //     )
-        //     .highlight_style(Style::default().bg(Color::DarkGray));
+        let table = Table::new(rows)
+            .style(Style::default().fg(Color::White))
+            .widths(&[
+                Constraint::Length(1),
+                Constraint::Max(3),
+                Constraint::Min(20),
+                Constraint::Min(35),
+                Constraint::Max(5000),
+            ])
+            .header(
+                Row::new(vec!["", "UID", "Date", "From", "Subject"])
+                    .style(Style::default().add_modifier(Modifier::BOLD)),
+            )
+            .highlight_style(Style::default().bg(Color::DarkGray));
 
-        // f.render_widget(dirlist, chunks[0]);
-        // f.render_widget(table, chunks[1]);
+        f.render_widget(dirlist, chunks[0]);
+        f.render_widget(table, chunks[1]);
     }
 }
 

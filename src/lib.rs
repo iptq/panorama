@@ -11,8 +11,6 @@ extern crate anyhow;
 #[macro_use]
 extern crate async_trait;
 #[macro_use]
-extern crate crossterm;
-#[macro_use]
 extern crate format_bytes;
 #[macro_use]
 extern crate serde;

@@ -49,9 +49,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.39"
+version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81cddc5f91628367664cc7c69714ff08deee8a3efc54623011c772544d7b2767"
+checksum = "28b2cd92db5cbd74e8e5028f7e27dd7aa3090e89e4f2a197cc7c8dfb69c7063b"
 
 [[package]]
 name = "archery"
@@ -1525,7 +1525,7 @@ dependencies = [
  "futures-core",
  "inotify-sys",
  "libc",
- "tokio 1.3.0",
+ "tokio 1.4.0",
 ]
 
 [[package]]
@@ -2014,7 +2014,6 @@ dependencies = [
  "cfg-if 1.0.0",
  "chrono",
  "chrono-humanize",
- "crossterm 0.19.0",
  "downcast-rs",
  "fern",
  "format-bytes",
@@ -2027,6 +2026,7 @@ dependencies = [
  "notify-rust",
  "panorama-imap",
  "panorama-smtp",
+ "panorama-tui",
  "parking_lot",
  "quoted_printable",
  "serde",
@@ -2034,12 +2034,11 @@ dependencies = [
  "shellexpand",
  "sqlx",
  "structopt",
- "tokio 1.3.0",
+ "tokio 1.4.0",
  "tokio-rustls",
  "tokio-stream",
  "tokio-util",
  "toml",
- "tui",
  "webpki-roots",
  "xdg",
 ]
@@ -2060,7 +2059,7 @@ dependencies = [
  "pest",
  "pest_derive",
  "quoted_printable",
- "tokio 1.3.0",
+ "tokio 1.4.0",
  "tokio-rustls",
  "tokio-util",
  "webpki-roots",
@@ -2073,6 +2072,14 @@ version = "0.1.0"
 [[package]]
 name = "panorama-tui"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "crossterm 0.19.0",
+ "futures 0.3.13",
+ "log",
+ "tokio 1.4.0",
+ "tui",
+]
 
 [[package]]
 name = "parking"
@@ -2869,7 +2876,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ce2e16b6774c671cc183e1d202386fdf9cde1e8468c1894a7f2a63eb671c4f4"
 dependencies = [
  "once_cell",
- "tokio 1.3.0",
+ "tokio 1.4.0",
  "tokio-rustls",
 ]
 
@@ -3143,9 +3150,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.3.0"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d56477f6ed99e10225f38f9f75f872f29b8b8bd8c0b946f63345bb144e9eeda"
+checksum = "134af885d758d645f0f0505c9a8b3f9bf8a348fd822e112ab5248138348f1722"
 dependencies = [
  "autocfg",
  "bytes 1.0.1",
@@ -3179,7 +3186,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc6844de72e57df1980054b38be3a9f4702aba4858be64dd700181a8a6d0e1b6"
 dependencies = [
  "rustls",
- "tokio 1.3.0",
+ "tokio 1.4.0",
  "webpki",
 ]
 
@@ -3191,7 +3198,7 @@ checksum = "c535f53c0cfa1acace62995a8994fc9cc1f12d202420da96ff306ee24d576469"
 dependencies = [
  "futures-core",
  "pin-project-lite 0.2.6",
- "tokio 1.3.0",
+ "tokio 1.4.0",
  "tokio-util",
 ]
 
@@ -3208,7 +3215,7 @@ dependencies = [
  "log",
  "pin-project-lite 0.2.6",
  "slab",
- "tokio 1.3.0",
+ "tokio 1.4.0",
 ]
 
 [[package]]
