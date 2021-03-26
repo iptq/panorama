@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["MailAccountState",""],["MailStore","UI's view of the currently-known mail-related state of all accounts."]]});

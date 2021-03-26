@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["into_opt",""]],"static":[["MIGRATOR",""]],"struct":[["EmailUpdateInfo",""],["MailStore","Manages email storage on disk, for both database and caches"]]});
+initSidebarItems({"fn":[["into_opt",""]],"static":[["MIGRATOR",""]],"struct":[["AccountRef",""],["EmailUpdateInfo",""],["MailStore","Manages email storage on disk, for both database and caches"],["MailStoreInner","This is associated with a particular config. When the config is updated, this gets replaced"]]});
