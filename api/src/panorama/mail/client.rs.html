@@ -205,6 +205,7 @@
 <span id="202">202</span>
 <span id="203">203</span>
 <span id="204">204</span>
+<span id="205">205</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">Context</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">futures</span>::{
@@ -338,7 +339,8 @@
                 .<span class="ident">unwrap</span>();
             <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">uid</span>, <span class="ident">attrs</span>)) <span class="op">=</span> <span class="ident">message_list</span>.<span class="ident">next</span>().<span class="kw">await</span> {
                 <span class="kw">let</span> <span class="ident">evt</span> <span class="op">=</span> <span class="ident">MailEvent</span>::<span class="ident">UpdateUid</span>(<span class="ident">acct_name</span>.<span class="ident">clone</span>(), <span class="ident">uid</span>, <span class="ident">attrs</span>);
-                <span class="ident">mail2ui_tx</span>.<span class="ident">send</span>(<span class="ident">evt</span>);
+                <span class="comment">// TODO: probably odn&#39;t care about this?</span>
+                <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">mail2ui_tx</span>.<span class="ident">send</span>(<span class="ident">evt</span>);
             }
 
             <span class="comment">// check if IDLE is supported</span>

@@ -20,7 +20,7 @@
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">gluon</span>::{<span class="ident">import</span>::<span class="ident">add_extern_module</span>, <span class="ident">ThreadExt</span>};
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">ui</span>::{<span class="ident">UiCommand</span>, <span class="ident">UiUpdate</span>};
+<span class="comment">// use crate::ui::{UiCommand, UiUpdate};</span>
 
 <span class="doccomment">/// Creates a VM for running scripts</span>
 <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_script_vm</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {

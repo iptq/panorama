@@ -411,6 +411,19 @@
 <span id="408">408</span>
 <span id="409">409</span>
 <span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Module for managing the offline storage of emails</span>
 
@@ -477,10 +490,9 @@
 
 <span class="kw">impl</span> <span class="ident">MailStore</span> {
     <span class="doccomment">/// Creates a new MailStore</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="kw-2">mut</span> <span class="ident">config_watcher</span>: <span class="ident">ConfigWatcher</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config_watcher</span>: <span class="ident">ConfigWatcher</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">RwLock</span>::<span class="ident">new</span>(<span class="prelude-val">None</span>));
         <span class="kw">let</span> <span class="ident">config2</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">clone</span>();
-
         <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">RwLock</span>::<span class="ident">new</span>(<span class="prelude-val">None</span>));
         <span class="kw">let</span> <span class="ident">inner2</span> <span class="op">=</span> <span class="ident">inner</span>.<span class="ident">clone</span>();
 
@@ -488,35 +500,14 @@
         <span class="kw">let</span> <span class="ident">store_out_tx</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">store_out_tx</span>);
         <span class="kw">let</span> <span class="ident">store_out_tx2</span> <span class="op">=</span> <span class="ident">store_out_tx</span>.<span class="ident">clone</span>();
 
-        <span class="kw">let</span> <span class="ident">listener</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
-            <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(()) <span class="op">=</span> <span class="ident">config_watcher</span>.<span class="ident">changed</span>().<span class="kw">await</span> {
-                <span class="kw">let</span> <span class="ident">new_config</span> <span class="op">=</span> <span class="ident">config_watcher</span>.<span class="ident">borrow</span>().<span class="ident">clone</span>();
-
-                <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="ident">future</span>::<span class="ident">try_join</span>(
-                    <span class="kw">async</span> {
-                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">write</span> <span class="op">=</span> <span class="ident">config2</span>.<span class="ident">write</span>().<span class="kw">await</span>;
-                        <span class="ident">write</span>.<span class="ident">replace</span>(<span class="ident">new_config</span>.<span class="ident">clone</span>());
-                        <span class="prelude-val">Ok</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">Error</span><span class="op">&gt;</span>(())
-                    },
-                    <span class="kw">async</span> {
-                        <span class="kw">let</span> <span class="ident">new_inner</span> <span class="op">=</span>
-                            <span class="ident">MailStoreInner</span>::<span class="ident">init_with_config</span>(<span class="ident">new_config</span>.<span class="ident">clone</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
-                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">write</span> <span class="op">=</span> <span class="ident">inner2</span>.<span class="ident">write</span>().<span class="kw">await</span>;
-                        <span class="ident">write</span>.<span class="ident">replace</span>(<span class="ident">new_inner</span>);
-                        <span class="prelude-val">Ok</span>(())
-                    },
-                );
-
-                <span class="kw">match</span> <span class="ident">fut</span>.<span class="kw">await</span> {
-                    <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">store_out_tx2</span>.<span class="ident">send</span>(<span class="prelude-val">Some</span>(<span class="ident">MailStoreUpdate</span>::<span class="ident">AccountListUpdate</span>(()))),
-                    <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;during mail loop: {}&quot;</span>, <span class="ident">e</span>);
-                        <span class="macro">panic</span><span class="macro">!</span>();
-                    }
-                };
+        <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
+            <span class="kw">match</span> <span class="ident">mail_store_config_listener</span>(<span class="ident">config_watcher</span>, <span class="ident">config2</span>, <span class="ident">inner2</span>, <span class="ident">store_out_tx2</span>).<span class="kw">await</span> {
+                <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {}
+                <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;mail store listener error: {}&quot;</span>, <span class="ident">e</span>);
+                }
             }
-        };
-        <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">spawn</span>(<span class="ident">listener</span>);
+        });
 
         <span class="ident">MailStore</span> {
             <span class="ident">config</span>,
@@ -709,6 +700,41 @@
 
         <span class="ident">inner</span>.<span class="ident">accounts</span>.<span class="ident">clone</span>()
     }
+}
+
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">mail_store_config_listener</span>(
+    <span class="kw-2">mut</span> <span class="ident">config_watcher</span>: <span class="ident">ConfigWatcher</span>,
+    <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">inner</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">MailStoreInner</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">store_out_tx</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">watch</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">MailStoreUpdate</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(()) <span class="op">=</span> <span class="ident">config_watcher</span>.<span class="ident">changed</span>().<span class="kw">await</span> {
+        <span class="kw">let</span> <span class="ident">new_config</span> <span class="op">=</span> <span class="ident">config_watcher</span>.<span class="ident">borrow</span>().<span class="ident">clone</span>();
+
+        <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="ident">future</span>::<span class="ident">try_join</span>(
+            <span class="kw">async</span> {
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">write</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">write</span>().<span class="kw">await</span>;
+                <span class="ident">write</span>.<span class="ident">replace</span>(<span class="ident">new_config</span>.<span class="ident">clone</span>());
+                <span class="prelude-val">Ok</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">Error</span><span class="op">&gt;</span>(())
+            },
+            <span class="kw">async</span> {
+                <span class="kw">let</span> <span class="ident">new_inner</span> <span class="op">=</span> <span class="ident">MailStoreInner</span>::<span class="ident">init_with_config</span>(<span class="ident">new_config</span>.<span class="ident">clone</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">write</span> <span class="op">=</span> <span class="ident">inner</span>.<span class="ident">write</span>().<span class="kw">await</span>;
+                <span class="ident">write</span>.<span class="ident">replace</span>(<span class="ident">new_inner</span>);
+                <span class="prelude-val">Ok</span>(())
+            },
+        );
+
+        <span class="kw">match</span> <span class="ident">fut</span>.<span class="kw">await</span> {
+            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">store_out_tx</span>.<span class="ident">send</span>(<span class="prelude-val">Some</span>(<span class="ident">MailStoreUpdate</span>::<span class="ident">AccountListUpdate</span>(())))<span class="question-mark">?</span>,
+            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;during mail loop: {}&quot;</span>, <span class="ident">e</span>);
+                <span class="macro">panic</span><span class="macro">!</span>();
+            }
+        };
+    }
+
+    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="kw">impl</span> <span class="ident">MailStoreInner</span> {

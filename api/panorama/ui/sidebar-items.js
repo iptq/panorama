@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["run_ui2","Main entrypoint for the UI"]],"mod":[["colon_prompt",""],["input",""],["keybinds",""],["mail_view",""],["messages",""],["windows",""]],"struct":[["UI","UI"],["UiParams","Parameters for passing to the UI thread"]],"type":[["FrameType",""],["TermType",""]]});
+initSidebarItems({"fn":[["run_ui2","Main entrypoint for the UI"]],"mod":[["colon_prompt",""],["input",""],["mail_view",""],["windows",""]],"struct":[["UI","UI"],["UiParams","Parameters for passing to the UI thread"]],"type":[["FrameType",""],["TermType",""]]});

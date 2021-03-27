@@ -106,9 +106,6 @@
 <span id="103">103</span>
 <span id="104">104</span>
 <span id="105">105</span>
-<span id="106">106</span>
-<span id="107">107</span>
-<span id="108">108</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>, <span class="ident">VecDeque</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">rc</span>::<span class="ident">Rc</span>;
@@ -165,7 +162,7 @@
         <span class="self">self</span>.<span class="ident">page_order</span>.<span class="ident">push</span>(<span class="ident">pid</span>);
         <span class="self">self</span>.<span class="ident">ids</span>.<span class="ident">insert</span>(<span class="ident">id</span>, <span class="ident">pid</span>);
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">None</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">currently_active</span> {
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">currently_active</span>.<span class="ident">is_none</span>() {
             <span class="self">self</span>.<span class="ident">currently_active</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">id</span>);
         }
 
@@ -205,10 +202,7 @@
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">enum</span> <span class="ident">Dir</span> {
-    <span class="ident">H</span>,
-    <span class="ident">V</span>,
-}
+<span class="kw">enum</span> <span class="ident">Dir</span> {}
 
 <span class="kw">impl</span> <span class="ident">PageGraph</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">id</span>: <span class="ident">LayoutId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
