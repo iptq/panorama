@@ -20,10 +20,29 @@ jobs:
         with:
           toolchain: stable
 
+      # Retrieve the cache if there is one
+
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      # Install shit
+
       - name: mdbook
         uses: peaceiris/actions-mdbook@v1
         with:
           mdbook-version: 'latest'
+
+      - name: install-cargo-deb
+        run: |
+          cargo install mdbook --version 0.4.7
+          cargo install cargo-deb --version 1.29.1
 
       # Run tests
 
@@ -52,22 +71,10 @@ jobs:
 
       - name: build-deb
         run: |
-          cargo install cargo-deb
           cargo deb
       - uses: actions/upload-artifact@v2
         with:
           name: panorama.deb
           path: target/debian/panorama*.deb
-
-      # Cache massively
-
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.cargo/bin
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
 # vim: set sw=2 et :
