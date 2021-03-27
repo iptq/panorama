@@ -36,10 +36,12 @@ jobs:
 
       - name: mdbook
         uses: peaceiris/actions-mdbook@v1
+        if: steps.cache.outputs.cache-hit != 'true'
         with:
           mdbook-version: 'latest'
 
       - name: install-cargo-deb
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           cargo install mdbook --version 0.4.7
           cargo install cargo-deb --version 1.29.1
