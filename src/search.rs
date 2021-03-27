@@ -10,5 +10,7 @@ pub struct SearchIndex {}
 
 impl SearchIndex {
     /// Create a new instance of the search index
-    pub fn new(config: Config) {}
+    pub fn new(config: Config) -> Self {
+        SearchIndex {}
+    }
 }

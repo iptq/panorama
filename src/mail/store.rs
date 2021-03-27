@@ -63,10 +63,9 @@ pub enum MailStoreUpdate {
 
 impl MailStore {
     /// Creates a new MailStore
-    pub fn new(mut config_watcher: ConfigWatcher) -> Self {
+    pub fn new(config_watcher: ConfigWatcher) -> Self {
         let config = Arc::new(RwLock::new(None));
         let config2 = config.clone();
-
         let inner = Arc::new(RwLock::new(None));
         let inner2 = inner.clone();
 
@@ -74,35 +73,14 @@ impl MailStore {
         let store_out_tx = Arc::new(store_out_tx);
         let store_out_tx2 = store_out_tx.clone();
 
-        let listener = async move {
-            while let Ok(()) = config_watcher.changed().await {
-                let new_config = config_watcher.borrow().clone();
-
-                let fut = future::try_join(
-                    async {
-                        let mut write = config2.write().await;
-                        write.replace(new_config.clone());
-                        Ok::<_, Error>(())
-                    },
-                    async {
-                        let new_inner =
-                            MailStoreInner::init_with_config(new_config.clone()).await?;
-                        let mut write = inner2.write().await;
-                        write.replace(new_inner);
-                        Ok(())
-                    },
-                );
-
-                match fut.await {
-                    Ok(_) => store_out_tx2.send(Some(MailStoreUpdate::AccountListUpdate(()))),
-                    Err(e) => {
-                        error!("during mail loop: {}", e);
-                        panic!();
-                    }
-                };
+        let handle = tokio::spawn(async move {
+            match mail_store_config_listener(config_watcher, config2, inner2, store_out_tx2).await {
+                Ok(_) => {}
+                Err(e) => {
+                    error!("mail store listener error: {}", e);
+                }
             }
-        };
-        let handle = tokio::spawn(listener);
+        });
 
         MailStore {
             config,
@@ -295,6 +273,41 @@ impl MailStore {
 
         inner.accounts.clone()
     }
+}
+
+async fn mail_store_config_listener(
+    mut config_watcher: ConfigWatcher,
+    config: Arc<RwLock<Option<Config>>>,
+    inner: Arc<RwLock<Option<MailStoreInner>>>,
+    store_out_tx: Arc<watch::Sender<Option<MailStoreUpdate>>>,
+) -> Result<()> {
+    while let Ok(()) = config_watcher.changed().await {
+        let new_config = config_watcher.borrow().clone();
+
+        let fut = future::try_join(
+            async {
+                let mut write = config.write().await;
+                write.replace(new_config.clone());
+                Ok::<_, Error>(())
+            },
+            async {
+                let new_inner = MailStoreInner::init_with_config(new_config.clone()).await?;
+                let mut write = inner.write().await;
+                write.replace(new_inner);
+                Ok(())
+            },
+        );
+
+        match fut.await {
+            Ok(_) => store_out_tx.send(Some(MailStoreUpdate::AccountListUpdate(())))?,
+            Err(e) => {
+                error!("during mail loop: {}", e);
+                panic!();
+            }
+        };
+    }
+
+    Ok(())
 }
 
 impl MailStoreInner {

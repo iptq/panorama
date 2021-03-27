@@ -130,7 +130,8 @@ pub async fn sync_main(
                 .unwrap();
             while let Some((uid, attrs)) = message_list.next().await {
                 let evt = MailEvent::UpdateUid(acct_name.clone(), uid, attrs);
-                mail2ui_tx.send(evt);
+                // TODO: probably odn't care about this?
+                let _ = mail2ui_tx.send(evt);
             }
 
             // check if IDLE is supported

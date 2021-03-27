@@ -3,7 +3,7 @@
 use anyhow::Result;
 use gluon::{import::add_extern_module, ThreadExt};
 
-use crate::ui::{UiCommand, UiUpdate};
+// use crate::ui::{UiCommand, UiUpdate};
 
 /// Creates a VM for running scripts
 pub async fn create_script_vm() -> Result<()> {

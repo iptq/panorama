@@ -53,7 +53,7 @@ impl WindowLayout {
         self.page_order.push(pid);
         self.ids.insert(id, pid);
 
-        if let None = self.currently_active {
+        if self.currently_active.is_none() {
             self.currently_active = Some(id);
         }
 
@@ -93,10 +93,7 @@ struct PageGraph {
 }
 
 #[derive(Debug)]
-enum Dir {
-    H,
-    V,
-}
+enum Dir {}
 
 impl PageGraph {
     pub fn new(id: LayoutId) -> Self {

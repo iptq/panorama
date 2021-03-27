@@ -2,9 +2,9 @@
 
 mod colon_prompt;
 mod input;
-mod keybinds;
+// mod keybinds;
 mod mail_view;
-mod messages;
+// mod messages;
 mod windows;
 
 use std::any::Any;
@@ -45,7 +45,7 @@ use crate::mail::{EmailMetadata, MailEvent, MailStore};
 use self::colon_prompt::ColonPrompt;
 use self::input::{BaseInputHandler, HandlesInput, InputResult};
 use self::mail_view::MailView;
-pub(crate) use self::messages::*;
+// pub(crate) use self::messages::*;
 use self::windows::*;
 
 pub(crate) type FrameType<'a, 'b> = Frame<'a, &'b mut Stdout>;
@@ -115,7 +115,7 @@ pub async fn run_ui2(params: UiParams) -> Result<()> {
             // got an event from the ui thread
             evt = ui_events.next().fuse() => if let Some(evt) = evt {
                 let evt = evt?;
-                ui.process_event(evt)?;
+                ui.process_event(evt);
             }
 
             // wait for approx 60fps
@@ -169,7 +169,7 @@ impl UI {
                     .cloned()
                     .unwrap_or_else(|| i.to_string())
             })
-            .map(|s| Spans::from(s))
+            .map(Spans::from)
             .collect();
         let tabs = Tabs::new(titles).style(Style::default().bg(Color::DarkGray));
         f.render_widget(tabs, chunks[1]);
@@ -196,7 +196,7 @@ impl UI {
     }
 
     /// Main entrypoint for handling any kind of event coming from the terminal
-    fn process_event(&mut self, evt: Event) -> Result<()> {
+    fn process_event(&mut self, evt: Event) {
         if let Event::Key(evt) = evt {
             if let KeyEvent {
                 code: KeyCode::Char('q'),
@@ -208,7 +208,7 @@ impl UI {
 
             // handle states in the state stack
             // although this is written in a for loop, every case except one should break
-            // let mut should_pop = false;
+            let should_pop = false;
             // for input_state in input_states.iter_mut().rev() {
             //     match input_state.handle_key(&mut term, evt)? {
             //         InputResult::Ok => break,
@@ -223,12 +223,11 @@ impl UI {
             //     }
             // }
 
-            // if should_pop {
-            //     input_states.pop();
-            // }
+            if should_pop {
+                debug!("pop state");
+                // input_states.pop();
+            }
         }
-
-        Ok(())
     }
 
     async fn process_mail_event(&mut self, evt: MailEvent) -> Result<()> {
