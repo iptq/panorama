@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::rc::Rc;
 
+use anyhow::Result;
 use futures::future::Future;
 use panorama_tui::tui::layout::Rect;
 
@@ -12,7 +13,7 @@ pub trait Window: HandlesInput {
     fn name(&self) -> String;
 
     /// Main draw function
-    async fn draw(&self, f: &mut FrameType<'_, '_>, area: Rect, ui: &UI);
+    async fn draw(&self, f: &mut FrameType<'_, '_>, area: Rect, ui: &UI) -> Result<()>;
     // async fn draw(&self, f: FrameType, area: Rect, ui: Rc<UI>);
 
     /// Update function

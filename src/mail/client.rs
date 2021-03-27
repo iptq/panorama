@@ -79,6 +79,7 @@ pub async fn sync_main(
             debug!("select response: {:?}", select);
 
             if let (Some(exists), Some(uidvalidity)) = (select.exists, select.uid_validity) {
+                // figure out which uids don't exist locally yet
                 let new_uids = stream::iter(1..exists).map(Ok).try_filter_map(|uid| {
                         mail_store.try_identify_email(&acct_name, &folder, uid, uidvalidity, None)
                             // invert the option to only select uids that haven't been downloaded

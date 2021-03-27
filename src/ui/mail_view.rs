@@ -19,9 +19,12 @@ use panorama_tui::{
         widgets::*,
     },
 };
-use tokio::task::JoinHandle;
+use tokio::{sync::RwLock, task::JoinHandle};
 
-use crate::mail::{store::AccountRef, EmailMetadata};
+use crate::mail::{
+    store::{AccountRef, MailStoreUpdate},
+    EmailMetadata,
+};
 
 use super::{FrameType, HandlesInput, InputResult, MailStore, TermType, Window, UI};
 
@@ -29,11 +32,17 @@ use super::{FrameType, HandlesInput, InputResult, MailStore, TermType, Window, U
 /// A singular UI view of a list of mail
 pub struct MailView {
     pub mail_store: MailStore,
-    pub current_account: Option<Arc<AccountRef>>,
-    pub current_folder: Option<String>,
     pub message_list: TableState,
     pub selected: Arc<AtomicU32>,
     pub change: Arc<AtomicI8>,
+    current: Arc<RwLock<Option<Current>>>,
+    mail_store_listener: JoinHandle<()>,
+}
+
+#[derive(Debug)]
+struct Current {
+    account: Arc<AccountRef>,
+    folder: Option<String>,
 }
 
 impl HandlesInput for MailView {
@@ -60,7 +69,7 @@ impl Window for MailView {
         String::from("email")
     }
 
-    async fn draw(&self, f: &mut FrameType<'_, '_>, area: Rect, ui: &UI) {
+    async fn draw(&self, f: &mut FrameType<'_, '_>, area: Rect, ui: &UI) -> Result<()> {
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
             .margin(0)
@@ -89,30 +98,27 @@ impl Window for MailView {
             .highlight_symbol(">>");
 
         let mut rows = vec![];
-        if let Some(acct_ref) = self.current_account.as_ref() {
-            let messages = acct_ref.get_newest_n_messages("INBOX", chunks[1].height as usize);
-        }
-
-        for (acct_name, acct_ref) in accts.iter() {
-            let result: Option<Vec<EmailMetadata>> = None; // self.mail_store.messages_of(acct);
-            if let Some(messages) = result {
-                for meta in messages {
-                    let mut row = Row::new(vec![
-                        String::from(if meta.unread { "\u{2b24}" } else { "" }),
-                        meta.uid.map(|u| u.to_string()).unwrap_or_default(),
-                        meta.date.map(|d| humanize_timestamp(d)).unwrap_or_default(),
-                        meta.from.clone(),
-                        meta.subject.clone(),
-                    ]);
-                    if meta.unread {
-                        row = row.style(
-                            Style::default()
-                                .fg(Color::LightCyan)
-                                .add_modifier(Modifier::BOLD),
-                        );
-                    }
-                    rows.push(row);
+        if let Some(current) = self.current.read().await.as_ref() {
+            let messages = current
+                .account
+                .get_newest_n_messages("INBOX", chunks[1].height as usize)
+                .await?;
+            for meta in messages.iter() {
+                let mut row = Row::new(vec![
+                    String::from(if meta.unread { "\u{2b24}" } else { "" }),
+                    meta.uid.map(|u| u.to_string()).unwrap_or_default(),
+                    meta.date.map(|d| humanize_timestamp(d)).unwrap_or_default(),
+                    meta.from.clone(),
+                    meta.subject.clone(),
+                ]);
+                if meta.unread {
+                    row = row.style(
+                        Style::default()
+                            .fg(Color::LightCyan)
+                            .add_modifier(Modifier::BOLD),
+                    );
                 }
+                rows.push(row);
             }
         }
 
@@ -133,6 +139,8 @@ impl Window for MailView {
 
         f.render_widget(dirlist, chunks[0]);
         f.render_widget(table, chunks[1]);
+
+        Ok(())
     }
 
     async fn update(&mut self) {
@@ -174,21 +182,42 @@ fn humanize_timestamp(date: DateTime<Local>) -> String {
 
 impl MailView {
     pub fn new(mail_store: MailStore) -> Self {
+        let current = Arc::new(RwLock::new(None));
+        let current2 = current.clone();
+
+        let mut listener = mail_store.store_out_rx.clone();
+        let mail_store2 = mail_store.clone();
+        let mail_store_listener = tokio::spawn(async move {
+            while let Ok(()) = listener.changed().await {
+                let updated = listener.borrow().clone();
+                debug!("new update from mail store: {:?}", updated);
+
+                // TODO: maybe do the processing of updates somewhere else?
+                // in case events get missed
+                match updated {
+                    Some(MailStoreUpdate::AccountListUpdate(_)) => {
+                        // TODO: maybe have a default account?
+                        let accounts = mail_store2.list_accounts().await;
+                        if let Some((acct_name, acct_ref)) = accounts.iter().next() {
+                            let mut write = current2.write().await;
+                            *write = Some(Current {
+                                account: acct_ref.clone(),
+                                folder: None,
+                            })
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        });
+
         MailView {
             mail_store,
-            current_account: None,
-            current_folder: None,
+            current,
             message_list: TableState::default(),
             selected: Arc::new(AtomicU32::default()),
             change: Arc::new(AtomicI8::default()),
-        }
-    }
-
-    pub async fn set_current_account(&mut self, name: impl AsRef<str>) {
-        let name = name.as_ref();
-        let accounts = self.mail_store.list_accounts().await;
-        if let Some(acct_ref) = accounts.get(name) {
-            self.current_account = Some(acct_ref.clone());
+            mail_store_listener,
         }
     }
 
@@ -219,5 +248,4 @@ impl MailView {
         //     self.message_list.select(Some(len - 1));
         // }
     }
-
 }

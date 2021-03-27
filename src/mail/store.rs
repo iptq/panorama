@@ -6,10 +6,12 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::{Context, Error, Result};
+use chrono::{DateTime, Local};
 use futures::{
     future::{self, FutureExt, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
+use indexmap::IndexMap;
 use panorama_imap::response::AttributeValue;
 use sha2::{Digest, Sha256};
 use sqlx::{
@@ -19,7 +21,7 @@ use sqlx::{
 };
 use tokio::{
     fs,
-    sync::{broadcast, RwLock},
+    sync::{broadcast, watch, RwLock},
     task::JoinHandle,
 };
 
@@ -37,6 +39,10 @@ pub struct MailStore {
     config: Arc<RwLock<Option<Config>>>,
     inner: Arc<RwLock<Option<MailStoreInner>>>,
     handle: Arc<JoinHandle<()>>,
+    store_out_tx: Arc<watch::Sender<Option<MailStoreUpdate>>>,
+
+    /// A receiver for listening to updates to the mail store
+    pub store_out_rx: watch::Receiver<Option<MailStoreUpdate>>,
 }
 
 #[derive(Debug)]
@@ -44,12 +50,16 @@ pub struct MailStore {
 struct MailStoreInner {
     pool: SqlitePool,
     mail_dir: PathBuf,
-    accounts: HashMap<String, Arc<AccountRef>>,
+    accounts: IndexMap<String, Arc<AccountRef>>,
 }
 
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 /// Probably an event about new emails? i forgot
-pub struct EmailUpdateInfo {}
+pub enum MailStoreUpdate {
+    /// The list of accounts has been updated (probably as a result of a config update)
+    AccountListUpdate(()),
+}
 
 impl MailStore {
     /// Creates a new MailStore
@@ -60,9 +70,14 @@ impl MailStore {
         let inner = Arc::new(RwLock::new(None));
         let inner2 = inner.clone();
 
+        let (store_out_tx, store_out_rx) = watch::channel(None);
+        let store_out_tx = Arc::new(store_out_tx);
+        let store_out_tx2 = store_out_tx.clone();
+
         let listener = async move {
             while let Ok(()) = config_watcher.changed().await {
                 let new_config = config_watcher.borrow().clone();
+
                 let fut = future::try_join(
                     async {
                         let mut write = config2.write().await;
@@ -77,13 +92,14 @@ impl MailStore {
                         Ok(())
                     },
                 );
+
                 match fut.await {
-                    Ok(_) => {}
+                    Ok(_) => store_out_tx2.send(Some(MailStoreUpdate::AccountListUpdate(()))),
                     Err(e) => {
                         error!("during mail loop: {}", e);
                         panic!();
                     }
-                }
+                };
             }
         };
         let handle = tokio::spawn(listener);
@@ -92,8 +108,13 @@ impl MailStore {
             config,
             inner,
             handle: Arc::new(handle),
+            store_out_tx,
+            store_out_rx,
         }
     }
+
+    /// Nuke all messages with an invalid UIDVALIDITY
+    pub async fn nuke_old_uidvalidity(&self, current: usize) {}
 
     /// Given a UID and optional message-id try to identify a particular message
     pub async fn try_identify_email(
@@ -265,11 +286,11 @@ impl MailStore {
 
     /// Return a map of the accounts that are currently being tracked as well as a reference to the
     /// account handles themselves
-    pub async fn list_accounts(&self) -> HashMap<String, Arc<AccountRef>> {
+    pub async fn list_accounts(&self) -> IndexMap<String, Arc<AccountRef>> {
         let read = self.inner.read().await;
-        let inner = match &*read {
+        let inner = match read.as_ref() {
             Some(v) => v,
-            None => return HashMap::new(),
+            None => return IndexMap::new(),
         };
 
         inner.accounts.clone()
@@ -365,6 +386,11 @@ impl AccountRef {
         .bind(folder)
         .fetch(&self.pool)
         .map_ok(|(date, subject): (String, String)| EmailMetadata {
+            date: Some(
+                DateTime::parse_from_rfc3339(&date)
+                    .unwrap()
+                    .with_timezone(&Local),
+            ),
             subject,
             ..EmailMetadata::default()
         })

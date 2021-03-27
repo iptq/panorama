@@ -102,7 +102,7 @@ pub async fn run_ui2(params: UiParams) -> Result<()> {
         term.pre_draw()?;
         {
             let mut frame = term.get_frame();
-            ui.draw(&mut frame).await;
+            ui.draw(&mut frame).await?;
         }
         term.post_draw()?;
 
@@ -148,7 +148,7 @@ pub struct UI {
 }
 
 impl UI {
-    async fn draw(&mut self, f: &mut FrameType<'_, '_>) {
+    async fn draw(&mut self, f: &mut FrameType<'_, '_>) -> Result<()> {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(0)
@@ -179,10 +179,12 @@ impl UI {
         let visible = self.window_layout.visible_windows(chunks[0]);
         for (layout_id, area) in visible.into_iter() {
             if let Some(window) = self.windows.get(&layout_id) {
-                window.draw(f, area, self).await;
+                window.draw(f, area, self).await?;
                 debug!("drew {:?} {:?}", layout_id, area);
             }
         }
+
+        Ok(())
     }
 
     fn open_window(&mut self, window: impl Window) {
