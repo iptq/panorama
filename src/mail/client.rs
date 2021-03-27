@@ -67,6 +67,10 @@ pub async fn sync_main(
         debug!("authentication successful!");
 
         let folder_list = authed.list().await?;
+        let _ = mail2ui_tx.send(MailEvent::FolderList(
+            acct_name.clone(),
+            folder_list.clone(),
+        ));
         debug!("mailbox list: {:?}", folder_list);
 
         for folder in folder_list.iter() {
@@ -100,7 +104,6 @@ pub async fn sync_main(
             }
         }
 
-        let _ = mail2ui_tx.send(MailEvent::FolderList(acct_name.clone(), folder_list));
         tokio::time::sleep(std::time::Duration::from_secs(50)).await;
 
         // TODO: remove this later

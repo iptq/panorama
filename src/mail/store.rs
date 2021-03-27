@@ -5,7 +5,11 @@ use std::mem;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Error, Result};
+use futures::{
+    future::{self, FutureExt, TryFutureExt},
+    stream::{StreamExt, TryStreamExt},
+};
 use panorama_imap::response::AttributeValue;
 use sha2::{Digest, Sha256};
 use sqlx::{
@@ -21,7 +25,7 @@ use tokio::{
 
 use crate::config::{Config, ConfigWatcher};
 
-use super::MailEvent;
+use super::{EmailMetadata, MailEvent};
 
 static MIGRATOR: Migrator = sqlx::migrate!();
 
@@ -44,6 +48,7 @@ struct MailStoreInner {
 }
 
 #[derive(Clone, Debug)]
+/// Probably an event about new emails? i forgot
 pub struct EmailUpdateInfo {}
 
 impl MailStore {
@@ -52,77 +57,42 @@ impl MailStore {
         let config = Arc::new(RwLock::new(None));
         let config2 = config.clone();
 
+        let inner = Arc::new(RwLock::new(None));
+        let inner2 = inner.clone();
+
         let listener = async move {
             while let Ok(()) = config_watcher.changed().await {
                 let new_config = config_watcher.borrow().clone();
-                let mut write = config2.write().await;
-
-                // drop old config
-                if let Some(old_config) = write.take() {
-                    mem::drop(old_config);
+                let fut = future::try_join(
+                    async {
+                        let mut write = config2.write().await;
+                        write.replace(new_config.clone());
+                        Ok::<_, Error>(())
+                    },
+                    async {
+                        let new_inner =
+                            MailStoreInner::init_with_config(new_config.clone()).await?;
+                        let mut write = inner2.write().await;
+                        write.replace(new_inner);
+                        Ok(())
+                    },
+                );
+                match fut.await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        error!("during mail loop: {}", e);
+                        panic!();
+                    }
                 }
-
-                *write = Some(new_config);
             }
         };
         let handle = tokio::spawn(listener);
 
         MailStore {
             config,
-            inner: Arc::new(RwLock::new(None)),
+            inner,
             handle: Arc::new(handle),
         }
-    }
-
-    async fn init_with_config(&self, config: Config) -> Result<()> {
-        let data_dir = config.data_dir.to_string_lossy();
-        let data_dir = PathBuf::from(shellexpand::tilde(data_dir.as_ref()).as_ref());
-
-        let mail_dir = data_dir.join("mail");
-        if !mail_dir.exists() {
-            fs::create_dir_all(&mail_dir).await?;
-        }
-        info!("using mail dir: {:?}", mail_dir);
-
-        // create database parent
-        let db_path = data_dir.join("panorama.db");
-        let db_parent = db_path.parent();
-        if let Some(path) = db_parent {
-            fs::create_dir_all(path).await?;
-        }
-
-        let db_path_str = db_path.to_string_lossy();
-        let db_path = format!("sqlite:{}", db_path_str);
-        info!("using database path: {}", db_path_str);
-
-        // create the database file if it doesn't already exist -_ -
-        if !Sqlite::database_exists(&db_path_str).await? {
-            Sqlite::create_database(&db_path_str).await?;
-        }
-
-        let pool = SqlitePool::connect(&db_path_str).await?;
-        MIGRATOR.run(&pool).await?;
-        debug!("run migrations : {:?}", MIGRATOR);
-
-        let accounts = config
-            .mail_accounts
-            .keys()
-            .map(|acct| {
-                let folders = RwLock::new(Vec::new());
-                (acct.to_owned(), Arc::new(AccountRef { folders }))
-            })
-            .collect();
-
-        // let (new_email_tx, new_email_rx) = broadcast::channel(100);
-        {
-            let mut write = self.inner.write().await;
-            *write = Some(MailStoreInner {
-                mail_dir,
-                pool,
-                accounts,
-            });
-        }
-        Ok(())
     }
 
     /// Given a UID and optional message-id try to identify a particular message
@@ -158,12 +128,6 @@ impl MailStore {
 
         if let Some(existing) = existing {
             let rowid = existing.0;
-            debug!(
-                "folder: {:?} uid: {:?} rowid: {:?}",
-                folder.as_ref(),
-                uid,
-                rowid,
-            );
             return Ok(Some(rowid));
         }
 
@@ -282,8 +246,21 @@ impl MailStore {
     }
 
     /// Event handerl
-    pub fn handle_mail_event(&self, evt: MailEvent) {
+    pub async fn handle_mail_event(&self, evt: MailEvent) -> Result<()> {
         debug!("TODO: handle {:?}", evt);
+        match evt {
+            MailEvent::FolderList(acct, folders) => {
+                let inner = self.inner.write().await;
+                let acct_ref = match inner.as_ref().and_then(|inner| inner.accounts.get(&acct)) {
+                    Some(inner) => inner.clone(),
+                    None => return Ok(()),
+                };
+                mem::drop(inner);
+                acct_ref.set_folders(folders).await;
+            }
+            _ => {}
+        }
+        Ok(())
     }
 
     /// Return a map of the accounts that are currently being tracked as well as a reference to the
@@ -299,14 +276,102 @@ impl MailStore {
     }
 }
 
+impl MailStoreInner {
+    async fn init_with_config(config: Config) -> Result<Self> {
+        let data_dir = config.data_dir.to_string_lossy();
+        let data_dir = PathBuf::from(shellexpand::tilde(data_dir.as_ref()).as_ref());
+
+        let mail_dir = data_dir.join("mail");
+        if !mail_dir.exists() {
+            fs::create_dir_all(&mail_dir).await?;
+        }
+        info!("using mail dir: {:?}", mail_dir);
+
+        // create database parent
+        let db_path = data_dir.join("panorama.db");
+        let db_parent = db_path.parent();
+        if let Some(path) = db_parent {
+            fs::create_dir_all(path).await?;
+        }
+
+        let db_path_str = db_path.to_string_lossy();
+        let db_path = format!("sqlite:{}", db_path_str);
+        info!("using database path: {}", db_path_str);
+
+        // create the database file if it doesn't already exist -_ -
+        if !Sqlite::database_exists(&db_path_str).await? {
+            Sqlite::create_database(&db_path_str).await?;
+        }
+
+        let pool = SqlitePool::connect(&db_path_str).await?;
+        MIGRATOR.run(&pool).await?;
+        debug!("run migrations : {:?}", MIGRATOR);
+
+        let accounts = config
+            .mail_accounts
+            .keys()
+            .map(|acct| {
+                let folders = RwLock::new(Vec::new());
+                (
+                    acct.to_owned(),
+                    Arc::new(AccountRef {
+                        folders,
+                        pool: pool.clone(),
+                    }),
+                )
+            })
+            .collect();
+
+        Ok(MailStoreInner {
+            mail_dir,
+            pool,
+            accounts,
+        })
+    }
+}
+
 #[derive(Debug)]
+/// Holds a reference to an account
 pub struct AccountRef {
     folders: RwLock<Vec<String>>,
+    pool: SqlitePool,
 }
 
 impl AccountRef {
-    pub async fn folders(&self) -> Vec<String> {
+    /// Gets the folders on this account
+    pub async fn get_folders(&self) -> Vec<String> {
         self.folders.read().await.clone()
+    }
+
+    /// Sets the folders on this account
+    pub async fn set_folders(&self, folders: Vec<String>) {
+        *self.folders.write().await = folders;
+    }
+
+    /// Gets the n latest messages in the given folder
+    pub async fn get_newest_n_messages(
+        &self,
+        folder: impl AsRef<str>,
+        n: usize,
+    ) -> Result<Vec<EmailMetadata>> {
+        let folder = folder.as_ref();
+        let messages: Vec<EmailMetadata> = sqlx::query_as(
+            r#"
+            SELECT internaldate, subject FROM mail
+            WHERE folder = ?
+            ORDER BY internaldate DESC
+        "#,
+        )
+        .bind(folder)
+        .fetch(&self.pool)
+        .map_ok(|(date, subject): (String, String)| EmailMetadata {
+            subject,
+            ..EmailMetadata::default()
+        })
+        .try_collect()
+        .await?;
+        debug!("found {} messages", messages.len());
+        Ok(messages)
     }
 }
 

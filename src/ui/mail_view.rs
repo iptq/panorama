@@ -19,14 +19,18 @@ use panorama_tui::{
         widgets::*,
     },
 };
+use tokio::task::JoinHandle;
 
-use crate::mail::EmailMetadata;
+use crate::mail::{store::AccountRef, EmailMetadata};
 
 use super::{FrameType, HandlesInput, InputResult, MailStore, TermType, Window, UI};
 
 #[derive(Debug)]
+/// A singular UI view of a list of mail
 pub struct MailView {
     pub mail_store: MailStore,
+    pub current_account: Option<Arc<AccountRef>>,
+    pub current_folder: Option<String>,
     pub message_list: TableState,
     pub selected: Arc<AtomicU32>,
     pub change: Arc<AtomicI8>,
@@ -68,8 +72,7 @@ impl Window for MailView {
         // folder list
         let mut items = vec![];
         for (acct_name, acct_ref) in accts.iter() {
-            let folders = acct_ref.folders().await;
-
+            let folders = acct_ref.get_folders().await;
             items.push(ListItem::new(acct_name.to_owned()));
             for folder in folders {
                 items.push(ListItem::new(format!(" {}", folder)));
@@ -86,29 +89,32 @@ impl Window for MailView {
             .highlight_symbol(">>");
 
         let mut rows = vec![];
-        // for acct in accts.iter() {
-        //     // TODO: messages
-        //     let result: Option<Vec<EmailMetadata>> = None; // self.mail_store.messages_of(acct);
-        //     if let Some(messages) = result {
-        //         for meta in messages {
-        //             let mut row = Row::new(vec![
-        //                 String::from(if meta.unread { "\u{2b24}" } else { "" }),
-        //                 meta.uid.map(|u| u.to_string()).unwrap_or_default(),
-        //                 meta.date.map(|d| humanize_timestamp(d)).unwrap_or_default(),
-        //                 meta.from.clone(),
-        //                 meta.subject.clone(),
-        //             ]);
-        //             if meta.unread {
-        //                 row = row.style(
-        //                     Style::default()
-        //                         .fg(Color::LightCyan)
-        //                         .add_modifier(Modifier::BOLD),
-        //                 );
-        //             }
-        //             rows.push(row);
-        //         }
-        //     }
-        // }
+        if let Some(acct_ref) = self.current_account.as_ref() {
+            let messages = acct_ref.get_newest_n_messages("INBOX", chunks[1].height as usize);
+        }
+
+        for (acct_name, acct_ref) in accts.iter() {
+            let result: Option<Vec<EmailMetadata>> = None; // self.mail_store.messages_of(acct);
+            if let Some(messages) = result {
+                for meta in messages {
+                    let mut row = Row::new(vec![
+                        String::from(if meta.unread { "\u{2b24}" } else { "" }),
+                        meta.uid.map(|u| u.to_string()).unwrap_or_default(),
+                        meta.date.map(|d| humanize_timestamp(d)).unwrap_or_default(),
+                        meta.from.clone(),
+                        meta.subject.clone(),
+                    ]);
+                    if meta.unread {
+                        row = row.style(
+                            Style::default()
+                                .fg(Color::LightCyan)
+                                .add_modifier(Modifier::BOLD),
+                        );
+                    }
+                    rows.push(row);
+                }
+            }
+        }
 
         let table = Table::new(rows)
             .style(Style::default().fg(Color::White))
@@ -127,6 +133,24 @@ impl Window for MailView {
 
         f.render_widget(dirlist, chunks[0]);
         f.render_widget(table, chunks[1]);
+    }
+
+    async fn update(&mut self) {
+        // make the change
+        if self
+            .change
+            .compare_exchange(-1, 0, Ordering::Relaxed, Ordering::Relaxed)
+            .is_ok()
+        {
+            self.move_up();
+        }
+        if self
+            .change
+            .compare_exchange(1, 0, Ordering::Relaxed, Ordering::Relaxed)
+            .is_ok()
+        {
+            self.move_down();
+        }
     }
 }
 
@@ -152,9 +176,19 @@ impl MailView {
     pub fn new(mail_store: MailStore) -> Self {
         MailView {
             mail_store,
+            current_account: None,
+            current_folder: None,
             message_list: TableState::default(),
             selected: Arc::new(AtomicU32::default()),
             change: Arc::new(AtomicI8::default()),
+        }
+    }
+
+    pub async fn set_current_account(&mut self, name: impl AsRef<str>) {
+        let name = name.as_ref();
+        let accounts = self.mail_store.list_accounts().await;
+        if let Some(acct_ref) = accounts.get(name) {
+            self.current_account = Some(acct_ref.clone());
         }
     }
 
@@ -186,21 +220,4 @@ impl MailView {
         // }
     }
 
-    pub fn update(&mut self) {
-        // make the change
-        if self
-            .change
-            .compare_exchange(-1, 0, Ordering::Relaxed, Ordering::Relaxed)
-            .is_ok()
-        {
-            self.move_up();
-        }
-        if self
-            .change
-            .compare_exchange(1, 0, Ordering::Relaxed, Ordering::Relaxed)
-            .is_ok()
-        {
-            self.move_down();
-        }
-    }
 }

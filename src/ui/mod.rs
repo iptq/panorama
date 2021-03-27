@@ -109,7 +109,7 @@ pub async fn run_ui2(params: UiParams) -> Result<()> {
         select! {
             // got an event from the mail thread
             evt = mail2ui_rx.recv().fuse() => if let Some(evt) = evt {
-                ui.process_mail_event(evt);
+                ui.process_mail_event(evt).await?;
             },
 
             // got an event from the ui thread
@@ -229,7 +229,8 @@ impl UI {
         Ok(())
     }
 
-    fn process_mail_event(&mut self, evt: MailEvent) {
-        self.mail_store.handle_mail_event(evt);
+    async fn process_mail_event(&mut self, evt: MailEvent) -> Result<()> {
+        self.mail_store.handle_mail_event(evt).await?;
+        Ok(())
     }
 }

@@ -16,7 +16,7 @@ pub trait Window: HandlesInput {
     // async fn draw(&self, f: FrameType, area: Rect, ui: Rc<UI>);
 
     /// Update function
-    fn update(&mut self) {}
+    async fn update(&mut self) {}
 }
 
 downcast_rs::impl_downcast!(Window);
