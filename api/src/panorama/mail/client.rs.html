@@ -201,6 +201,9 @@
 <span id="198">198</span>
 <span id="199">199</span>
 <span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">Context</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">futures</span>::{
@@ -271,6 +274,10 @@
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;authentication successful!&quot;</span>);
 
         <span class="kw">let</span> <span class="ident">folder_list</span> <span class="op">=</span> <span class="ident">authed</span>.<span class="ident">list</span>().<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">mail2ui_tx</span>.<span class="ident">send</span>(<span class="ident">MailEvent</span>::<span class="ident">FolderList</span>(
+            <span class="ident">acct_name</span>.<span class="ident">clone</span>(),
+            <span class="ident">folder_list</span>.<span class="ident">clone</span>(),
+        ));
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;mailbox list: {:?}&quot;</span>, <span class="ident">folder_list</span>);
 
         <span class="kw">for</span> <span class="ident">folder</span> <span class="kw">in</span> <span class="ident">folder_list</span>.<span class="ident">iter</span>() {
@@ -304,7 +311,6 @@
             }
         }
 
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">mail2ui_tx</span>.<span class="ident">send</span>(<span class="ident">MailEvent</span>::<span class="ident">FolderList</span>(<span class="ident">acct_name</span>.<span class="ident">clone</span>(), <span class="ident">folder_list</span>));
         <span class="ident">tokio</span>::<span class="ident">time</span>::<span class="ident">sleep</span>(<span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">50</span>)).<span class="kw">await</span>;
 
         <span class="comment">// TODO: remove this later</span>

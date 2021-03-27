@@ -236,6 +236,7 @@
 <span id="233">233</span>
 <span id="234">234</span>
 <span id="235">235</span>
+<span id="236">236</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! UI library</span>
 
@@ -348,7 +349,7 @@
         <span class="macro">select</span><span class="macro">!</span> {
             <span class="comment">// got an event from the mail thread</span>
             <span class="ident">evt</span> <span class="op">=</span> <span class="ident">mail2ui_rx</span>.<span class="ident">recv</span>().<span class="ident">fuse</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">evt</span>) <span class="op">=</span> <span class="ident">evt</span> {
-                <span class="ident">ui</span>.<span class="ident">process_mail_event</span>(<span class="ident">evt</span>);
+                <span class="ident">ui</span>.<span class="ident">process_mail_event</span>(<span class="ident">evt</span>).<span class="kw">await</span><span class="question-mark">?</span>;
             },
 
             <span class="comment">// got an event from the ui thread</span>
@@ -468,8 +469,9 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">process_mail_event</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">evt</span>: <span class="ident">MailEvent</span>) {
-        <span class="self">self</span>.<span class="ident">mail_store</span>.<span class="ident">handle_mail_event</span>(<span class="ident">evt</span>);
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_mail_event</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">evt</span>: <span class="ident">MailEvent</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">mail_store</span>.<span class="ident">handle_mail_event</span>(<span class="ident">evt</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
     }
 }
 </pre></div>
